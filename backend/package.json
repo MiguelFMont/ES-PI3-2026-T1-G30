@@ -1,0 +1,36 @@
+{
+  "name": "es-pi3-2025-t1-g30",
+  "version": "1.0.0",
+  "description": "Pacote dedicado ao Projeto Integrador III, grupo 30, turma 1 da PUC-Campinas.",
+  "main": "server.js",
+  "scripts": {
+    "dev": "nodemon --exerc ts-node src/server.js",
+    "build": "tsc",
+    "start": "npm run build && node dist/server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MiguelFMont/ES-PI3-2026-T1-G30.git"
+  },
+   "keywords": [
+    "node",
+    "backend"
+  ],
+  "author": "Caio Ávila Marchi, Gabriel Martins de Almeida, Maria Júlia Lazarini Oleto, Miguel Fernandes Monteiro, Samuel Campovilla",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "firebase-admin": "^13.7.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.4.0",
+    "eslint": "^10.0.3",
+    "prettier": "^3.8.1",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.9.3"
+  }
+}

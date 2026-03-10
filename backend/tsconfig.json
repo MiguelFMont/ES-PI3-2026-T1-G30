@@ -1,0 +1,64 @@
+{
+  "compilerOptions": {
+
+    // ─── Caminhos ────────────────────────────────────────────────────────────
+
+    "rootDir": "./src",
+    "outDir": "./dist",
+
+
+    // ─── Módulos e versão ────────────────────────────────────────────────────
+
+    "module": "commonjs",
+    "target": "es2020",
+    "lib": ["es2020"],
+    "types": ["node"],
+
+
+    // ─── Qualidade e segurança ───────────────────────────────────────────────
+
+    // Ativa um conjunto de verificações rigorosas de uma vez:
+    // noImplicitAny, strictNullChecks, strictFunctionTypes, entre outras
+    "strict": true,
+
+    // Acusa erro se uma variável local foi declarada mas nunca utilizada
+    "noUnusedLocals": true,
+
+    // Acusa erro se um parâmetro de função foi declarado mas nunca utilizado
+    "noUnusedParameters": true,
+
+    // Exige que toda função retorne um valor em todos os caminhos possíveis
+    // Evita retornos undefined silenciosos quando um if não tem else
+    "noImplicitReturns": true,
+
+
+    // ─── Compatibilidade ─────────────────────────────────────────────────────
+
+    // Ignora erros de tipagem dentro das bibliotecas externas (.d.ts)
+    // Evita que um tipo mal definido no express ou firebase-admin quebre sua compilação
+    "skipLibCheck": true,
+
+    // Permite importar módulos CommonJS com a sintaxe padrão: import x from 'modulo'
+    // Sem isso seria necessário escrever: import * as x from 'modulo'
+    "esModuleInterop": true,
+
+    // Garante que imports respeitam maiúsculas/minúsculas do nome do arquivo
+    // Evita bugs que funcionam no Windows mas quebram no Linux (case-sensitive)
+    "forceConsistentCasingInFileNames": true,
+
+    // Permite importar arquivos .json diretamente com tipagem automática
+    // Necessário para o serviceAccountKey.json do Firebase Admin
+    "resolveJsonModule": true,
+
+    // Gera arquivos .map junto com o .js compilado
+    // Permite rastrear erros de runtime na linha exata do .ts original em vez do .js gerado
+    "sourceMap": true
+
+  },
+
+  // Arquivos que o TypeScript deve compilar
+  "include": ["src/**/*"],
+
+  // Arquivos que o TypeScript deve ignorar
+  "exclude": ["node_modules", "dist"]
+}
