@@ -61,3 +61,14 @@ export async function loginService(idToken: string) {
     //retorna os dados
     return userDoc.data;
 }
+
+
+// _______________   SENHA   _______________ //
+
+export async function recoverPasswordService(email: string){
+
+    // gera o link para redefinir a senha (o proprio firebase ja tem essa função)
+    const link = await getAuth().generatePasswordResetLink(email);
+
+    return { link }
+}

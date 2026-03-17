@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
-import { cadastroService,
-         loginService } from './auth.service';
+import { cadastroService, loginService, recoverPasswordService } from './auth.service';
 
 export async function cadastroController(req: Request, res: Response){
 
@@ -20,3 +19,11 @@ export async function loginController(req: Request, res: Response){
     res.status(200).json(result)
 }
 
+export async function recoverPasswordController(req: Request, res: Response){
+
+    const { email } = req.body;
+
+    const result = await recoverPasswordService(email);
+
+    res.status(200).json(result)
+}
