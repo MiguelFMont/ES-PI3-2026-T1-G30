@@ -44,3 +44,20 @@ export async function cadastroService(
 
     return { uid }
 }
+
+// _______________   LOGIN   _______________ //
+
+export async function loginService(idToken: string) {
+
+    //valida o token recebido no firebase admin sdk
+    const decondedToken = await getAuth().verifyIdToken(idToken);
+
+    //pega o UID do token decodificado
+    const uid = decondedToken.uid;
+
+    //busca na coleção users o documento com o UID e pega seus dados
+    const userDoc = await getDb().collection('users').doc(uid).get();
+
+    //retorna os dados
+    return userDoc.data;
+}

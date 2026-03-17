@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
-import { cadastroService } from './auth.service';
+import { cadastroService,
+         loginService } from './auth.service';
 
 export async function cadastroController(req: Request, res: Response){
 
@@ -9,3 +10,13 @@ export async function cadastroController(req: Request, res: Response){
 
     res.status(201).json(result);
 }
+
+export async function loginController(req: Request, res: Response){
+
+    const { idToken } = req.body;
+
+    const result = await loginService(idToken);
+    
+    res.status(200).json(result)
+}
+
