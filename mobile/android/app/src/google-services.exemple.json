@@ -1,0 +1,32 @@
+{
+  "_comment": "IMPORTANTE: Este é um arquivo de exemplo com os campos em branco.",
+  "_comment2": "NÃO commite o google-services.json real — ele está no .gitignore.",
+  "_comment3": "Para obtê-lo: Firebase Console → Configurações do projeto → Seus apps → Android → Baixar google-services.json",
+  "project_info": {
+    "project_number": "SEU_PROJECT_NUMBER_AQUI",
+    "project_id": "SEU_PROJECT_ID_AQUI",
+    "storage_bucket": "SEU_PROJECT_ID_AQUI.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "SEU_APP_ID_AQUI",
+        "android_client_info": {
+          "package_name": "com.example.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "SEU_API_KEY_AQUI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
