@@ -1,5 +1,12 @@
 import * as admin from 'firebase-admin';
-import * as serviceAccount from '../../serviceAccountKey.json';
+
+// Alterei import * as serviceAccount from '../../serviceAccountKey.json'
+// O TypeScript trata imports de JSON como objetos somente leitura (módulo congelado).
+// O Firebase Admin SDK precisa modificar as propriedades da credencial internamente,
+// o que causa o erro: "Cannot set property project_id of #<Object> which has only a getter".
+// Solução: usar require().
+
+const serviceAccount = require('../../serviceAccountKey.json');
 
 export function initializeFirebase(): void {
   admin.initializeApp({

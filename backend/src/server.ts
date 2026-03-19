@@ -7,7 +7,7 @@ import { initializeFirebase } from './config/firebase';
 import { env } from './config/env';
 import { corsOptions } from './config/cors';
 // Rotas
-// import routes from './modules/index.ts';
+import routes from './modules/index';
 // Middlewares compartilhados
 import { errorMiddleware } from './shared/errors/error.middleware';
 
@@ -21,7 +21,7 @@ app.use(cors(corsOptions));
 app.use(express.json()); // interpreta o body das requisições como JSON
 
 // Rotas
-// app.use('/api/v1', routes);
+app.use('/api/v1', routes);
 
 // Erro — deve ser o último middleware registrado
 app.use(errorMiddleware);
