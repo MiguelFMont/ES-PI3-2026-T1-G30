@@ -38,6 +38,8 @@ dependencies:
   firebase_core: ^3.13.0
   firebase_auth: ^5.5.2
   cloud_firestore: ^5.6.5
+  fl_chart: ^0.69.0   # gráfico de linha
+  intl: ^0.19.0 #formatação de moeda
 
 dev_dependencies:
   flutter_test:
