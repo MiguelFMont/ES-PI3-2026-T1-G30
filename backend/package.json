@@ -2,7 +2,7 @@
   "name": "es-pi3-2025-t1-g30",
   "version": "1.0.0",
   "description": "Pacote dedicado ao Projeto Integrador III, grupo 30, turma 1 da PUC-Campinas.",
-  "main": "server.js",
+  "main": "dist/server.js",
   "scripts": {
     "dev": "nodemon --exerc ts-node src/server.js",
     "build": "tsc",
@@ -12,7 +12,7 @@
     "type": "git",
     "url": "git+https://github.com/MiguelFMont/ES-PI3-2026-T1-G30.git"
   },
-   "keywords": [
+  "keywords": [
     "node",
     "backend"
   ],
@@ -22,6 +22,7 @@
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "firebase-admin": "^13.7.0",
+    "firebase-functions": "^7.2.2",
     "zod": "^4.3.6"
   },
   "devDependencies": {
