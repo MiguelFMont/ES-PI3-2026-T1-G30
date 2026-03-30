@@ -5,6 +5,6 @@ class AppRoutes {
   static Map<String, WidgetBuilder> routes = {
     '/login': (context) => const LoginPage(),
     '/register': (context) => const CadastroPage(),
-    // '/home': (context) => const HomeScreen(),
+    '/home': (context) => const Scaffold(body: Center(child: Text('Home')))
   };
 }
