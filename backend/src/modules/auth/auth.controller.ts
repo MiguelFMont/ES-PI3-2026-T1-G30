@@ -3,9 +3,9 @@ import { cadastroService, loginService, recoverPasswordService } from './auth.se
 
 export async function cadastroController(req: Request, res: Response){
 
-    const { nomeCompleto, email, cpf, telefone, senha } = req.body;
+    const { dataNascimento, nomeCompleto, email, cpf, telefone, senha } = req.body;
 
-    const result = await cadastroService(nomeCompleto, email, cpf, telefone, senha);
+    const result = await cadastroService(dataNascimento, nomeCompleto, email, cpf, telefone, senha);
 
     res.status(201).json(result);
 }

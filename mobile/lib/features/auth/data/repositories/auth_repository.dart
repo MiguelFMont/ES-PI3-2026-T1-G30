@@ -11,6 +11,7 @@ class AuthRepository {
 
   // Cadastro — converte o Map bruto do datasource para UserModel
   Future<UserModel> cadastro(
+    String dataNascimento,
     String nomeCompleto,
     String email,
     String cpf,
@@ -19,6 +20,7 @@ class AuthRepository {
   ) async {
     try {
       final data = await _datasource.cadastro(
+        dataNascimento,
         nomeCompleto,
         email,
         cpf,

@@ -4,6 +4,7 @@ import * as admin from 'firebase-admin';
 // _______________   CADASTRO   _______________ // 
 
 export async function cadastroService(
+    dataNascimento: string,
     nomeCompleto: string,
     email: string,
     cpf: string,
@@ -23,6 +24,7 @@ export async function cadastroService(
 
     await getDb().collection('users').doc(uid).set({
         uid,
+        dataNascimento,
         nomeCompleto,
         email,
         cpf,
