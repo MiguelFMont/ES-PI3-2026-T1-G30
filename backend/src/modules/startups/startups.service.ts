@@ -13,7 +13,7 @@ export class StartupsService {
     async buscarPorId(id: string) {
         const startup = await repo.findById(id);
         if (!startup) {
-            throw new Error('Startups não encontradas');
+            throw new Error ('Startup não encontradas');
         }
         return startup;
     }
