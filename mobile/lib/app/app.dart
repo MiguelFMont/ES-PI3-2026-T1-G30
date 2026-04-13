@@ -12,7 +12,7 @@ class MesclaInvestApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
       ),
-      initialRoute: '/login',
+      initialRoute: '/welcome',
       routes: AppRoutes.routes,
     );
   }

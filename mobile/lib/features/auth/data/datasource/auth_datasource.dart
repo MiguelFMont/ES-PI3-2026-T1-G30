@@ -18,6 +18,7 @@ class AuthDatasource {
 
   //cadastro
   Future<Map<String, dynamic>> cadastro(
+    String dataNascimento,
     String nomeCompleto,
     String email,
     String cpf,
@@ -30,6 +31,7 @@ class AuthDatasource {
       // informa ao backend que o body é JSON
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
+        'dataNascimento': dataNascimento,
         'nomeCompleto': nomeCompleto,
         'email': email,
         'cpf': cpf,

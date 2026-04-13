@@ -3,6 +3,7 @@
 
 class UserModel {
   final String id;
+  final String dataNascimento;
   final String nomeCompleto;
   final String email;
   final String cpf;
@@ -10,6 +11,7 @@ class UserModel {
 
   UserModel({
     required this.id,
+    required this.dataNascimento,
     required this.nomeCompleto,
     required this.email,
     required this.cpf,
@@ -21,6 +23,7 @@ class UserModel {
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
       id: json['id'],
+      dataNascimento: json['dataNascimento'],
       nomeCompleto: json['nomeCompleto'],
       email: json['email'],
       cpf: json['cpf'],
@@ -33,6 +36,7 @@ class UserModel {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'dataNascimento': dataNascimento,
       'nomeCompleto': nomeCompleto,
       'email': email,
       'cpf': cpf,

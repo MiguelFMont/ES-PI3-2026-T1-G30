@@ -1,10 +1,14 @@
+// Auto: Miguel Fenandes Monteiro
+// RA: 25014808
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class CampoTexto extends StatelessWidget {
   final TextEditingController controller;
   final String label;
   final TextInputType? keyboardType;
   final bool obscureText;
+  final List<TextInputFormatter>? inputFormatters;
 
   const CampoTexto({
     super.key,
@@ -12,6 +16,7 @@ class CampoTexto extends StatelessWidget {
     required this.label,
     this.keyboardType,
     this.obscureText = false,
+    this.inputFormatters
   });
 
   @override
@@ -34,6 +39,7 @@ class CampoTexto extends StatelessWidget {
           controller: controller,
           keyboardType: keyboardType,
           obscureText: obscureText,
+          inputFormatters: inputFormatters,
           decoration: InputDecoration(
             hintText: label,
             filled: true,
