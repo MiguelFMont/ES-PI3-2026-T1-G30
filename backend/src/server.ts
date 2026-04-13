@@ -32,3 +32,7 @@ app.use(errorMiddleware);
 
 
 export const api = functions.https.onRequest(app);
+
+app.listen(process.env.PORT || 3333, () => {
+    console.log("Server rodando");
+});
