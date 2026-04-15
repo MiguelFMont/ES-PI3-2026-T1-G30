@@ -7,6 +7,7 @@ import '../../../../shared/widgets/campo_data.dart';
 import '../../../../shared/widgets/mescla_logo.dart';
 import '../../../../shared/formatters/cpf_formatter.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../shared/widgets/mescla_button.dart';
 
 class CadastroPage extends StatefulWidget {
   const CadastroPage({super.key});
@@ -311,85 +312,11 @@ class _CadastroPageState extends State<CadastroPage> {
     );
   }
 
-  Widget _botaoAvancar() {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: ElevatedButton(
-        onPressed: _irAvancar,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: AppColors.card,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        child: const SizedBox(
-          height: 60,
-          width: 200,
-          child: Center(
-            child: Text(
-              'Avançar',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: AppColors.card,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget _botaoAvancar() =>
+      MesclaButton(label: 'Avançar', onPressed: _irAvancar);
 
-  Widget _botaoCadastrar() {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.mutedForeground.withOpacity(0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: ElevatedButton(
-        onPressed: _cadastrar,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: AppColors.card,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        child: const SizedBox(
-          height: 60,
-          width: 200,
-          child: Center(
-            child: Text(
-              'Cadastrar',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: AppColors.card,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget _botaoCadastrar() =>
+      MesclaButton(label: 'Cadastrar', onPressed: _cadastrar);
 
   Widget _botaoVoltar() {
     return TextButton(

@@ -13,7 +13,23 @@ class MesclaInvestApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
       ),
       initialRoute: '/welcome',
-      routes: AppRoutes.routes,
+      onGenerateRoute: (settings) {
+        final builder = AppRoutes.routes[settings.name];
+        if (builder == null) return null;
+
+        return PageRouteBuilder(
+          settings: settings,
+          pageBuilder: (context, _, __) => builder(context),
+          transitionsBuilder: (_, animation, __, child) {
+            var tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
+                .chain(CurveTween(curve: Curves.ease));
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          },
+        );
+      },
     );
   }
 }
