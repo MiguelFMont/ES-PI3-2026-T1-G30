@@ -30,9 +30,4 @@ app.use('/api/v1', routes);
 // Erro — deve ser o último middleware registrado
 app.use(errorMiddleware);
 
-
 export const api = functions.https.onRequest(app);
-
-app.listen(process.env.PORT || 3333, () => {
-    console.log("Server rodando");
-});
