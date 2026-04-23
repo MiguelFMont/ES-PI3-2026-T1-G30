@@ -115,8 +115,8 @@ export async function enviarTokenRecuperacaoService(email: string) {
     // Gera token de 5 dígitos
     const token = crypto.randomInt(10000, 99999).toString();
 
-    // Expira em 15 minutos
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    // Expira em 2 minutos
+    const expiresAt = new Date(Date.now() + 2 * 60 * 1000);
 
     // Salva no Firestore com contador de tentativas
     await getDb().collection('passwordResetTokens').doc(user.uid).set({
@@ -179,7 +179,7 @@ export async function reenviarTokenCadastroService(email: string) {
     if (!doc.exists) throw new Error('Nenhum cadastro pendente encontrado para este e-mail.');
 
     const token = crypto.randomInt(10000, 99999).toString();
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    const expiresAt = new Date(Date.now() + 2 * 60 * 1000);
 
     await docRef.update({
         token,
