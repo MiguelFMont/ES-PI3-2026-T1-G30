@@ -4,7 +4,7 @@ class Socio {
   final String foto;
   final double participacao;
 
-  socio({required this.nome, required this.foto, required this.participacao});
+  Socio({required this.nome, required this.foto, required this.participacao});
 
   //converte o json da api para o objeto dart
   factory Socio.fromJson(Map<String, dynamic> json) {
@@ -23,7 +23,7 @@ class Membro {
   final String cargo;
   final String area;
 
-  membro({
+  Membro({
     required this.nome,
     required this.foto,
     required this.cargo,
@@ -31,7 +31,7 @@ class Membro {
   });
 
   factory Membro.fromJson(Map<String, dynamic> json) {
-    return membro(
+    return Membro(
       nome: json['nome'] ?? '',
       foto: json['foto'] ?? '',
       cargo: json['cargo'] ?? '',
@@ -46,10 +46,10 @@ class Video {
   final String url;
   final String thumbnail;
 
-  video({required this.titulo, required this.url, required this.thumbnail});
+  Video({required this.titulo, required this.url, required this.thumbnail});
 
   factory Video.fromJson(Map<String, dynamic> json) {
-    return video(
+    return Video(
       titulo: json['titulo'] ?? '',
       url: json['url'] ?? '',
       thumbnail: json['thumbnail'] ?? '',
@@ -61,15 +61,16 @@ class Video {
 class Atualizacao {
   final String titulo;
   final String descricao;
+  final String data;
 
-  atualizacao({
+  Atualizacao({
     required this.titulo,
     required this.descricao,
     required this.data,
   });
 
   factory Atualizacao.fromJson(Map<String, dynamic> json) {
-    return atualizacao(
+    return Atualizacao(
       titulo: json['titulo'] ?? '',
       descricao: json['descricao'] ?? '',
       data: json['data'] ?? '',
