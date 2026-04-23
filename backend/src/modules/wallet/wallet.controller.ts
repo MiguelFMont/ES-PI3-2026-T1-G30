@@ -28,7 +28,7 @@ export async function getDadosDashboardController (req: Request, res: Response) 
     const {uid} = req.params;
 
     // chama o service 
-    const result = await getDadosDashboardController(uid);
+    const result = await getDadosDashboardService(uid);
 
     // retorna o resultado
     res.status(200).json(result);
