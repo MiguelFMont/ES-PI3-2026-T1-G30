@@ -40,7 +40,7 @@ export async function iniciarCadastroController(req: Request, res: Response) {
                     <h1 style="background: #f4f4f4; padding: 15px; letter-spacing: 8px; border-radius: 8px; display: inline-block;">
                         ${token}
                     </h1>
-                    <p style="color: #888; font-size: 12px;">Este código expira em 15 minutos.</p>
+                    <p style="color: #888; font-size: 12px;">Este código expira em 2 minutos.</p>
                 </div>
             `,
         });
@@ -110,7 +110,7 @@ export async function solicitarRecuperacaoSenhaController(req: Request, res: Res
                     <h1 style="background: #f4f4f4; padding: 15px; letter-spacing: 8px; border-radius: 8px; display: inline-block;">
                         ${token}
                     </h1>
-                    <p style="color: #888; font-size: 12px;">Este código expira em 15 minutos.</p>
+                    <p style="color: #888; font-size: 12px;">Este código expira em 2 minutos.</p>
                 </div>
             `,
         });
@@ -186,7 +186,7 @@ export async function reenviarTokenCadastroController(req: Request, res: Respons
                     <h1 style="background: #f4f4f4; padding: 15px; letter-spacing: 8px; border-radius: 8px; display: inline-block;">
                         ${token}
                     </h1>
-                    <p style="color: #888; font-size: 12px;">Este código expira em 15 minutos.</p>
+                    <p style="color: #888; font-size: 12px;">Este código expira em 2 minutos.</p>
                 </div>
             `,
         });

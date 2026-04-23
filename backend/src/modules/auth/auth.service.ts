@@ -117,8 +117,8 @@ export async function enviarTokenRecuperacaoService(email: string) {
     // Gera token de 5 dígitos
     const token = crypto.randomInt(10000, 99999).toString();
 
-    // Expira em 15 minutos
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    // Expira em 2 minutos
+    const expiresAt = new Date(Date.now() + 2 * 60 * 1000);
 
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
@@ -172,8 +172,8 @@ export async function novaSenhaService(email: string, token: string, novaSenha: 
     // Altera a senha no Firebase Auth
     await getAuth().updateUser(uid, { password: novaSenha });
 
-    // Marca token como usado para não ser reaproveitado
-    await getDb().collection('passwordResetTokens').doc(uid).update({ used: true });
+    // Documento da coleção é deletado para não ocupar espaço desnecessário no banco como é feito na validação de email
+    await getDb().collection('passwordResetTokens').doc(uid).delete();
 
     return { success: true };
 }
@@ -185,7 +185,7 @@ export async function reenviarTokenCadastroService(email: string) {
     if (!doc.exists) throw new Error('Nenhum cadastro pendente encontrado para este e-mail.');
 
     const token = crypto.randomInt(10000, 99999).toString();
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    const expiresAt = new Date(Date.now() + 2 * 60 * 1000);
 
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
