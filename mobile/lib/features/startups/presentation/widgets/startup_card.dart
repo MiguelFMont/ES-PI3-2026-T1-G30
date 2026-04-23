@@ -16,13 +16,13 @@ class StartupCard extends StatelessWidget {
   Color _estagioColor(String estagio) {
     switch (estagio) {
       case 'Em Expansão':
-        return const Color(0xFF6C63FF); // roxo
+        return AppColors.stageExpansion // roxo
       case 'Em Operação':
-        return const Color(0xFF2196F3); // azul
+        return AppColors.stageOperation // azul
       case 'Nova':
-        return const Color(0xFF4CAF50); // verde
+        return AppColors.stageNew; // verde
       default:
-        return Colors.grey;
+        return AppColors.mutedForeground;
     }
   }
 
