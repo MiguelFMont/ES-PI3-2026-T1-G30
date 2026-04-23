@@ -1,10 +1,15 @@
+// Auto: Miguel Fenandes Monteiro
+// RA: 25014808
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:mobile/core/theme/app_colors.dart';
 
-class CampoTexto extends StatelessWidget {
+class CampoTexto extends StatefulWidget {
   final TextEditingController controller;
   final String label;
   final TextInputType? keyboardType;
   final bool obscureText;
+  final List<TextInputFormatter>? inputFormatters;
 
   const CampoTexto({
     super.key,
@@ -12,10 +17,26 @@ class CampoTexto extends StatelessWidget {
     required this.label,
     this.keyboardType,
     this.obscureText = false,
+    this.inputFormatters,
   });
 
   @override
-   Widget build(BuildContext context) {
+  State<CampoTexto> createState() => _CampoTextoState();
+}
+
+class _CampoTextoState extends State<CampoTexto> {
+  // Variável interna do componente para controlar se está escondido ou não
+  late bool _isObscured;
+
+  @override
+  void initState() {
+    super.initState();
+    // A variável interna recebe o valor que foi passado quando o widget foi criado
+    _isObscured = widget.obscureText;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
@@ -31,14 +52,33 @@ class CampoTexto extends StatelessWidget {
         height: 60,
         width: 250,
         child: TextField(
-          controller: controller,
-          keyboardType: keyboardType,
-          obscureText: obscureText,
+          controller: widget.controller,
+          keyboardType: widget.keyboardType,
+          inputFormatters: widget.inputFormatters,
+          obscureText: _isObscured,
           decoration: InputDecoration(
-            hintText: label,
+            suffixIcon: widget.obscureText
+                ? IconButton(
+                    splashColor: Colors.transparent,
+                    highlightColor: Colors.transparent,
+                    icon: Icon(
+                      _isObscured ? Icons.visibility_off : Icons.visibility,
+                      color: AppColors.foreground,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _isObscured = !_isObscured;
+                      });
+                    },
+                  )
+                : null,
+            hintText: widget.label,
             filled: true,
             fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 18,
+            ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,

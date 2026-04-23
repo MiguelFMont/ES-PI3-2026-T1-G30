@@ -4,7 +4,7 @@
   "description": "Pacote dedicado ao Projeto Integrador III, grupo 30, turma 1 da PUC-Campinas.",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "nodemon --exerc ts-node src/server.js",
+    "dev": "nodemon --exec ts-node src/server.ts",
     "build": "tsc",
     "start": "npm run build && node dist/server.js"
   },
@@ -18,11 +18,13 @@
   ],
   "author": "Caio Ávila Marchi, Gabriel Martins de Almeida, Maria Júlia Lazarini Oleto, Miguel Fernandes Monteiro, Samuel Campovilla",
   "dependencies": {
+    "axios": "^1.15.2",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "firebase-admin": "^13.7.0",
     "firebase-functions": "^7.2.2",
+    "resend": "^6.11.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
@@ -30,6 +32,7 @@
     "@types/express": "^5.0.6",
     "@types/node": "^25.4.0",
     "eslint": "^10.0.3",
+    "nodemon": "^3.1.14",
     "prettier": "^3.8.1",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.3"

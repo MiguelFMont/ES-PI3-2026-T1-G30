@@ -1,7 +1,12 @@
+// Autor: Miguel Fernandes Monteiro
+// RA: 25014808
 import 'package:flutter/material.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../../../shared/widgets/campo_texto.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../shared/widgets/mescla_auth_layout.dart';
+import '../../../../shared/widgets/mescla_button.dart';
+
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -38,216 +43,116 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF4A3F8F),
-      body: Stack(
-        children: [
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFFE91E8C), Color(0xFF4A3F8F)],
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-              ),
-            ),
-          ),
-          // logo posicionada no topo
-          Positioned(
-            top: 50,
-            left: 0,
-            right: 0,
-            child: Column(
-              children: [
-                Image.asset(
-                  'assets/images/logoBranca.png',
-                  width: 100,
-                  height: 80,
-                ),
-                Text(
-                  'MesclaInvest',
-                  style: GoogleFonts.nunito(
-                    textStyle: const TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight
-                          .w800, // Deixa a fonte mais gordinha, parecida com a imagem
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Column(
+    return MesclaAuthLayout(
+      children: [
+        Expanded(
+          child: Column(
             children: [
-              const SizedBox(height: 200),
-              Expanded(
-                child: Card(
-                  color: Color.fromARGB(255, 255, 255, 255),
-                  elevation: 4,
-                  margin: EdgeInsets.zero,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(50),
-                    ),
-                  ),
-                  child: Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        Container(
-                          margin: const EdgeInsets.only(bottom: 30, top: 20),
-                          child: const Text(
-                            'Login',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFF2D2558), // darkNavy
-                            ),
-                          ),
-                        ),
-                        CampoTexto(
-                          controller: _emailController,
-                          label: 'E-mail',
-                          keyboardType: TextInputType.emailAddress,
-                        ),
-                        SizedBox(height: 20),
-                        CampoTexto(
-                          controller: _senhaController,
-                          label: 'Senha',
-                          obscureText: true,
-                        ),
-                        Transform.translate(
-                          offset: const Offset(
-                            -16,
-                            -8,
-                          ), // x negativo = esquerda, y negativo = cima
-                          child: Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton(
-                              onPressed: () {},
-                              style: TextButton.styleFrom(
-                                splashFactory: NoSplash.splashFactory,
-                                overlayColor: Colors.transparent,
-                              ),
-                              child: const Text(
-                                'Esqueceu sua senha?',
-                                style: TextStyle(
-                                  color: Color.fromARGB(70, 0, 0, 0),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: 32),
-                        _isLoading
-                            ? const CircularProgressIndicator(
-                                color: Color(0xFF4A3F8F),
-                                backgroundColor: Color(0xFFE91E8C),
-                              )
-                            : Transform.translate(
-                                offset: const Offset(0, -30),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(12),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.08),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: ElevatedButton(
-                                    onPressed: _login,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Color(0xFFE91E8C),
-                                      foregroundColor: const Color.fromARGB(
-                                        255,
-                                        0,
-                                        0,
-                                        0,
-                                      ),
-                                      elevation: 0,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        side: BorderSide.none,
-                                      ),
-                                    ),
-                                    child: SizedBox(
-                                      height: 60,
-                                      width: 200,
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            const Text(
-                                              'Login',
-                                              style: TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.w600,
-                                                color: Color.fromARGB(
-                                                  255,
-                                                  255,
-                                                  255,
-                                                  255,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                        Container(
-                          alignment: Alignment.center,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Text(
-                                'Não tem uma conta?',
-                                style: TextStyle(
-                                  color: Color.fromARGB(60, 0, 0, 0),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.pushNamed(context, '/register');
-                                },
-                                style: TextButton.styleFrom(
-                                  splashFactory: NoSplash.splashFactory,
-                                  overlayColor: Colors.transparent,
-                                ),
-                                child: const Text(
-                                  'Cadastre-se',
-                                  style: TextStyle(
-                                    color: Color(0xFF4A3F8F),
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+              _titulo(),
+              CampoTexto(
+                controller: _emailController,
+                label: 'E-mail',
+                keyboardType: TextInputType.emailAddress,
               ),
+              const SizedBox(height: 16),
+              CampoTexto(
+                controller: _senhaController,
+                label: 'Senha',
+                obscureText: true,
+              ),
+              _linkEsqueceuSenha(),
+              const SizedBox(height: 32),
+              _isLoading
+                  ? const CircularProgressIndicator(
+                      color: AppColors.foreground,
+                      backgroundColor: AppColors.primary,
+                    )
+                  : _botaoLogin(),
+              const SizedBox(height: 55),
+              _linkCadastro(),
             ],
           ),
-        ],
+        ),
+      ],
+    );
+  }
+
+  // --- Widgets auxiliares ---
+
+  Widget _botaoLogin() {
+    return MesclaButton(label: 'Entrar', onPressed: _login);
+  }
+
+  Widget _titulo() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 30, top: 20),
+      child: const Text(
+        'Login',
+        style: TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.w800,
+          color: AppColors.foreground, // Alterado
+        ),
       ),
+    );
+  }
+
+  Widget _linkEsqueceuSenha() {
+    return Transform.translate(
+      offset: const Offset(-16, -8),
+      child: Align(
+        alignment: Alignment.centerRight,
+        child: TextButton(
+          onPressed: () {
+            Navigator.pushNamed(context, '/forgot-password');
+          },
+          style: TextButton.styleFrom(
+            splashFactory: NoSplash.splashFactory,
+            overlayColor: Colors.transparent,
+          ),
+          child: const Text(
+            'Esqueceu sua senha?',
+            style: TextStyle(
+              color: AppColors.accent, // Alterado
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _linkCadastro() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Text(
+          'Não tem uma conta?',
+          style: TextStyle(
+            color: AppColors.mutedForeground, // Alterado
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        TextButton(
+          onPressed: () {
+            Navigator.pushReplacementNamed(context, '/register');
+          },
+          style: TextButton.styleFrom(
+            splashFactory: NoSplash.splashFactory,
+            overlayColor: Colors.transparent,
+          ),
+          child: const Text(
+            'Cadastre-se',
+            style: TextStyle(
+              color: AppColors.accent, // Alterado
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
