@@ -22,6 +22,23 @@ class StartupService {
         ? Uri.parse('$_baseUrl/startups?estagio=$estagio')
         : Uri.parse('$_baseUrl/startups');
 
+    try {
+      final response = await https.get(url).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        final List<dynamic> data = body['data'];
+        return data.map((json) => Startup.fromJson(json)).toList();
+      } else {
+        throw StartupApiException(
+          'Falha ao carregar catálogo',
+          response.statusCode,
+        );
+      }
+    }catch (e) {
+      if (e is StartupApiException) rethrow;
+      throw StartupApiException('Erro de conexão com o servidor. Verifique sua internet.')
+    }
     // Faz a requisição GET
     final response = await http.get(url);
 
@@ -32,4 +49,14 @@ class StartupService {
     }
     throw Exception('Erro ao buscar startups: ${response.statusCode}');
   }
+}
+
+class StartupApiException implements Exception {
+  final String message;
+  final int? statusCode;
+
+  StartupApiException(this.message, [this.statusCode]);
+
+  @override
+  String toString() => 'StartupApiException: $message (Status: $statusCode)';
 }
