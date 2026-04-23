@@ -166,8 +166,8 @@ export async function novaSenhaService(email: string, token: string, novaSenha: 
     // Altera a senha no Firebase Auth
     await getAuth().updateUser(uid, { password: novaSenha });
 
-    // Marca token como usado para não ser reaproveitado
-    await getDb().collection('passwordResetTokens').doc(uid).update({ used: true });
+    // Documento da coleção é deletado para não ocupar espaço desnecessário no banco como é feito na validação de email
+    await getDb().collection('passwordResetTokens').doc(uid).delete();
 
     return { success: true };
 }
