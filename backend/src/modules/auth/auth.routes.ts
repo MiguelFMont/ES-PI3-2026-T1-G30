@@ -1,19 +1,23 @@
 import { Router } from "express";
 import {
-    cadastroController,
+    iniciarCadastroController,
+    concluirCadastroController,
     loginController,
-    solicitarRecuperacaoSenha,
-    redefinirSenha
+    solicitarRecuperacaoSenhaController,
+    redefinirSenhaController,
+    validarTokenController,
+    reenviarTokenCadastroController
 } from "./auth.controller";
 
 
 const router = Router();
 
-router.post('/register', cadastroController);
+router.post('/register/iniciar', iniciarCadastroController);
+router.post('/register/concluir', concluirCadastroController);
+router.post('/register/reenviar-token', reenviarTokenCadastroController);
 router.post('/login', loginController);
-router.post('/recuperar-senha', solicitarRecuperacaoSenha);
-router.post('/redefinir-senha', redefinirSenha);
-
-
+router.post('/recuperar-senha', solicitarRecuperacaoSenhaController);
+router.post('/redefinir-senha', redefinirSenhaController);
+router.post('/validar-token', validarTokenController)
 
 export default router;

@@ -4,8 +4,9 @@ import 'package:flutter/material.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../../../shared/widgets/campo_texto.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../shared/widgets/mescla_logo.dart';
+import '../../../../shared/widgets/mescla_auth_layout.dart';
 import '../../../../shared/widgets/mescla_button.dart';
+
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -42,70 +43,44 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    final tecladoAberto = MediaQuery.of(context).viewInsets.bottom > 0;
-    return Scaffold(
-      backgroundColor: AppColors.card,
-      resizeToAvoidBottomInset: true,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          child: SizedBox(
-            height:
-                MediaQuery.of(context).size.height -
-                MediaQuery.of(context).padding.top -
-                MediaQuery.of(context).padding.bottom,
-            child: Column(
-              children: [
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  height: tecladoAberto ? 40 : 80,
-                ),
-                _logo(),
-                const SizedBox(height: 32),
-                Expanded(
-                  child: Column(
-                    children: [
-                      _titulo(),
-                      CampoTexto(
-                        controller: _emailController,
-                        label: 'E-mail',
-                        keyboardType: TextInputType.emailAddress,
-                      ),
-                      const SizedBox(height: 16),
-                      CampoTexto(
-                        controller: _senhaController,
-                        label: 'Senha',
-                        obscureText: true,
-                      ),
-                      _linkEsqueceuSenha(),
-                      const SizedBox(height: 32),
-                      _isLoading
-                          ? const CircularProgressIndicator(
-                              color: AppColors.foreground,
-                              backgroundColor: AppColors.primary,
-                            )
-                          : _botaoLogin(),
-                      const SizedBox(height: 55),
-                      _linkCadastro(),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+    return MesclaAuthLayout(
+      children: [
+        Expanded(
+          child: Column(
+            children: [
+              _titulo(),
+              CampoTexto(
+                controller: _emailController,
+                label: 'E-mail',
+                keyboardType: TextInputType.emailAddress,
+              ),
+              const SizedBox(height: 16),
+              CampoTexto(
+                controller: _senhaController,
+                label: 'Senha',
+                obscureText: true,
+              ),
+              _linkEsqueceuSenha(),
+              const SizedBox(height: 32),
+              _isLoading
+                  ? const CircularProgressIndicator(
+                      color: AppColors.foreground,
+                      backgroundColor: AppColors.primary,
+                    )
+                  : _botaoLogin(),
+              const SizedBox(height: 55),
+              _linkCadastro(),
+            ],
           ),
         ),
-      ),
+      ],
     );
   }
 
   // --- Widgets auxiliares ---
 
   Widget _botaoLogin() {
-    return MesclaButton(label: 'login', onPressed: _login);
-  }
-
-  Widget _logo() {
-    return const MesclaLogo();
+    return MesclaButton(label: 'Entrar', onPressed: _login);
   }
 
   Widget _titulo() {

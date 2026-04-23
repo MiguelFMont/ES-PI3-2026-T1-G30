@@ -19,7 +19,7 @@ class MesclaInvestApp extends StatelessWidget {
 
         return PageRouteBuilder(
           settings: settings,
-          pageBuilder: (context, _, __) => builder(context),
+          pageBuilder: (context, _, _) => builder(context),
           transitionsBuilder: (_, animation, __, child) {
             var tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
                 .chain(CurveTween(curve: Curves.ease));

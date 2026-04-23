@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:mobile/shared/widgets/mescla_button.dart';
 import '../../../../shared/widgets/campo_texto.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../shared/widgets/mescla_logo.dart';
+import '../../../../shared/widgets/mescla_auth_layout.dart';
+import '../../data/repositories/auth_repository.dart';
 
 class RecoverPasswordPage extends StatefulWidget {
   const RecoverPasswordPage({super.key});
@@ -15,67 +16,87 @@ class RecoverPasswordPage extends StatefulWidget {
 
 class _RecoverPasswordPageState extends State<RecoverPasswordPage> {
   final _emailController = TextEditingController();
+  final AuthRepository _authRepository = AuthRepository();
+
+  bool _isLoading = false;
 
   Future<void> _recoverPassword() async {
+    final email = _emailController.text.trim();
+
+    if (email.isEmpty) {
+      _mostrarMensagem('Por favor, digite seu e-mail.', isError: true);
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final mensagem = await _authRepository.solicitarCodigoRecuperacao(email);
+
+      _mostrarMensagem(mensagem, isError: false);
+
+      if (mounted) {
+        Navigator.pushNamed(
+          context,
+          '/token-verification',
+          arguments: {'email': email, 'fluxo': 'senha'},
+        );
+      }
+    } catch (e) {
+      _mostrarMensagem(e.toString(), isError: true);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  // Função auxiliar para mostrar o Snackbar
+  void _mostrarMensagem(String mensagem, {required bool isError}) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Instruções de recuperação enviadas para o e-mail'),
+      SnackBar(
+        content: Text(mensagem),
+        backgroundColor: isError ? Colors.red : Colors.green,
       ),
     );
   }
 
   @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final tecladoAberto = MediaQuery.of(context).viewInsets.bottom > 0;
-    return Scaffold(
-      backgroundColor: AppColors.card,
-      resizeToAvoidBottomInset: true,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          child: SizedBox(
-            height:
-                MediaQuery.of(context).size.height -
-                MediaQuery.of(context).padding.top -
-                MediaQuery.of(context).padding.bottom,
+    return MesclaAuthLayout(
+      children: [
+        _imagemDeCadeado(),
+        const SizedBox(height: 32),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Column(
               children: [
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  height: tecladoAberto ? 40 : 80,
+                _mensagemDeInstrucao(),
+                CampoTexto(
+                  controller: _emailController,
+                  label: 'E-mail',
+                  keyboardType: TextInputType.emailAddress,
                 ),
-                _logo(),
-                const SizedBox(height: 32),
-                _imagemDeCadeado(),
-                const SizedBox(height: 32),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Column(
-                      children: [
-                        _mensagemDeInstrucao(),
-                        CampoTexto(
-                          controller: _emailController,
-                          label: 'E-mail',
-                          keyboardType: TextInputType.emailAddress,
-                        ),
 
-                        const SizedBox(height: 20),
-                        _botaoRecuperarSenha(),
-                      ],
-                    ),
-                  ),
-                ),
+                const SizedBox(height: 20),
+                _botaoRecuperarSenha(),
               ],
             ),
           ),
         ),
-      ),
+      ],
     );
-  }
-
-  Widget _logo() {
-    return const MesclaLogo();
   }
 
   Widget _mensagemDeInstrucao() {
@@ -109,6 +130,10 @@ class _RecoverPasswordPageState extends State<RecoverPasswordPage> {
   }
 
   Widget _botaoRecuperarSenha() {
-    return MesclaButton(label: 'Recuperar Senha', onPressed: _recoverPassword);
+    return _isLoading
+        ? const Center(
+            child: CircularProgressIndicator(color: AppColors.primary),
+          )
+        : MesclaButton(label: 'Recuperar Senha', onPressed: _recoverPassword);
   }
 }
