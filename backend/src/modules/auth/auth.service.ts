@@ -17,14 +17,14 @@ export async function iniciarCadastroService(dados: {
     senha: string;
 }) {
     const token = crypto.randomInt(10000, 99999).toString();
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    const expiresAt = new Date(Date.now() + 2 * 60 * 1000);
 
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
     // Salva dados temporários no Firestore (ainda não cria o usuário)
     await getDb().collection('pendingUsers').doc(dados.email).set({
         ...dados,
-        tokenHash,
+        token: tokenHash,
         expiresAt: admin.firestore.Timestamp.fromDate(expiresAt),
         used: false,
     });
@@ -41,9 +41,11 @@ export async function concluirCadastroService(email: string, token: string) {
 
     const dados = doc.data()!;
 
+    const inputHash = crypto.createHash('sha256').update(token).digest('hex');
+
     if (dados.used) throw new Error('Este código já foi utilizado.');
     if (dados.expiresAt.toDate() < new Date()) throw new Error('Código expirado. Solicite um novo cadastro.');
-    if (dados.token !== token) throw new Error('Código inválido.');
+    if (dados.token !== inputHash) throw new Error('Código inválido.');
 
     // Cria o usuário no Firebase Auth
     const userRecord = await getAuth().createUser({
@@ -124,7 +126,7 @@ export async function enviarTokenRecuperacaoService(email: string) {
 
     // Salva no Firestore com contador de tentativas
     await getDb().collection('passwordResetTokens').doc(user.uid).set({
-        tokenHash,
+        token: tokenHash,
         expiresAt: admin.firestore.Timestamp.fromDate(expiresAt),
         used: false,
         tentativas: 0,
@@ -190,7 +192,7 @@ export async function reenviarTokenCadastroService(email: string) {
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
     await docRef.update({
-        tokenHash,
+        token: tokenHash,
         expiresAt: admin.firestore.Timestamp.fromDate(expiresAt),
         used: false,
     });
