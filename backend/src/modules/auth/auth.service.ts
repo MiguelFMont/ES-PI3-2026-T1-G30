@@ -18,12 +18,14 @@ export async function iniciarCadastroService(dados: {
 }) {
     const token = crypto.randomInt(10000, 99999).toString();
     const expiresAt = new Date(Date.now() + 2 * 60 * 1000);
-
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    // Remove a senha do objeto usando desestruturação
+    const { senha, ...dadosParaSalvar } = dados;
 
     // Salva dados temporários no Firestore (ainda não cria o usuário)
     await getDb().collection('pendingUsers').doc(dados.email).set({
-        ...dados,
+        ...dadosParaSalvar,
         token: tokenHash,
         expiresAt: admin.firestore.Timestamp.fromDate(expiresAt),
         used: false,
@@ -33,7 +35,7 @@ export async function iniciarCadastroService(dados: {
 }
 
 // 2. CONCLUI O CADASTRO — valida token e cria o usuário
-export async function concluirCadastroService(email: string, token: string) {
+export async function concluirCadastroService(email: string, token: string, senha: string) {
     const docRef = getDb().collection('pendingUsers').doc(email);
     const doc = await docRef.get();
 
@@ -50,7 +52,7 @@ export async function concluirCadastroService(email: string, token: string) {
     // Cria o usuário no Firebase Auth
     const userRecord = await getAuth().createUser({
         email: dados.email,
-        password: dados.senha,
+        password: senha,
         displayName: dados.nomeCompleto,
     });
 

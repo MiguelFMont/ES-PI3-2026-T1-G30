@@ -9,12 +9,12 @@ import {
     validarTokenService,
     reenviarTokenCadastroService
 } from './auth.service';
-import { env } from '../../config/env';
 import { sendError, sendSuccess } from '../../shared/utils/response.utils';
-import { json } from 'zod';
 
 
-const resend = new Resend(env.resendApi);
+function getResend() {
+  return new Resend(process.env.RESEND_API_KEY);
+}
 
 export async function iniciarCadastroController(req: Request, res: Response) {
     try {
@@ -29,7 +29,7 @@ export async function iniciarCadastroController(req: Request, res: Response) {
         console.log('Tentando enviar email para:', email);
 
         // ← adiciona o envio do email
-        const emailResult = await resend.emails.send({
+        const emailResult = await getResend().emails.send({
             from: 'MesclaInvest <noreply@mesclainvest.online>',
             to: email,
             subject: 'Confirme seu cadastro no MesclaInvest',
@@ -57,13 +57,13 @@ export async function iniciarCadastroController(req: Request, res: Response) {
 
 export async function concluirCadastroController(req: Request, res: Response) {
     try {
-        const { email, token } = req.body;
+        const { email, token, senha } = req.body;
 
         if (!email || !token) {
             return sendError(res, 'E-mail e token são obrigatórios.', 400);
         }
 
-        const result = await concluirCadastroService(email, token);
+        const result = await concluirCadastroService(email, token, senha);
 
         return sendSuccess(res, result, 201);
 
@@ -98,7 +98,7 @@ export async function solicitarRecuperacaoSenhaController(req: Request, res: Res
         const { token } = await enviarTokenRecuperacaoService(email);
 
         // Dispara o e-mail
-        await resend.emails.send({
+        await getResend().emails.send({
             from: 'MesclaInvest <noreply@mesclainvest.online>',
             to: email,
             subject: 'Seu código de recuperação de senha',
@@ -115,14 +115,14 @@ export async function solicitarRecuperacaoSenhaController(req: Request, res: Res
             `,
         });
 
-        return sendSuccess(res, json({ message: 'código enviado com sucesso!' }));
+        return sendSuccess(res, { message: 'código enviado com sucesso!' });
 
     } catch (error: any) {
         console.error('Erro ao solicitar recuperação:', error);
         if (error.code === 'auth/user-not-found') {
 
             // Segurança: Não avisar que o e-mail não existe
-            return sendSuccess(res, json({ message: 'Se o e-mail existir, o código foi enviado.' }));
+            return sendSuccess(res, { message: 'Se o e-mail existir, o código foi enviado.' });
         }
         return sendError(res, error.message || 'Erro interno do servidor.');
     }
@@ -141,7 +141,7 @@ export async function redefinirSenhaController(req: Request, res: Response) {
         // Tenta trocar a senha (a validação do token já acontece lá dentro)
         await novaSenhaService(email, token, novaSenha);
 
-        return sendSuccess(res, json({ message: 'Senha alterada com sucesso!' }));
+        return sendSuccess(res, { message: 'Senha alterada com sucesso!' });
 
     } catch (error: any) {
         // Retornamos status 400 para erros da nossa regra de negócio (ex: token inválido)
@@ -175,7 +175,7 @@ export async function reenviarTokenCadastroController(req: Request, res: Respons
 
         const { token } = await reenviarTokenCadastroService(email);
 
-        await resend.emails.send({
+        await getResend().emails.send({
             from: 'MesclaInvest <noreply@mesclainvest.online>',
             to: email,
             subject: 'Novo código de confirmação - MesclaInvest',

@@ -33,9 +33,9 @@ class AuthRepository {
   }
 
   // 2. CONCLUIR CADASTRO
-  Future<void> concluirCadastro(String email, String token) async {
+  Future<void> concluirCadastro(String email, String token, String senha) async {
     try {
-      await _datasource.concluirCadastro(email, token);
+      await _datasource.concluirCadastro(email, token, senha);
     } catch (e) {
       throw Exception(e.toString().replaceAll('Exception: ', ''));
     }

@@ -97,6 +97,7 @@ class _CadastroPageState extends State<CadastroPage> {
       '/token-verification',
       arguments: {
         'email': _emailController.text,
+        'senha': _senhaController.text,
         'fluxo': 'cadastro' // <-- A "flag" que avisa a tela do token o que fazer depois
       }
     );
