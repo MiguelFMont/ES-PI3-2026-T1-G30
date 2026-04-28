@@ -1,6 +1,5 @@
 /* 
 significado do arquivo:
-
 ele vai herdar a classe base do repositório do firestore 
 acessa a wallets/{uid}/operações
 ordena esses dados por data, de forma decrescente (mais recente primeiro)

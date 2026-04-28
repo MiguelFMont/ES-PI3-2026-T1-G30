@@ -1,34 +1,29 @@
 // Autor: Miguel Fernandes Monteiro
 // RA: 25014808
 
-// Framework HTTP
 import express from 'express';
-// Middlewares globais
 import cors from 'cors';
-// Configurações
-import { initializeFirebase } from './config/firebase';
 import { corsOptions } from './config/cors';
-// Rotas
 import routes from './modules/index';
-// Middlewares compartilhados
 import { errorMiddleware } from './shared/errors/error.middleware';
+import { onRequest } from 'firebase-functions/v2/https';
+import { defineSecret } from 'firebase-functions/params';
 
-import * as functions from 'firebase-functions'; // utilizado para não usar o servidor local
+import './config/firebase';
 
-// Inicializa o Firebase antes de qualquer coisa
-initializeFirebase();
+const RESEND_API_KEY = defineSecret('RESEND_API_KEY');
 
 const app = express();
 
-// Middlewares globais
 app.use(cors(corsOptions));
-app.use(express.json()); // interpreta o body das requisições como JSON
-
-// Rotas
-app.use('/api/v1', routes);
-
-// Erro — deve ser o último middleware registrado
+app.use(express.json());
+app.use('/v1', routes);
 app.use(errorMiddleware);
 
-
-export const api = functions.https.onRequest(app);
+export const api = onRequest(
+    {
+        secrets: [RESEND_API_KEY],
+        region: 'southamerica-east1',
+    },
+    app
+);

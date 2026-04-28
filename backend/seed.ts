@@ -1,7 +1,7 @@
-import { initializeFirebase, getDb } from './src/config/firebase';
+import { getDb } from './src/config/firebase';
 import { Timestamp } from 'firebase-admin/firestore';   
 
-initializeFirebase();
+// initializeFirebase();
 
 const db = getDb();
 
