@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mobile/core/theme/app_colors.dart';
 import '../../domain/startup_model.dart';
 
 class StartupCard extends StatelessWidget {
@@ -16,9 +17,9 @@ class StartupCard extends StatelessWidget {
   Color _estagioColor(String estagio) {
     switch (estagio) {
       case 'Em Expansão':
-        return AppColors.stageExpansion // roxo
+        return AppColors.stageExpansion; // roxo
       case 'Em Operação':
-        return AppColors.stageOperation // azul
+        return AppColors.stageOperation; // azul
       case 'Nova':
         return AppColors.stageNew; // verde
       default:

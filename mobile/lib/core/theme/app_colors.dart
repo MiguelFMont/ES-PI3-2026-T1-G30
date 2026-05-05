@@ -31,7 +31,7 @@ class AppColors {
   //── Estágios das Startups ──────────────────────────────────────
 
   static const Color stageExpansion = chart4; //roxo
-  static const Colot stageOperation = chart2 // azul
-  static const Color stageNew  = success // verde
+  static const Color stageOperation = chart2; // azul
+  static const Color stageNew  = success; // verde
 
 }

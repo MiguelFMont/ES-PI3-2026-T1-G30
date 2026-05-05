@@ -1,18 +1,18 @@
 import 'dart:convert';
 import 'dart:io' show Platform; 
-import 'package: flutter/foundation.dart' show KIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import '../domain/startup_model.dart';
 
 class StartupService {
   // URL base do backend
   static String get _baseUrl {
-    if (KIsWeb) {
+    if (kIsWeb) {
       return 'https://localhost:3000';
     } else if (Platform.isAndroid){
-      return 'https://10.0.2.2:3000' // é para o emulador de android
+      return 'https://10.0.2.2:3000'; // é para o emulador de android
     } else {
-      return 'https://127.0.0.1:3000' // para emulador de ios 
+      return 'https://127.0.0.1:3000'; // para emulador de ios 
     }
   }
 
@@ -22,32 +22,22 @@ class StartupService {
         ? Uri.parse('$_baseUrl/startups?estagio=$estagio')
         : Uri.parse('$_baseUrl/startups');
 
-    try {
-      final response = await https.get(url).timeout(const Duration(seconds: 10));
+    try{
+      final response = await http.get(url);
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
         final List<dynamic> data = body['data'];
         return data.map((json) => Startup.fromJson(json)).toList();
       } else {
-        throw StartupApiException(
-          'Falha ao carregar catálogo',
-          response.statusCode,
-        );
+         throw Exception('Erro ao buscar startups: ${response.statusCode}');
       }
-    }catch (e) {
-      if (e is StartupApiException) rethrow;
-      throw StartupApiException('Erro de conexão com o servidor. Verifique sua internet.')
+    } catch (e) {
+      if (e is StartupApiException) {
+        rethrow;
+      }
+      throw StartupApiException('Erro de conexão com o servidor. Verifique sua internet.');
     }
-    // Faz a requisição GET
-    final response = await http.get(url);
-
-    if (response.statusCode == 200) {
-      final body = jsonDecode(response.body);
-      final List<dynamic> data = body['data'];
-      return data.map((json) => Startup.fromJson(json)).toList();
-    }
-    throw Exception('Erro ao buscar startups: ${response.statusCode}');
   }
 }
 
