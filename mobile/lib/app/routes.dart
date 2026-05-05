@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
-import '../../features/auth/presentation/pages/login_page.dart';
-import '../../features/auth/presentation/pages/welcome_page.dart';
-import '../../features/auth/presentation/pages/cadastro_page.dart';
-import '../../features/auth/presentation/pages/recover_password_page.dart';
-import '../../features/auth/presentation/pages/reset_password_page.dart';
-import '../../features/auth/presentation/pages/token_verification_page.dart';
-import '../../features/perfil/presentation/pages/perfil_page.dart';
+import '../features/auth/presentation/pages/login_page.dart';
+import '../features/auth/presentation/pages/welcome_page.dart';
+import '../features/auth/presentation/pages/cadastro_page.dart';
+import '../features/auth/presentation/pages/recover_password_page.dart';
+import '../features/auth/presentation/pages/reset_password_page.dart';
+import '../features/auth/presentation/pages/token_verification_page.dart';
+import '../features/perfil/presentation/pages/perfil_page.dart';
+import '../features/auth/presentation/pages/splash_page.dart';
 
 class AppRoutes {
+  static const splash = '/';
   static const login = '/login';
   static const register = '/register';
   static const home = '/home';
@@ -18,7 +20,7 @@ class AppRoutes {
   static const perfil = '/perfil';
 
   static Map<String, Widget Function(BuildContext)> get routes => {
-
+    splash: (_) => SplashPage(),
     welcome: (_) => WelcomePage(),
     register: (_) => CadastroPage(),
     login: (_) => LoginPage(),
@@ -29,4 +31,3 @@ class AppRoutes {
     perfil: (_) => PerfilPage(),
   };
 }
-  

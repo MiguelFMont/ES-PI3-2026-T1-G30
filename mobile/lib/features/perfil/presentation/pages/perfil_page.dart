@@ -3,8 +3,9 @@
 
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../data/repositories/perfil_repository.dart';
+import '../../domain/perfil_models.dart';
 
-// ─── Página principal ──────────────────────────────────────────────────────
 class PerfilPage extends StatefulWidget {
   const PerfilPage({super.key});
 
@@ -14,83 +15,120 @@ class PerfilPage extends StatefulWidget {
 
 class _PerfilPageState extends State<PerfilPage> {
   bool _notificacoesAtivas = true;
+  final _repo = PerfilRepository();
+  late Future<PerfilModel> _perfilFuture;
+
+  static const double _cardOverlap = 48.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _perfilFuture = _repo.buscarPerfil();
+  }
+
+  String _iniciais(String nome) {
+    final partes = nome.trim().split(' ');
+    if (partes.length >= 2) return '${partes.first[0]}${partes.last[0]}';
+    return partes.first[0];
+  }
+
+  String _formatarReais(double valor) {
+    final partes = valor.toStringAsFixed(0).split('');
+    final buffer = StringBuffer();
+    int count = 0;
+    for (int i = partes.length - 1; i >= 0; i--) {
+      if (count > 0 && count % 3 == 0) buffer.write('.');
+      buffer.write(partes[i]);
+      count++;
+    }
+    return 'R\$ ${buffer.toString().split('').reversed.join()}';
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.secondary,
-      body: CustomScrollView(
-        slivers: [
-          _buildAppBar(),
-          SliverToBoxAdapter(
+      extendBodyBehindAppBar: true,
+      body: FutureBuilder<PerfilModel>(
+        future: _perfilFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            );
+          }
+          if (snapshot.hasError) {
+            return _buildErro(snapshot.error.toString());
+          }
+          return _buildScrollContent(snapshot.data!);
+        },
+      ),
+    );
+  }
+
+  Widget _buildScrollContent(PerfilModel data) {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Gradiente + título rolam junto com o conteúdo
+          _buildGradientHeader(),
+
+          // Card e seções sobem sobre o gradiente via translate negativo
+          Transform.translate(
+            offset: const Offset(0, -_cardOverlap),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 16),
-
-                  _ProfileCard(
-                    nome: 'João da Silva',
-                    email: 'joao.silva@puccampinas.edu.br',
-                    patrimonio: 'R\$ 91.105',
-                    startups: 3,
-                    desde: 'Fev 2026',
-                  ),
-
+                  _buildProfileCard(data),
                   const SizedBox(height: 24),
-
-                  const _SectionLabel(titulo: 'CONTA'),
+                  _buildSectionLabel('CONTA'),
                   const SizedBox(height: 8),
-                  _MenuSection(
-                    tiles: [
-                      _MenuTileData(
-                        icon: Icons.person_outline,
-                        titulo: 'Informações Pessoais',
-                        subtitulo: 'Nome, email, telefone',
-                        onTap: () {},
+                  _buildMenuSection([
+                    _buildMenuTile(
+                      icon: Icons.person_outline,
+                      titulo: 'Informações Pessoais',
+                      subtitulo: 'Nome, email, telefone',
+                      onTap: () {},
+                    ),
+                    _buildMenuTile(
+                      icon: Icons.lock_outline,
+                      titulo: 'Segurança e Senha',
+                      subtitulo: 'Alterar senha, verificação',
+                      onTap: () {},
+                    ),
+                    _buildMenuTile(
+                      icon: Icons.notifications_outlined,
+                      titulo: 'Notificações',
+                      subtitulo: 'Push, email, alertas de preço',
+                      trailing: Switch(
+                        value: _notificacoesAtivas,
+                        onChanged: (v) =>
+                            setState(() => _notificacoesAtivas = v),
+                        activeColor: AppColors.primary,
                       ),
-                      _MenuTileData(
-                        icon: Icons.lock_outline,
-                        titulo: 'Segurança e Senha',
-                        subtitulo: 'Alterar senha, verificação',
-                        onTap: () {},
-                      ),
-                      _MenuTileData(
-                        icon: Icons.notifications_outlined,
-                        titulo: 'Notificações',
-                        subtitulo: 'Push, email, alertas de preço',
-                        trailing: Switch(
-                          value: _notificacoesAtivas,
-                          onChanged: (v) => setState(() => _notificacoesAtivas = v),
-                          activeColor: AppColors.primary,
-                        ),
-                      ),
-                    ],
-                  ),
-
+                    ),
+                  ]),
                   const SizedBox(height: 24),
-
-                  const _SectionLabel(titulo: 'CARTEIRA DIGITAL'),
+                  _buildSectionLabel('CARTEIRA DIGITAL'),
                   const SizedBox(height: 8),
-                  _MenuSection(
-                    tiles: [
-                      _MenuTileData(
-                        icon: Icons.account_balance_wallet_outlined,
-                        titulo: 'Saldo e Depósitos',
-                        subtitulo: 'Saldo: R\$ 50.000',
-                        onTap: () {},
-                      ),
-                      _MenuTileData(
-                        icon: Icons.credit_card_outlined,
-                        titulo: 'Métodos de Pagamento',
-                        subtitulo: 'Cartões e contas vinculadas',
-                        onTap: () {},
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 32),
+                  _buildMenuSection([
+                    _buildMenuTile(
+                      icon: Icons.account_balance_wallet_outlined,
+                      titulo: 'Saldo e Depósitos',
+                      subtitulo: 'Saldo: ${_formatarReais(data.saldo)}',
+                      onTap: () {},
+                    ),
+                    _buildMenuTile(
+                      icon: Icons.credit_card_outlined,
+                      titulo: 'Métodos de Pagamento',
+                      subtitulo: 'Cartões e contas vinculadas',
+                      onTap: () {},
+                    ),
+                  ]),
+                  const SizedBox(height: _cardOverlap + 32),
                 ],
               ),
             ),
@@ -100,63 +138,76 @@ class _PerfilPageState extends State<PerfilPage> {
     );
   }
 
-  SliverAppBar _buildAppBar() {
-    return SliverAppBar(
-      expandedHeight: 80,
-      pinned: true,
-      flexibleSpace: FlexibleSpaceBar(
-        titlePadding: const EdgeInsets.only(left: 20, bottom: 14),
-        title: const Text(
-          'Meu Perfil',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 22,
-          ),
+  Widget _buildGradientHeader() {
+    final statusBarHeight = MediaQuery.of(context).padding.top;
+    return Container(
+      height: statusBarHeight + 160,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          stops: [0.55, 0.55],
+          colors: [AppColors.primary, Color(0xFFE92C6B)],
         ),
-        background: Container(
-          // primary (pink) → accent (navy azul) — mesma lógica visual do design
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [AppColors.primary, AppColors.accent],
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
+      ),
+      child: Padding(
+        padding: EdgeInsets.only(
+          top: statusBarHeight + 8,
+          left: 24,
+          bottom: _cardOverlap + 8,
+        ),
+        child: const Align(
+          alignment: Alignment.bottomLeft,
+          child: Text(
+            'Meu Perfil',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 26,
+              letterSpacing: 0.1,
             ),
           ),
         ),
       ),
     );
   }
-}
 
-// ══════════════════════════════════════════════════════════════════════════════
-// WIDGETS AUXILIARES
-// ══════════════════════════════════════════════════════════════════════════════
-
-// ─── Card do perfil ───────────────────────────────────────────────────────────
-class _ProfileCard extends StatelessWidget {
-  final String nome;
-  final String email;
-  final String patrimonio;
-  final int startups;
-  final String desde;
-
-  const _ProfileCard({
-    required this.nome,
-    required this.email,
-    required this.patrimonio,
-    required this.startups,
-    required this.desde,
-  });
-
-  String get _iniciais {
-    final partes = nome.trim().split(' ');
-    if (partes.length >= 2) return '${partes.first[0]}${partes.last[0]}';
-    return partes.first[0];
+  Widget _buildErro(String mensagem) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.cloud_off,
+              color: AppColors.mutedForeground,
+              size: 48,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              mensagem,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.mutedForeground),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+              icon: const Icon(Icons.refresh),
+              label: const Text('Tentar novamente'),
+              onPressed: () =>
+                  setState(() => _perfilFuture = _repo.buscarPerfil()),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildProfileCard(PerfilModel data) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -174,14 +225,14 @@ class _ProfileCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              _Avatar(iniciais: _iniciais),
+              _buildAvatar(data.nome),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      nome,
+                      data.nome,
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -190,61 +241,74 @@ class _ProfileCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      email,
+                      data.email,
                       style: const TextStyle(
                         fontSize: 12,
                         color: AppColors.mutedForeground,
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const _BadgesRow(),
                   ],
                 ),
               ),
             ],
           ),
+          Row(
+            children: [
+              _buildBadge(
+                texto: 'Investidor Mescla',
+                cor: AppColors.muted,
+                textoCor: AppColors.accent,
+              ),
+              const SizedBox(width: 6),
+              _buildBadge(
 
+                // TODO: Criar uma função que verifica se o usuario tem MFA ativo
+                // se tiver → badge 
+                //texto: verificado,
+                //cor: sucess 
+                texto: 'Não Verificado',
+                cor: AppColors.destructive.withOpacity(0.12),
+                textoCor: AppColors.destructive,
+              ),
+            ],
+          ),
           const SizedBox(height: 20),
+          // linha de separar as informações
           const Divider(color: AppColors.muted, height: 1),
           const SizedBox(height: 16),
-
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _StatItem(label: 'Patrimônio', valor: patrimonio),
-              _StatDivider(),
-              _StatItem(label: 'Startups', valor: startups.toString()),
-              _StatDivider(),
-              _StatItem(label: 'Desde', valor: desde),
+              _buildStatItem(
+                label: 'Patrimônio',
+                valor: _formatarReais(data.patrimonio),
+              ),
+              Container(width: 1, height: 32, color: AppColors.muted),
+              _buildStatItem(
+                label: 'Startups',
+                valor: data.totalStartups.toString(),
+              ),
+              Container(width: 1, height: 32, color: AppColors.muted),
+              _buildStatItem(label: 'Desde', valor: data.desde),
             ],
           ),
         ],
       ),
     );
   }
-}
 
-// ─── Avatar circular com iniciais ─────────────────────────────────────────────
-class _Avatar extends StatelessWidget {
-  final String iniciais;
-  const _Avatar({required this.iniciais});
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildAvatar(String nome) {
     return Container(
       width: 56,
       height: 56,
       decoration: const BoxDecoration(
         shape: BoxShape.circle,
-        gradient: LinearGradient(
-          colors: [AppColors.primary, AppColors.accent],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: AppColors.primary,
       ),
       child: Center(
         child: Text(
-          iniciais.toUpperCase(),
+          _iniciais(nome).toUpperCase(),
           style: const TextStyle(
             color: Colors.white,
             fontSize: 20,
@@ -254,44 +318,12 @@ class _Avatar extends StatelessWidget {
       ),
     );
   }
-}
 
-// ─── Badges "Investidor Mescla" e "Verificado" ────────────────────────────────
-class _BadgesRow extends StatelessWidget {
-  const _BadgesRow();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        _Badge(
-          texto: 'Investidor Mescla',
-          cor: AppColors.muted,
-          textoCor: AppColors.accent,
-        ),
-        const SizedBox(width: 6),
-        _Badge(
-          texto: 'Verificado',
-          cor: AppColors.success.withOpacity(0.12),
-          textoCor: AppColors.success,
-        ),
-      ],
-    );
-  }
-}
-
-class _Badge extends StatelessWidget {
-  final String texto;
-  final Color cor;
-  final Color textoCor;
-  const _Badge({
-    required this.texto,
-    required this.cor,
-    required this.textoCor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildBadge({
+    required String texto,
+    required Color cor,
+    required Color textoCor,
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
@@ -308,16 +340,8 @@ class _Badge extends StatelessWidget {
       ),
     );
   }
-}
 
-// ─── Item de estatística ──────────────────────────────────────────────────────
-class _StatItem extends StatelessWidget {
-  final String label;
-  final String valor;
-  const _StatItem({required this.label, required this.valor});
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildStatItem({required String label, required String valor}) {
     return Column(
       children: [
         Text(
@@ -339,22 +363,8 @@ class _StatItem extends StatelessWidget {
       ],
     );
   }
-}
 
-class _StatDivider extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(width: 1, height: 32, color: AppColors.muted);
-  }
-}
-
-// ─── Label de seção (ex: "CONTA") ────────────────────────────────────────────
-class _SectionLabel extends StatelessWidget {
-  final String titulo;
-  const _SectionLabel({required this.titulo});
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildSectionLabel(String titulo) {
     return Text(
       titulo,
       style: const TextStyle(
@@ -365,31 +375,8 @@ class _SectionLabel extends StatelessWidget {
       ),
     );
   }
-}
 
-// ─── Seção de menu agrupado ───────────────────────────────────────────────────
-class _MenuTileData {
-  final IconData icon;
-  final String titulo;
-  final String subtitulo;
-  final VoidCallback? onTap;
-  final Widget? trailing;
-
-  _MenuTileData({
-    required this.icon,
-    required this.titulo,
-    required this.subtitulo,
-    this.onTap,
-    this.trailing,
-  });
-}
-
-class _MenuSection extends StatelessWidget {
-  final List<_MenuTileData> tiles;
-  const _MenuSection({required this.tiles});
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildMenuSection(List<Widget> tiles) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.card,
@@ -407,30 +394,25 @@ class _MenuSection extends StatelessWidget {
           final isLast = i == tiles.length - 1;
           return Column(
             children: [
-              _MenuTile(data: tiles[i]),
+              tiles[i],
               if (!isLast)
-                const Divider(
-                  height: 1,
-                  indent: 56,
-                  color: AppColors.muted,
-                ),
+                const Divider(height: 1, indent: 56, color: AppColors.muted),
             ],
           );
         }),
       ),
     );
   }
-}
 
-// ─── Tile individual do menu ──────────────────────────────────────────────────
-class _MenuTile extends StatelessWidget {
-  final _MenuTileData data;
-  const _MenuTile({required this.data});
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildMenuTile({
+    required IconData icon,
+    required String titulo,
+    required String subtitulo,
+    VoidCallback? onTap,
+    Widget? trailing,
+  }) {
     return ListTile(
-      onTap: data.onTap,
+      onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       leading: Container(
         width: 36,
@@ -439,10 +421,10 @@ class _MenuTile extends StatelessWidget {
           color: AppColors.primary.withOpacity(0.08),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: Icon(data.icon, color: AppColors.primary, size: 20),
+        child: Icon(icon, color: AppColors.primary, size: 20),
       ),
       title: Text(
-        data.titulo,
+        titulo,
         style: const TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w600,
@@ -450,11 +432,16 @@ class _MenuTile extends StatelessWidget {
         ),
       ),
       subtitle: Text(
-        data.subtitulo,
+        subtitulo,
         style: const TextStyle(fontSize: 12, color: AppColors.mutedForeground),
       ),
-      trailing: data.trailing ??
-          const Icon(Icons.chevron_right, color: AppColors.mutedForeground, size: 20),
+      trailing:
+          trailing ??
+          const Icon(
+            Icons.chevron_right,
+            color: AppColors.mutedForeground,
+            size: 20,
+          ),
     );
   }
 }
