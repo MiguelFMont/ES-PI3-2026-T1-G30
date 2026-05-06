@@ -41,13 +41,13 @@ class AuthDatasource {
     }
   }
 
-  Future<void> concluirCadastro(String email, String token) async {
+  Future<void> concluirCadastro(String email, String token, String senha) async {
     final url = Uri.parse('${AppHttpClient.baseUrl}/auth/register/concluir');
 
     final response = await http.post(
       url,
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'token': token}),
+      body: jsonEncode({'email': email, 'token': token, 'senha': senha}),
     );
 
     if (response.statusCode != 200 && response.statusCode != 201) {
