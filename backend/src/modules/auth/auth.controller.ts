@@ -35,7 +35,7 @@ export async function iniciarCadastroController(req: Request, res: Response) {
         console.log('Tentando enviar email para:', email);
 
         // ← adiciona o envio do email
-        const emailResult = await resend.emails.send({
+        const emailResult = await getResendClient().emails.send({
             from: 'MesclaInvest <noreply@mesclainvest.online>',
             to: email,
             subject: 'Confirme seu cadastro no MesclaInvest',
@@ -104,7 +104,7 @@ export async function solicitarRecuperacaoSenhaController(req: Request, res: Res
         const { token } = await enviarTokenRecuperacaoService(email);
 
         // Dispara o e-mail
-        await resend.emails.send({
+        await getResendClient().emails.send({
             from: 'MesclaInvest <noreply@mesclainvest.online>',
             to: email,
             subject: 'Seu código de recuperação de senha',
@@ -181,7 +181,7 @@ export async function reenviarTokenCadastroController(req: Request, res: Respons
 
         const { token } = await reenviarTokenCadastroService(email);
 
-        await resend.emails.send({
+        await getResendClient().emails.send({
             from: 'MesclaInvest <noreply@mesclainvest.online>',
             to: email,
             subject: 'Novo código de confirmação - MesclaInvest',
