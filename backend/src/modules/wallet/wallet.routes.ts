@@ -10,9 +10,10 @@ o :uid é o ID do usuário que será passado na URL
 
 import { Router } from 'express';
 import { getHistoricoOperacoesController, getDadosDashboardController } from './wallet.controller';
+import { authMiddleware } from '../../shared/http/auth.middleware';
 const router = Router();
 
-router.get('/historico/:uid', getHistoricoOperacoesController);
-router.get('/dashboard/:uid', getDadosDashboardController);
+router.get('/historico/:uid', authMiddleware, getHistoricoOperacoesController);
+router.get('/dashboard/:uid', authMiddleware, getDadosDashboardController);
 
 export default router;
