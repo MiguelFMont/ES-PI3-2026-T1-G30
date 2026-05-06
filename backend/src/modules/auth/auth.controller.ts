@@ -14,7 +14,13 @@ import { sendError, sendSuccess } from '../../shared/utils/response.utils';
 import { json } from 'zod';
 
 
-const resend = new Resend(env.resendApi);
+function getResendClient() {
+    if (!env.resendApi) {
+        throw new Error('RESEND_API_KEY não configurada');
+    }
+
+    return new Resend(env.resendApi);
+}
 
 export async function iniciarCadastroController(req: Request, res: Response) {
     try {
