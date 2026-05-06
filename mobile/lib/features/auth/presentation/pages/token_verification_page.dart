@@ -55,6 +55,7 @@ class _TokenVerificationPageState extends State<TokenVerificationPage> {
     final args =
         ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
     final String email = args['email'];
+    final String senha = args['senha'];
     final String fluxo = args['fluxo']; // Vai ser 'cadastro' ou 'senha'
 
     final token = _otpController.text;
@@ -69,7 +70,7 @@ class _TokenVerificationPageState extends State<TokenVerificationPage> {
     try {
       if (fluxo == 'cadastro') {
         // ---- FLUXO DE CADASTRO ----
-        await _authRepository.concluirCadastro(email, token);
+        await _authRepository.concluirCadastro(email, token, senha);
 
         if (mounted) {
           _showSnackBar('Conta ativada com sucesso!', isError: false);

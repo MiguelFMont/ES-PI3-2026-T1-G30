@@ -6,16 +6,24 @@ import cors from 'cors';
 import { corsOptions } from './config/cors';
 import routes from './modules/index';
 import { errorMiddleware } from './shared/errors/error.middleware';
-import * as functions from 'firebase-functions';
+import { onRequest } from 'firebase-functions/v2/https';
+import { defineSecret } from 'firebase-functions/params';
 
-// Firebase inicializa automaticamente ao importar o config
 import './config/firebase';
+
+const RESEND_API_KEY = defineSecret('RESEND_API_KEY');
 
 const app = express();
 
 app.use(cors(corsOptions));
 app.use(express.json());
-app.use('/api/v1', routes);
+app.use('/v1', routes);
 app.use(errorMiddleware);
 
-export const api = functions.https.onRequest(app);
+export const api = onRequest(
+    {
+        secrets: [RESEND_API_KEY],
+        region: 'southamerica-east1',
+    },
+    app
+);
