@@ -26,6 +26,71 @@ class _PerfilPageState extends State<PerfilPage> {
     _perfilFuture = _repo.buscarPerfil();
   }
 
+  void _recarregarPerfil() {
+    setState(() => _perfilFuture = _repo.buscarPerfil());
+  }
+
+  Future<void> _abrirDepositoDialog() async {
+    final controller = TextEditingController();
+    final valorDigitado = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Adicionar saldo'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(
+              labelText: 'Valor em reais',
+              hintText: 'Ex: 150.00',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(controller.text),
+              child: const Text('Adicionar'),
+            ),
+          ],
+        );
+      },
+    );
+    controller.dispose();
+
+    if (valorDigitado == null) return;
+
+    final valor = double.tryParse(valorDigitado.trim().replaceAll(',', '.'));
+    if (valor == null || valor <= 0) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Informe um valor monetário válido.')),
+      );
+      return;
+    }
+
+    try {
+      await _repo.adicionarSaldo(valor);
+      if (!mounted) return;
+
+      _recarregarPerfil();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Saldo adicionado com sucesso.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString().replaceFirst('Exception: ', '')),
+        ),
+      );
+    }
+  }
+
   String _iniciais(String nome) {
     final partes = nome.trim().split(' ');
     if (partes.length >= 2) return '${partes.first[0]}${partes.last[0]}';
@@ -119,7 +184,7 @@ class _PerfilPageState extends State<PerfilPage> {
                       icon: Icons.account_balance_wallet_outlined,
                       titulo: 'Saldo e Depósitos',
                       subtitulo: 'Saldo: ${_formatarReais(data.saldo)}',
-                      onTap: () {},
+                      onTap: _abrirDepositoDialog,
                     ),
                     _buildMenuTile(
                       icon: Icons.credit_card_outlined,
@@ -198,8 +263,7 @@ class _PerfilPageState extends State<PerfilPage> {
               ),
               icon: const Icon(Icons.refresh),
               label: const Text('Tentar novamente'),
-              onPressed: () =>
-                  setState(() => _perfilFuture = _repo.buscarPerfil()),
+              onPressed: _recarregarPerfil,
             ),
           ],
         ),
