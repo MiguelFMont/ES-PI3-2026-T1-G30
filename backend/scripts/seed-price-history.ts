@@ -1,6 +1,6 @@
 /**
  * Samuel Campovilla
- * Seed idempotente para criar o ponto inicial de historico de preco.
+ * Seed para criar o ponto inicial de historico de preco.
  *
  * Como executar:
  *   npm run seed:price-history
@@ -9,6 +9,20 @@
  * - credenciais validas para o Firebase Admin SDK;
  * - acesso de escrita na colecao "priceHistory";
  * - acesso de leitura na colecao "startups".
+ * 
+ * Funcionamento:
+ * lê todos os documentos da coleção startups
+ * pega precoTokenAtualCentavos de cada startup
+ * valida se esse preço existe e é um inteiro positivo
+ * verifica se a startup já tem um ponto inicial em:
+ * priceHistory/{startupId}/points/initial
+ * ou, por compatibilidade, qualquer ponto com motivo = "PRECO_INICIAL"
+ * se já existir, não faz nada nessa startup
+ * se não existir, cria:
+ * priceHistory/{startupId}/points/initial
+ * Por que isso existe
+ * Esse ponto inicial serve para o sistema ter um preço de partida formal para cada startup. 
+ * Isso vai ser usado depois por: dashboard de valorização, trilha histórica de preço e referência para evolução do token
  */
 
 import { FieldValue } from 'firebase-admin/firestore';

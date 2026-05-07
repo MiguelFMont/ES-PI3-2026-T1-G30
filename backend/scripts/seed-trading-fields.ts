@@ -1,6 +1,6 @@
 /**
  * Samuel Campovilla
- * Seed idempotente para adicionar campos de negociacao nas startups.
+ * Seed para adicionar campos de negociacao nas startups.
  *
  * Como executar:
  *   npm run seed:trading-fields
@@ -8,6 +8,9 @@
  * Requisitos:
  * - credenciais validas para o Firebase Admin SDK;
  * - acesso de escrita na colecao "startups".
+ * 
+ * Na coleção inicial modelada, faltaram campos essenciais para a lógica de negociação 
+ * Essa seed adiciona estes campos às coleções de startups
  */
 
 import { FieldValue } from 'firebase-admin/firestore';

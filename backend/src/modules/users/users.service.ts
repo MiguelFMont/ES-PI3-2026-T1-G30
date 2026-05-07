@@ -5,20 +5,16 @@ import { UsersRepo } from "./users.repo";
 export class UsersService {
   private repo = new UsersRepo();
 
+  // Converte a leitura da wallet em um saldo consistente para o perfil.
+  // É usada apenas por getPerfil e agora considera apenas saldoCentavos.
   private getSaldoInCents(
     wallet: Awaited<ReturnType<UsersRepo["findWalletByUid"]>>,
   ) {
-    if (wallet?.saldoCentavos !== undefined) {
-      return wallet.saldoCentavos;
-    }
-
-    if (wallet?.saldo !== undefined) {
-      return Math.round(wallet.saldo * 100);
-    }
-
-    return 0;
+    return wallet?.saldoCentavos ?? 0;
   }
 
+  // Monta o payload do endpoint de perfil do usuário.
+  // É chamada por users.controller.ts e consulta usuário + wallet em paralelo.
   async getPerfil(uid: string) {
     const [user, wallet] = await Promise.all([
       this.repo.findByUid(uid),
@@ -35,6 +31,7 @@ export class UsersService {
       });
     }
 
+    // O perfil usa o saldo da wallet já no padrão novo da Fase 1.
     const saldoCentavos = this.getSaldoInCents(wallet);
     const totalStartups = wallet?.startupIds?.length ?? 0;
     const patrimonioCentavos = Math.round(saldoCentavos * 1.05);
