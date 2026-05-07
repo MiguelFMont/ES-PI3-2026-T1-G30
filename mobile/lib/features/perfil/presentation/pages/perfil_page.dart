@@ -97,16 +97,23 @@ class _PerfilPageState extends State<PerfilPage> {
     return partes.first[0];
   }
 
-  String _formatarReais(double valor) {
-    final partes = valor.toStringAsFixed(0).split('');
+  String _formatarCentavos(int valorEmCentavos) {
+    final valorAbsoluto = valorEmCentavos.abs();
+    final reais = valorAbsoluto ~/ 100;
+    final centavos = valorAbsoluto % 100;
+    final partes = reais.toString().split('');
     final buffer = StringBuffer();
     int count = 0;
+
     for (int i = partes.length - 1; i >= 0; i--) {
       if (count > 0 && count % 3 == 0) buffer.write('.');
       buffer.write(partes[i]);
       count++;
     }
-    return 'R\$ ${buffer.toString().split('').reversed.join()}';
+
+    final prefixo = valorEmCentavos < 0 ? '-R\$ ' : 'R\$ ';
+    final reaisFormatados = buffer.toString().split('').reversed.join();
+    return '$prefixo$reaisFormatados,${centavos.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -183,7 +190,8 @@ class _PerfilPageState extends State<PerfilPage> {
                     _buildMenuTile(
                       icon: Icons.account_balance_wallet_outlined,
                       titulo: 'Saldo e Depósitos',
-                      subtitulo: 'Saldo: ${_formatarReais(data.saldo)}',
+                      subtitulo:
+                          'Saldo: ${_formatarCentavos(data.saldoCentavos)}',
                       onTap: _abrirDepositoDialog,
                     ),
                     _buildMenuTile(
@@ -346,7 +354,7 @@ class _PerfilPageState extends State<PerfilPage> {
             children: [
               _buildStatItem(
                 label: 'Patrimônio',
-                valor: _formatarReais(data.patrimonio),
+                valor: _formatarCentavos(data.patrimonioCentavos),
               ),
               Container(width: 1, height: 32, color: AppColors.muted),
               _buildStatItem(

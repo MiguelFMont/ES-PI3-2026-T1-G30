@@ -10,16 +10,9 @@ export type WalletBalanceUpdateResult = {
   saldoAnteriorCentavos: number;
   valorAdicionadoCentavos: number;
   saldoAtualCentavos: number;
-  saldoAnterior: number;
-  valorAdicionado: number;
-  saldoAtual: number;
 };
 
 export class WalletRepo {
-  private toAmount(cents: number): number {
-    return cents / 100;
-  }
-
   private readBalanceInCents(
     walletData: FirebaseFirestore.DocumentData | undefined,
   ): number {
@@ -82,9 +75,6 @@ export class WalletRepo {
         saldoAnteriorCentavos,
         valorAdicionadoCentavos: amountInCents,
         saldoAtualCentavos,
-        saldoAnterior: this.toAmount(saldoAnteriorCentavos),
-        valorAdicionado: this.toAmount(amountInCents),
-        saldoAtual: this.toAmount(saldoAtualCentavos),
       };
     });
   }

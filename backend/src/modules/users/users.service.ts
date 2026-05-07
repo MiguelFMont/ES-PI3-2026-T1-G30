@@ -35,17 +35,17 @@ export class UsersService {
       });
     }
 
-    const saldo = this.getSaldoInCents(wallet) / 100;
+    const saldoCentavos = this.getSaldoInCents(wallet);
     const totalStartups = wallet?.startupIds?.length ?? 0;
-    const patrimonio = saldo * 1.05;
+    const patrimonioCentavos = Math.round(saldoCentavos * 1.05);
 
     return {
       uid: user.uid,
       nome: user.nomeCompleto?.trim() ?? "Usuário",
       email: user.email,
       telefone: user.telefone ?? null,
-      saldo,
-      patrimonio,
+      saldoCentavos,
+      patrimonioCentavos,
       totalStartups,
       desde,
     };
