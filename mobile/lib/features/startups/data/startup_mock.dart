@@ -1,14 +1,16 @@
 import '../domain/startup_model.dart';
 
-// Alterne para false para voltar a consumir o backend real
-const bool kUseMock = true;
+// usando apenas para teste, depois volta pra api real
+const bool kUseMock = false;
 
 final List<Startup> mockStartups = [
   Startup(
     id: 'mock-001',
     nome: 'VerdeTech',
-    logo: 'https://ui-avatars.com/api/?name=VT&size=128&background=22c55e&color=fff&bold=true',
-    descricao: 'Monitoramento de safras por IoT e IA para pequenos agricultores',
+    logo:
+        'https://ui-avatars.com/api/?name=VT&size=128&background=22c55e&color=fff&bold=true',
+    descricao:
+        'Monitoramento de safras por IoT e IA para pequenos agricultores',
     estagio: 'Em Expansão',
     capitalAportado: 1200000,
     totalTokens: 50000,
@@ -48,7 +50,8 @@ final List<Startup> mockStartups = [
     atualizacoes: [
       Atualizacao(
         titulo: 'Expansão para o Mato Grosso',
-        descricao: 'Firmamos contrato com cooperativa de soja para pilotar '
+        descricao:
+            'Firmamos contrato com cooperativa de soja para pilotar '
             'em 80 propriedades a partir de julho.',
         data: '2025-04-10',
       ),
@@ -57,7 +60,8 @@ final List<Startup> mockStartups = [
   Startup(
     id: 'mock-002',
     nome: 'MedConnect',
-    logo: 'https://ui-avatars.com/api/?name=MC&size=128&background=3b82f6&color=fff&bold=true',
+    logo:
+        'https://ui-avatars.com/api/?name=MC&size=128&background=3b82f6&color=fff&bold=true',
     descricao: 'Telemedicina acessível para regiões com baixa cobertura médica',
     estagio: 'Em Operação',
     capitalAportado: 320000,
@@ -86,7 +90,8 @@ final List<Startup> mockStartups = [
     atualizacoes: [
       Atualizacao(
         titulo: 'Certificação CFM aprovada',
-        descricao: 'Recebemos o aval do Conselho Federal de Medicina para '
+        descricao:
+            'Recebemos o aval do Conselho Federal de Medicina para '
             'expandir o modelo de consulta assíncrona.',
         data: '2025-03-02',
       ),
@@ -100,7 +105,8 @@ final List<Startup> mockStartups = [
   Startup(
     id: 'mock-003',
     nome: 'EduSpace',
-    logo: 'https://ui-avatars.com/api/?name=ES&size=128&background=a855f7&color=fff&bold=true',
+    logo:
+        'https://ui-avatars.com/api/?name=ES&size=128&background=a855f7&color=fff&bold=true',
     descricao: 'Plataforma adaptativa de ensino com IA para escolas públicas',
     estagio: 'Nova',
     capitalAportado: 80000,
@@ -128,7 +134,8 @@ final List<Startup> mockStartups = [
     atualizacoes: [
       Atualizacao(
         titulo: 'MVP aprovado pela Secretaria de Educação',
-        descricao: 'Avaliação pedagógica concluída com nota máxima. '
+        descricao:
+            'Avaliação pedagógica concluída com nota máxima. '
             'Expansão para mais 10 escolas prevista para agosto.',
         data: '2025-04-28',
       ),
