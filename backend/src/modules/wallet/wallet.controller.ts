@@ -1,24 +1,37 @@
-import { NextFunction, Request, Response } from "express";
-import { addBalanceService } from "./wallet.service";
+/*
+Autora: Maria Júlia Lazarini Oleto
+RA: 25006031
+significado do arquivo:
 
-// Controller do endpoint de adicionar saldo.
-// Esta função é usada em wallet.routes.ts na rota POST /add-balance.
-// O papel dela é transformar a requisição HTTP em parâmetros simples
-// para a camada de service e devolver a resposta ao cliente.
-export async function addBalanceController(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) {
-  try {
-    // req.user?.uid é preenchido pelo authMiddleware depois da validação do token.
-    // req.body.amount é o valor enviado pelo cliente no JSON da requisição.
-    const result = await addBalanceService(req.user?.uid, req.body.amount);
+recebe a requisição http da busca 
+pega o uid do usuário pelos parametros da rota (/historico/:uid)
+chama o service 
+retorna o resultado com status 200
+*/
 
-    // A resposta devolve os dados calculados pelo repo:
-    // saldo anterior, valor adicionado e saldo final da carteira.
+import  {Request, Response } from 'express';
+import { getHistoricoOperacoesService, getDadosDashboardService} from './wallet.service';
+
+// controller histórico de operações 
+export async function getHistoricoOperacoesController (req: Request, res: Response) {
+    // pega o uid do usuário pelos parametros da rota 
+    const uid = req.params.uid as string;
+
+    // chama o service 
+    const result = await getHistoricoOperacoesService(uid);
+
+    // retorna o resultado 
     res.status(200).json(result);
-  } catch (error) {
-    next(error);
-  }
+}
+
+// controller dos dados do dashboard 
+export async function getDadosDashboardController (req: Request, res: Response) {
+    // pega o uid do usuário pelos parametros da rota 
+    const uid = req.params.uid as string;
+
+    // chama o service 
+    const result = await getDadosDashboardService(uid);
+
+    // retorna o resultado
+    res.status(200).json(result);
 }
