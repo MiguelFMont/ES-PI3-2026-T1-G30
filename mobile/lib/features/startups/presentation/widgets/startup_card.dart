@@ -57,7 +57,7 @@ class StartupCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withValues(alpha: 0.06),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -79,7 +79,7 @@ class StartupCard extends StatelessWidget {
                     height: 48,
                     fit: BoxFit.cover,
                     // Fallback se a imagem não carregar
-                    errorBuilder: (_, __, ___) => Container(
+                    errorBuilder: (_, _, _) => Container(
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
@@ -133,7 +133,7 @@ class StartupCard extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: _estagioColor(startup.estagio).withOpacity(0.15),
+                    color: _estagioColor(startup.estagio).withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(

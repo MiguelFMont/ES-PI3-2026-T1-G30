@@ -132,7 +132,7 @@ class _CatalogPageState extends State<CatalogPage> {
             'Ecossistema Mescla · PUC-Campinas',
             style: TextStyle(
               fontSize: 13,
-              color: Colors.white.withOpacity(0.85),
+              color: Colors.white.withValues(alpha: 0.85),
             ),
           ),
         ],
