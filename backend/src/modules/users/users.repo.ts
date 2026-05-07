@@ -1,7 +1,6 @@
-
 // Autor: Miguel Fernandes Monteiro — RA: 25014808
 
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirestore } from "firebase-admin/firestore";
 
 export interface UserRecord {
   uid: string;
@@ -13,7 +12,8 @@ export interface UserRecord {
 }
 
 export interface WalletRecord {
-  saldo: number;
+  saldoCentavos?: number;
+  saldo?: number;
   startupIds?: string[];
 }
 
@@ -21,7 +21,7 @@ export class UsersRepo {
   private db = getFirestore();
 
   async findByUid(uid: string): Promise<UserRecord | null> {
-    const snap = await this.db.collection('users').doc(uid).get();
+    const snap = await this.db.collection("users").doc(uid).get();
     if (!snap.exists) return null;
     return { uid: snap.id, ...snap.data() } as UserRecord;
   }

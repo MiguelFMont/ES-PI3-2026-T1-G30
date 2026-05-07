@@ -23,14 +23,37 @@ class PerfilRepository {
     );
 
     if (response.statusCode == 200) {
-    final json = jsonDecode(response.body);
-    print('>>> perfil JSON: $json'); // remover depois
-    return PerfilModel.fromJson(json);
-  }else if (response.statusCode == 401) {
+      final json = jsonDecode(response.body);
+      return PerfilModel.fromJson(json);
+    } else if (response.statusCode == 401) {
       throw Exception('Sessão expirada. Faça login novamente.');
     } else {
       final body = jsonDecode(response.body);
       throw Exception(body['erro'] ?? 'Erro ao buscar perfil');
     }
+  }
+
+  Future<void> adicionarSaldo(double amount) async {
+    final token = await SessionManager.getToken();
+    if (token == null) throw Exception('Sessão expirada. Faça login novamente.');
+
+    final uri = Uri.parse('${AppHttpClient.baseUrl}/wallet/add-balance');
+
+    final response = await http.post(
+      uri,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'amount': amount}),
+    );
+
+    if (response.statusCode == 200) {
+      return;
+    }
+
+    final body =
+        response.body.isNotEmpty ? jsonDecode(response.body) : <String, dynamic>{};
+    throw Exception(body['message'] ?? 'Erro ao adicionar saldo');
   }
 }

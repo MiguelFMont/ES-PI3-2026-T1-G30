@@ -12,6 +12,5 @@ required.forEach((key) => {
 export const env = {
   NODE_ENV: process.env.NODE_ENV || 'development',
   projectId: process.env.APP_PROJECT_ID!,
-  resendApi: process.env.RESEND_API_KEY,
   firebaseApiKey: process.env.APP_API_KEY,
 };
