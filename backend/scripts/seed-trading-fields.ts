@@ -12,7 +12,7 @@
 
 import { FieldValue } from 'firebase-admin/firestore';
 import { getDb } from '../src/config/firebase';
-
+// O tipo StartupDoc representa a estrutura dos documentos na coleção "startups".
 type StartupDoc = {
   nome?: unknown;
   totalTokens?: unknown;
@@ -21,14 +21,16 @@ type StartupDoc = {
   precoTokenAtualCentavos?: unknown;
   descontoVendaDiretaBps?: unknown;
 };
-
+// Valores padrao para os campos de negociacao, caso estejam ausentes.
 const DEFAULT_PRECO_TOKEN_CENTAVOS = 1000;
 const DEFAULT_DESCONTO_VENDA_DIRETA_BPS = 1000;
-
+// Esta função verifica se um objeto possui um campo específico como propriedade direta (não herdada).
+// isso é importante para distinguir entre campos que realmente existem no documento 
+// e aqueles que podem estar ausentes ou herdados da cadeia de protótipos.
 function hasOwnField<T extends object>(data: T, field: keyof any): boolean {
   return Object.prototype.hasOwnProperty.call(data, field);
 }
-
+// Esta função formata um rótulo legível para uma startup, usando seu nome e ID do documento.
 function formatStartupLabel(docId: string, data: StartupDoc): string {
   const nome =
     typeof data.nome === 'string' && data.nome.trim().length > 0
@@ -37,11 +39,13 @@ function formatStartupLabel(docId: string, data: StartupDoc): string {
 
   return `${nome} (${docId})`;
 }
-
+// A função principal que executa o processo de seed.
 async function seedTradingFields(): Promise<void> {
   const db = getDb();
   const snapshot = await db.collection('startups').get();
-
+  // Variáveis para manter contagem de quantas startups foram atualizadas ou ignoradas.
+  // Isso ajuda a fornecer um resumo claro no final do processo de seed.
+  // No projeto serve para monitorar o resultado da execução do seed - é opcinal, mas boas práticas de  desenvolvimento recomendam fornecer feedback claro sobre o que o script fez.
   let updatedCount = 0;
   let skippedAlreadyCompleteCount = 0;
   let skippedMissingTotalTokensCount = 0;
@@ -116,7 +120,7 @@ async function seedTradingFields(): Promise<void> {
   );
   console.log('[seed:trading-fields] Seed concluido com sucesso.');
 }
-
+// Executa a função de seed e lida com erros de forma adequada.
 seedTradingFields()
   .then(() => process.exit(0))
   .catch((error: unknown) => {
