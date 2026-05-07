@@ -3,6 +3,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import '../domain/startup_model.dart';
+import 'startup_mock.dart';
 
 class StartupService {
   // URL base do backend
@@ -18,6 +19,12 @@ class StartupService {
 
   // Busca todas as startups, com filtro opcional por estágio
   Future<List<Startup>> listarStartups({String? estagio}) async {
+    if (kUseMock) {
+      await Future.delayed(const Duration(milliseconds: 600));
+      if (estagio == null || estagio.isEmpty) return List.of(mockStartups);
+      return mockStartups.where((s) => s.estagio == estagio).toList();
+    }
+
     final url = estagio != null && estagio.isNotEmpty
         ? Uri.parse('$_baseUrl/startups?estagio=$estagio')
         : Uri.parse('$_baseUrl/startups');
