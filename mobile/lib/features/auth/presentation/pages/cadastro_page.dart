@@ -4,9 +4,10 @@ import 'package:flutter/material.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../../../shared/widgets/campo_texto.dart';
 import '../../../../shared/widgets/campo_data.dart';
-import '../../../../shared/widgets/mescla_logo.dart';
+import '../../../../shared/widgets/mescla_auth_layout.dart';
 import '../../../../shared/formatters/cpf_formatter.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../shared/widgets/mescla_button.dart';
 
 class CadastroPage extends StatefulWidget {
   const CadastroPage({super.key});
@@ -63,84 +64,75 @@ class _CadastroPageState extends State<CadastroPage> {
   }
 
   Future<void> _cadastrar() async {
-    if (_dataNascimento == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Preencha sua data de nascimento')),
-      );
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    try {
-      await _repository.cadastro(
-        _dataNascimento!.toIso8601String(),
-        _nomeController.text,
-        _emailController.text,
-        _cpfController.text,
-        _telefoneController.text,
-        _senhaController.text,
-      );
-
-      if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/login');
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
-    } finally {
-      setState(() => _isLoading = false);
-    }
+  // 1. Validação simples antes de chamar a API
+  if (!_emailController.text.contains('@')) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Digite um e-mail válido.'), backgroundColor: Colors.red)
+    );
+    return;
   }
+  if (_senhaController.text.length < 6) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('A senha deve ter pelo menos 6 caracteres.'), backgroundColor: Colors.red)
+    );
+    return;
+  }
+
+  setState(() => _isLoading = true);
+
+  try {
+    await _repository.iniciarCadastro(
+      _dataNascimento!.toIso8601String(),
+      _nomeController.text,
+      _emailController.text,
+      _cpfController.text,
+      _telefoneController.text,
+      _senhaController.text,
+    );
+
+    if (!mounted) return;
+    
+    Navigator.pushNamed(
+      context, 
+      '/token-verification',
+      arguments: {
+        'email': _emailController.text,
+        'senha': _senhaController.text,
+        'fluxo': 'cadastro' // <-- A "flag" que avisa a tela do token o que fazer depois
+      }
+    );
+
+  } catch (e) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(e.toString()), backgroundColor: Colors.red)
+    );
+  } finally {
+    setState(() => _isLoading = false);
+  }
+}
 
   @override
   Widget build(BuildContext context) {
-    final tecladoAberto = MediaQuery.of(context).viewInsets.bottom > 0;
 
-    return Scaffold(
-      backgroundColor: AppColors.card,
-      resizeToAvoidBottomInset: true,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          child: SizedBox(
-            height:
-                MediaQuery.of(context).size.height -
-                MediaQuery.of(context).padding.top -
-                MediaQuery.of(context).padding.bottom,
+    return MesclaAuthLayout(
+      children: [
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Column(
               children: [
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  height: tecladoAberto ? 40 : 80,
-                ),
-                _logo(),
-                const SizedBox(height: 32),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Column(
-                      children: [
-                        Expanded(child: _paginasFormulario()),
-                        _indicadorEtapas(),
-                        const SizedBox(height: 8),
-                        _linkLogin(),
-                        const SizedBox(height: 16),
-                      ],
-                    ),
-                  ),
-                ),
+                Expanded(child: _paginasFormulario()),
+                _indicadorEtapas(),
+                const SizedBox(height: 8),
+                _linkLogin(),
+                const SizedBox(height: 16),
               ],
             ),
           ),
         ),
-      ),
+      ],
     );
-  }
-
-  Widget _logo() {
-    return const MesclaLogo();
   }
 
   Widget _paginasFormulario() {
@@ -311,85 +303,11 @@ class _CadastroPageState extends State<CadastroPage> {
     );
   }
 
-  Widget _botaoAvancar() {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: ElevatedButton(
-        onPressed: _irAvancar,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: AppColors.card,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        child: const SizedBox(
-          height: 60,
-          width: 200,
-          child: Center(
-            child: Text(
-              'Avançar',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: AppColors.card,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget _botaoAvancar() =>
+      MesclaButton(label: 'Avançar', onPressed: _irAvancar);
 
-  Widget _botaoCadastrar() {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.mutedForeground.withOpacity(0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: ElevatedButton(
-        onPressed: _cadastrar,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: AppColors.card,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        child: const SizedBox(
-          height: 60,
-          width: 200,
-          child: Center(
-            child: Text(
-              'Cadastrar',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: AppColors.card,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget _botaoCadastrar() =>
+      MesclaButton(label: 'Cadastrar', onPressed: _cadastrar);
 
   Widget _botaoVoltar() {
     return TextButton(

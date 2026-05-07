@@ -18,17 +18,19 @@
   ],
   "author": "Caio Ávila Marchi, Gabriel Martins de Almeida, Maria Júlia Lazarini Oleto, Miguel Fernandes Monteiro, Samuel Campovilla",
   "dependencies": {
+    "axios": "^1.15.2",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "firebase-admin": "^13.7.0",
     "firebase-functions": "^7.2.2",
+    "resend": "^6.11.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
-    "@types/node": "^25.4.0",
+    "@types/node": "^25.6.0",
     "eslint": "^10.0.3",
     "nodemon": "^3.1.14",
     "prettier": "^3.8.1",

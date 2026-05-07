@@ -11,5 +11,6 @@ required.forEach((key) => {
 // Exporta as variáveis tipadas para uso no restante da aplicação
 export const env = {
   NODE_ENV: process.env.NODE_ENV || 'development',
-  projectId: process.env.APP_PROJECT_ID,
+  projectId: process.env.APP_PROJECT_ID!,
+  firebaseApiKey: process.env.APP_API_KEY,
 };
