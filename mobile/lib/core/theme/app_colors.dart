@@ -28,6 +28,12 @@ class AppColors {
   static const Color chart4 = Color(0xFF9C27B0);
   static const Color chart5 = Color(0xFF00BCD4);
 
+  //── Estágios das Startups ──────────────────────────────────────
+
+  static const Color stageExpansion = chart4; //roxo
+  static const Color stageOperation = chart2; // azul
+  static const Color stageNew = success; // verde
+
   static const Color darkNavy = Color(0xFF2D2558);
   static const Color lavanda = Color(0xFFEAE8F5);
 }
