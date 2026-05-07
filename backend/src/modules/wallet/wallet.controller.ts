@@ -10,12 +10,12 @@ retorna o resultado com status 200
 */
 
 import  {Request, Response } from 'express';
-import { getHistoricoOperacoesService } from './wallet.service';
+import { getHistoricoOperacoesService, getDadosDashboardService} from './wallet.service';
 
 // controller histórico de operações 
 export async function getHistoricoOperacoesController (req: Request, res: Response) {
     // pega o uid do usuário pelos parametros da rota 
-    const {uid} = req.params;
+    const uid = req.params.uid as string;
 
     // chama o service 
     const result = await getHistoricoOperacoesService(uid);
@@ -27,7 +27,7 @@ export async function getHistoricoOperacoesController (req: Request, res: Respon
 // controller dos dados do dashboard 
 export async function getDadosDashboardController (req: Request, res: Response) {
     // pega o uid do usuário pelos parametros da rota 
-    const {uid} = req.params;
+    const uid = req.params.uid as string;
 
     // chama o service 
     const result = await getDadosDashboardService(uid);

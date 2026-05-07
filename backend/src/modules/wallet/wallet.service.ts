@@ -32,7 +32,7 @@ export async function getHistoricoOperacoesService(uid: string) {
     const historico = await walletRepo.getHistoricoOperacoes(uid);
 
     // valida se encontrou as operações 
-    if (!historico || historico.lenght === 0){
+    if (!historico || historico.length === 0){
         return {
             message: 'Nenhuma operação encontrada',
             operacoes: [],
