@@ -104,4 +104,17 @@ class AuthRepository {
       throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
   }
+
+  Future<void> logout() async {
+  try {
+    final idToken = await SessionManager.getToken();
+
+    if (idToken == null) throw Exception('Sessão não encontrada.');
+
+    await _datasource.logout(idToken);
+    await SessionManager.fazerLogout();
+  } catch (e) {
+    throw Exception(e.toString().replaceAll('Exception: ', ''));
+  }
+}
 }

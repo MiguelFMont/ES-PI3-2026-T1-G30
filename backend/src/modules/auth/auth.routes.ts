@@ -6,12 +6,15 @@ import {
     solicitarRecuperacaoSenhaController,
     redefinirSenhaController,
     validarTokenController,
-    reenviarTokenCadastroController
+    reenviarTokenCadastroController,
+    logoutController
 } from "./auth.controller";
+import { authMiddleware } from '../../shared/http/auth.middleware';
 
 
 const router = Router();
 
+router.post('/logout', authMiddleware, logoutController);
 router.post('/register/iniciar', iniciarCadastroController);
 router.post('/register/concluir', concluirCadastroController);
 router.post('/register/reenviar-token', reenviarTokenCadastroController);

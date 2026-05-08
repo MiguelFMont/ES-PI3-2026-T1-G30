@@ -1,40 +1,38 @@
 // Autor: Miguel Fernandes Monteiro — RA: 25014808
 
-import { getFirestore } from "firebase-admin/firestore";
+import { FirestoreBaseRepo } from '../../infra/repositories/firestore.base.repo';
+import { getDb } from '../../config/firebase';
 
-// Estrutura mínima do documento do usuário usada pelo módulo de perfil.
-export interface UserRecord {
-  uid: string;
-  nomeCompleto: string;
-  email: string;
-  telefone?: string;
-  walletId?: string;
-  createdAt?: FirebaseFirestore.Timestamp;
-}
-
-// Estrutura mínima da wallet lida pelo módulo de perfil.
-// Nesta fase o saldo passa a ser lido apenas de saldoCentavos.
-export interface WalletRecord {
-  saldoCentavos?: number;
-  startupIds?: string[];
-}
-
-export class UsersRepo {
-  private db = getFirestore();
-
-  // Busca o documento users/{uid}.
-  // É chamado por UsersService.getPerfil para montar os dados básicos da conta.
-  async findByUid(uid: string): Promise<UserRecord | null> {
-    const snap = await this.db.collection("users").doc(uid).get();
-    if (!snap.exists) return null;
-    return { uid: snap.id, ...snap.data() } as UserRecord;
+export class UsersRepo extends FirestoreBaseRepo {
+  constructor() {
+    super('users');
   }
 
-  // Busca o documento wallets/{uid}.
-  // É chamado por UsersService.getPerfil para obter o saldo e métricas exibidas ao usuário.
-  async findWalletByUid(uid: string): Promise<WalletRecord | null> {
-    const snap = await this.db.doc(`wallets/${uid}`).get();
-    if (!snap.exists) return null;
-    return snap.data() as WalletRecord;
+  // Busca o documento do usuário pelo campo uid
+  // (o Firestore usa doc IDs gerados automaticamente, então uid é um campo separado)
+  async findByUid(uid: string) {
+    const snapshot = await getDb()
+      .collection(this.collectionName)
+      .where('uid', '==', uid)
+      .limit(1)
+      .get();
+
+    if (snapshot.empty) return null;
+
+    const doc = snapshot.docs[0];
+    return { id: doc.id, ...doc.data() } as any;
+  }
+
+  // Busca a carteira do usuário na coleção 'wallets'
+  async findWalletByUid(uid: string) {
+    const snapshot = await getDb()
+      .collection('wallets')
+      .where('uid', '==', uid)
+      .limit(1)
+      .get();
+
+    if (snapshot.empty) return null;
+
+    return snapshot.docs[0].data() as any;
   }
 }

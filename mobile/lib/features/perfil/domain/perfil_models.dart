@@ -5,23 +5,22 @@ class PerfilModel {
   final String nome;
   final String email;
   final String telefone;
-  final int saldoCentavos;
-  final int patrimonioCentavos;
-  final int totalStartups;
+  final double saldo;
   final String desde;
+  final String cpf;
+  final String dataNascimento;
+  final bool mfaAtivo;
 
   const PerfilModel({
     required this.nome,
     required this.email,
     required this.telefone,
-    required this.saldoCentavos,
-    required this.patrimonioCentavos,
-    required this.totalStartups,
+    required this.saldo,
     required this.desde,
+    required this.cpf,
+    required this.dataNascimento,
+    required this.mfaAtivo,
   });
-
-  double get saldo => saldoCentavos / 100;
-  double get patrimonio => patrimonioCentavos / 100;
 
   factory PerfilModel.fromJson(Map<String, dynamic> json) {
     return PerfilModel(
@@ -29,9 +28,10 @@ class PerfilModel {
       email: json['email'] as String? ?? '',
       telefone: json['telefone'] as String? ?? '',
       desde: json['desde'] as String? ?? '—',
-      saldoCentavos: (json['saldoCentavos'] as num? ?? 0).toInt(),
-      patrimonioCentavos: (json['patrimonioCentavos'] as num? ?? 0).toInt(),
-      totalStartups: json['totalStartups'] as int? ?? 0,
+      saldo: (json['saldo'] as num? ?? 0).toDouble(),
+      cpf: json['cpf'] as String? ?? '',
+      dataNascimento: json['dataNascimento'] as String? ?? '—',
+      mfaAtivo: json['mfEnabled'] as bool? ?? false,
     );
   }
 }
