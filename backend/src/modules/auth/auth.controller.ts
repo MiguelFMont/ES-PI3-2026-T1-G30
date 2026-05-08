@@ -1,17 +1,6 @@
 import { Request, Response } from "express";
 import { Resend } from "resend";
 import {
-<<<<<<< HEAD
-  iniciarCadastroService,
-  concluirCadastroService,
-  loginService,
-  enviarTokenRecuperacaoService,
-  novaSenhaService,
-  validarTokenService,
-  reenviarTokenCadastroService,
-} from "./auth.service";
-import { sendError, sendSuccess } from "../../shared/utils/response.utils";
-=======
     iniciarCadastroService,
     concluirCadastroService,
     loginService,
@@ -22,7 +11,6 @@ import { sendError, sendSuccess } from "../../shared/utils/response.utils";
     logoutService
 } from './auth.service';
 import { sendError, sendSuccess } from '../../shared/utils/response.utils';
->>>>>>> feature/sprint6-tela-perfil-usuario
 
 function getResendClient() {
   const apiKey = process.env.RESEND_API_KEY;
@@ -219,15 +207,6 @@ export async function reenviarTokenCadastroController(
                 </div>
             `,
     });
-
-<<<<<<< HEAD
-    return sendSuccess(res, { message: "Novo código enviado!" }, 200);
-  } catch (error: any) {
-    console.error("Erro ao reenviar token:", error);
-    return sendError(res, error.message || "Erro ao reenviar código.", 400);
-  }
-}
-=======
         return sendSuccess(res, { message: 'Novo código enviado!' }, 200);
 
     } catch (error: any) {
@@ -249,4 +228,3 @@ export async function logoutController(req: Request, res: Response) {
         return sendError(res, error.message || 'Erro ao realizar logout.', 500);
     }
 }
->>>>>>> feature/sprint6-tela-perfil-usuario

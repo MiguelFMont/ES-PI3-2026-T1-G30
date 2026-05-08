@@ -20,7 +20,7 @@ function _formatarData(valor: string | null | undefined): string {
   });
 }
 
-const CAMPOS_PERMITIDOS = ['nome', 'email', 'telefone'] as const;
+const CAMPOS_PERMITIDOS = ['nome', 'telefone'] as const;
 type CampoPermitido = typeof CAMPOS_PERMITIDOS[number];
 
 export class UsersService {
@@ -52,7 +52,7 @@ export class UsersService {
       });
     }
 
-    const saldo = wallet?.saldo ?? 0;
+    const saldo = this.getSaldoInCents(wallet);
     const patrimonio = saldo * 1.05;
 
     return {
@@ -86,7 +86,6 @@ export class UsersService {
     // Mapeia os nomes da API para os campos do Firestore
     const dadosFirestore: Record<string, string> = {};
     if (payload.nome)     dadosFirestore['nomeCompleto'] = payload.nome;
-    if (payload.email)    dadosFirestore['email']        = payload.email;
     if (payload.telefone) dadosFirestore['telefone']     = payload.telefone;
 
     // update() vem do FirestoreBaseRepo e já adiciona updatedAt automaticamente
