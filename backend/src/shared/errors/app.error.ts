@@ -4,14 +4,20 @@
 
 export class AppError extends Error {
   readonly statusCode: number;
+  readonly code?: string;
 
-  constructor(message: string, statusCode = 400) {
+  // Permite anexar status HTTP e um código estável de erro ao objeto lançado.
+  // Esse formato é consumido pelo errorMiddleware antes de responder ao cliente.
+  constructor(message: string, statusCode = 400, code?: string) {
     super(message);
     this.name = "AppError";
     this.statusCode = statusCode;
+    this.code = code;
   }
 }
-// Guard Operator para verificar se um erro é uma instância de AppError.
+
+// Guard operator usado pelo errorMiddleware para distinguir erros conhecidos
+// de erros genéricos disparados em qualquer camada da aplicação.
 export function isAppError(error: unknown): error is AppError {
   return error instanceof AppError;
 }
