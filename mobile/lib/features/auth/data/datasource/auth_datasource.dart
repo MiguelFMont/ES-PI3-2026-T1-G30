@@ -129,4 +129,20 @@ class AuthDatasource {
       throw Exception(data['message'] ?? 'Erro ao reenviar código.');
     }
   }
+
+  Future<void> logout(String idToken) async {
+  final response = await http.post(
+    Uri.parse('${AppHttpClient.baseUrl}/auth/logout'),
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $idToken', // middleware valida e extrai o uid
+    },
+  );
+
+  final data = jsonDecode(response.body);
+
+  if (response.statusCode != 200) {
+    throw Exception(data['message'] ?? 'Erro ao realizar logout.');
+  }
+}
 }

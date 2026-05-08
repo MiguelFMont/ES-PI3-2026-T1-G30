@@ -202,3 +202,11 @@ export async function reenviarTokenCadastroService(email: string) {
     return { token, email };
 }
 
+// _______________   LOGOUT   _______________ //
+
+export async function logoutService(uid: string) {
+    // Revoga todos os refresh tokens do usuário no Firebase Auth
+    await getAuth().revokeRefreshTokens(uid);
+    return { success: true };
+}
+

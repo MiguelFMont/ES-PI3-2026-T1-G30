@@ -7,6 +7,8 @@ import '../features/auth/presentation/pages/reset_password_page.dart';
 import '../features/auth/presentation/pages/token_verification_page.dart';
 import '../features/perfil/presentation/pages/perfil_page.dart';
 import '../features/auth/presentation/pages/splash_page.dart';
+import '../features/perfil/presentation/pages/informacoes_pessoais_page.dart';
+import '../features/perfil/presentation/pages/mfa_page.dart';
 
 class AppRoutes {
   static const splash = '/';
@@ -18,6 +20,8 @@ class AppRoutes {
   static const resetPassword = '/reset-password';
   static const tokenVerification = '/token-verification';
   static const perfil = '/perfil';
+  static const informacoesPessoais = '/informacoes-pessoais';
+  static const mfa = '/mfa';
 
   static Map<String, Widget Function(BuildContext)> get routes => {
     splash: (_) => SplashPage(),
@@ -29,5 +33,7 @@ class AppRoutes {
     resetPassword: (_) => ResetPasswordPage(),
     tokenVerification: (_) => TokenVerificationPage(),
     perfil: (_) => PerfilPage(),
+    informacoesPessoais: (_) => InformacoesPage(),
+    mfa: (_) => MfaPage(),
   };
 }

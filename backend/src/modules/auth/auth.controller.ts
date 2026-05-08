@@ -7,7 +7,8 @@ import {
     enviarTokenRecuperacaoService,
     novaSenhaService,
     validarTokenService,
-    reenviarTokenCadastroService
+    reenviarTokenCadastroService,
+    logoutService
 } from './auth.service';
 import { sendError, sendSuccess } from '../../shared/utils/response.utils';
 
@@ -196,5 +197,19 @@ export async function reenviarTokenCadastroController(req: Request, res: Respons
     } catch (error: any) {
         console.error('Erro ao reenviar token:', error);
         return sendError(res, error.message || 'Erro ao reenviar código.', 400);
+    }
+}
+
+export async function logoutController(req: Request, res: Response) {
+    try {
+        const uid = req.user!.uid; // injetado pelo authMiddleware
+
+        await logoutService(uid);
+
+        return sendSuccess(res, { message: 'Logout realizado com sucesso.' }, 200);
+
+    } catch (error: any) {
+        console.error('Erro ao realizar logout:', error);
+        return sendError(res, error.message || 'Erro ao realizar logout.', 500);
     }
 }
