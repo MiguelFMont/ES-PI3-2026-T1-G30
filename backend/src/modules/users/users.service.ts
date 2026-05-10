@@ -65,6 +65,7 @@ export class UsersService {
       saldo,
       patrimonio,
       desde,
+      mfaEnabled: user.mfaEnabled ?? false,
     };
   }
 

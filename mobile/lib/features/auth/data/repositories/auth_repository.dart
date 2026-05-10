@@ -1,7 +1,5 @@
-//autor: Miguel Fernandes Monteiro
-//RA: 25014808
-
-// arquivo criado para processar os dados das chamadas http da pasta datasource
+// Autor: Miguel Fernandes Monteiro
+// RA: 25014808
 
 import '../datasource/auth_datasource.dart';
 import '../../domain/models/user_model.dart';
@@ -32,7 +30,6 @@ class AuthRepository {
     }
   }
 
-  // 2. CONCLUIR CADASTRO
   Future<void> concluirCadastro(String email, String token, String senha) async {
     try {
       await _datasource.concluirCadastro(email, token, senha);
@@ -41,18 +38,16 @@ class AuthRepository {
     }
   }
 
-  // Login — converte o Map bruto do datasource para UserModel
   Future<UserModel> login(String email, String password) async {
     try {
       final data = await _datasource.login(email, password);
       final user = UserModel.fromJson(data);
 
+      // MFA pendente: não salva sessão ainda, retorna para a tela tratar
+      if (user.mfaRequired) return user;
+
       if (user.idToken != null && user.refreshToken != null) {
-        await SessionManager.salvarSessao(
-          user.idToken!,
-          user.refreshToken!,
-          user.id,
-        );
+        await SessionManager.salvarSessao(user.idToken!, user.refreshToken!, user.id);
       }
 
       return user;
@@ -61,24 +56,33 @@ class AuthRepository {
     }
   }
 
-  // Solicitar Código de Recuperação
-  Future<String> solicitarCodigoRecuperacao(String email) async {
+  // ───── MFA Challenge (segundo fator no login) ─────
+
+  Future<void> mfaChallenge(String uid, String tempToken, String code) async {
     try {
-      final data = await _datasource.solicitarCodigoRecuperacao(email);
-      // Retorna a mensagem de sucesso que veio da API ("Se o e-mail existir...")
-      return data['message'] ?? 'Código solicitado com sucesso.';
+      final data = await _datasource.mfaChallenge(uid, tempToken, code);
+      final payload = data['data'] as Map<String, dynamic>;
+
+      await SessionManager.salvarSessao(
+        payload['idToken'] as String,
+        payload['refreshToken'] as String,
+        uid,
+      );
     } catch (e) {
-      // O replaceAll limpa o texto 'Exception: ' que o Dart adiciona
       throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
   }
 
-  // Redefinir a Senha
-  Future<String> redefinirSenha(
-    String email,
-    String token,
-    String novaSenha,
-  ) async {
+  Future<String> solicitarCodigoRecuperacao(String email) async {
+    try {
+      final data = await _datasource.solicitarCodigoRecuperacao(email);
+      return data['message'] ?? 'Código solicitado com sucesso.';
+    } catch (e) {
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  Future<String> redefinirSenha(String email, String token, String novaSenha) async {
     try {
       final data = await _datasource.redefinirSenha(email, token, novaSenha);
       return data['message'] ?? 'Senha alterada com sucesso.';
@@ -87,7 +91,6 @@ class AuthRepository {
     }
   }
 
-  // Validar Token
   Future<String> validarToken(String email, String token) async {
     try {
       final data = await _datasource.validarToken(email, token);
@@ -106,15 +109,13 @@ class AuthRepository {
   }
 
   Future<void> logout() async {
-  try {
-    final idToken = await SessionManager.getToken();
-
-    if (idToken == null) throw Exception('Sessão não encontrada.');
-
-    await _datasource.logout(idToken);
-    await SessionManager.fazerLogout();
-  } catch (e) {
-    throw Exception(e.toString().replaceAll('Exception: ', ''));
+    try {
+      final idToken = await SessionManager.getToken();
+      if (idToken == null) throw Exception('Sessão não encontrada.');
+      await _datasource.logout(idToken);
+      await SessionManager.fazerLogout();
+    } catch (e) {
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
   }
-}
 }

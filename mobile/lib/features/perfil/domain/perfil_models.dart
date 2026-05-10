@@ -31,7 +31,7 @@ class PerfilModel {
       saldo: (json['saldo'] as num? ?? 0).toDouble(),
       cpf: json['cpf'] as String? ?? '',
       dataNascimento: json['dataNascimento'] as String? ?? '—',
-      mfaAtivo: json['mfEnabled'] as bool? ?? false,
+      mfaAtivo: json['mfaEnabled'] as bool? ?? false,
     );
   }
 }

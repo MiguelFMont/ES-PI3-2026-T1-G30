@@ -1,12 +1,11 @@
-//arquivo usado somente para fazer as chamadas HTTP
-// Author: Miguel
-// RA: 25014808
-import 'dart:convert'; // jsonEncode e jsonDecode
-import 'package:http/http.dart' as http; // requisições HTTP
-import '../../../../core/network/http_client.dart'; // AppHttpClient.baseUrl
+// Autor: Miguel Fernandes Monteiro — RA: 25014808
+
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import '../../../../core/network/http_client.dart';
 
 class AuthDatasource {
-  //login
+
   Future<Map<String, dynamic>> login(String email, String password) async {
     final response = await http.post(
       Uri.parse('${AppHttpClient.baseUrl}/auth/login'),
@@ -15,37 +14,40 @@ class AuthDatasource {
     );
 
     final data = jsonDecode(response.body);
-
-    if (response.statusCode == 200) {
-      return data;
-    } else {
-      throw Exception(data['message'] ?? 'Erro ao realizar login.');
-    }
+    if (response.statusCode == 200) return data;
+    throw Exception(data['message'] ?? 'Erro ao realizar login.');
   }
 
-  //cadastro
-  Future<void> iniciarCadastro(Map<String, dynamic> dados) async {
-    final url = Uri.parse('${AppHttpClient.baseUrl}/auth/register/iniciar');
+  // ───── MFA Challenge ─────
 
+  Future<Map<String, dynamic>> mfaChallenge(String uid, String tempToken, String code) async {
     final response = await http.post(
-      url,
+      Uri.parse('${AppHttpClient.baseUrl}/auth/mfa/challenge'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'uid': uid, 'tempToken': tempToken, 'code': code}),
+    );
+
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200) return data;
+    throw Exception(data['message'] ?? 'Código inválido.');
+  }
+
+  Future<void> iniciarCadastro(Map<String, dynamic> dados) async {
+    final response = await http.post(
+      Uri.parse('${AppHttpClient.baseUrl}/auth/register/iniciar'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode(dados),
     );
 
     if (response.statusCode != 200 && response.statusCode != 201) {
       final erro = jsonDecode(response.body);
-      throw Exception(
-        erro['message'] ?? 'Erro ao iniciar cadastro. Tente novamente.',
-      );
+      throw Exception(erro['message'] ?? 'Erro ao iniciar cadastro.');
     }
   }
 
   Future<void> concluirCadastro(String email, String token, String senha) async {
-    final url = Uri.parse('${AppHttpClient.baseUrl}/auth/register/concluir');
-
     final response = await http.post(
-      url,
+      Uri.parse('${AppHttpClient.baseUrl}/auth/register/concluir'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'token': token, 'senha': senha}),
     );
@@ -56,7 +58,6 @@ class AuthDatasource {
     }
   }
 
-  // Solicitar Código (Esqueci a senha)
   Future<Map<String, dynamic>> solicitarCodigoRecuperacao(String email) async {
     final response = await http.post(
       Uri.parse('${AppHttpClient.baseUrl}/auth/recuperar-senha'),
@@ -65,41 +66,22 @@ class AuthDatasource {
     );
 
     final data = jsonDecode(response.body);
-
-    if (response.statusCode == 200) {
-      return data;
-    } else {
-      // Se a API retornar erro (ex: 400), jogamos a mensagem do backend para cima
-      throw Exception(data['message'] ?? 'Erro ao solicitar código.');
-    }
+    if (response.statusCode == 200) return data;
+    throw Exception(data['message'] ?? 'Erro ao solicitar código.');
   }
 
-  // Enviar a Nova Senha com o Token
-  Future<Map<String, dynamic>> redefinirSenha(
-    String email,
-    String token,
-    String novaSenha,
-  ) async {
+  Future<Map<String, dynamic>> redefinirSenha(String email, String token, String novaSenha) async {
     final response = await http.post(
       Uri.parse('${AppHttpClient.baseUrl}/auth/redefinir-senha'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'email': email,
-        'token': token,
-        'novaSenha': novaSenha,
-      }),
+      body: jsonEncode({'email': email, 'token': token, 'novaSenha': novaSenha}),
     );
 
     final data = jsonDecode(response.body);
-
-    if (response.statusCode == 200) {
-      return data;
-    } else {
-      throw Exception(data['message'] ?? 'Erro ao redefinir senha.');
-    }
+    if (response.statusCode == 200) return data;
+    throw Exception(data['message'] ?? 'Erro ao redefinir senha.');
   }
 
-  // Validar Token
   Future<Map<String, dynamic>> validarToken(String email, String token) async {
     final response = await http.post(
       Uri.parse('${AppHttpClient.baseUrl}/auth/validar-token'),
@@ -108,12 +90,8 @@ class AuthDatasource {
     );
 
     final data = jsonDecode(response.body);
-
-    if (response.statusCode == 200) {
-      return data;
-    } else {
-      throw Exception(data['message'] ?? 'Erro ao validar código.');
-    }
+    if (response.statusCode == 200) return data;
+    throw Exception(data['message'] ?? 'Erro ao validar código.');
   }
 
   Future<void> reenviarTokenCadastro(String email) async {
@@ -124,25 +102,23 @@ class AuthDatasource {
     );
 
     final data = jsonDecode(response.body);
-
     if (response.statusCode != 200) {
       throw Exception(data['message'] ?? 'Erro ao reenviar código.');
     }
   }
 
   Future<void> logout(String idToken) async {
-  final response = await http.post(
-    Uri.parse('${AppHttpClient.baseUrl}/auth/logout'),
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer $idToken', // middleware valida e extrai o uid
-    },
-  );
+    final response = await http.post(
+      Uri.parse('${AppHttpClient.baseUrl}/auth/logout'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $idToken',
+      },
+    );
 
-  final data = jsonDecode(response.body);
-
-  if (response.statusCode != 200) {
-    throw Exception(data['message'] ?? 'Erro ao realizar logout.');
+    final data = jsonDecode(response.body);
+    if (response.statusCode != 200) {
+      throw Exception(data['message'] ?? 'Erro ao realizar logout.');
+    }
   }
-}
 }

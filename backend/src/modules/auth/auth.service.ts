@@ -100,22 +100,34 @@ export async function concluirCadastroService(
 export async function loginService(email: string, senha: string) {
   const firebaseResponse = await axios.post(
     `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${env.firebaseApiKey}`,
-    {
-      email,
-      password: senha,
-      returnSecureToken: true,
-    },
+    { email, password: senha, returnSecureToken: true },
   );
 
-  const { idToken, localId: uid } = firebaseResponse.data;
+  const { idToken, localId: uid, refreshToken } = firebaseResponse.data;
 
-  const userDoc = await getDb().collection("users").doc(uid).get();
+  const userDoc = await getDb().collection('users').doc(uid).get();
   const userData = userDoc.data();
 
-  // retorna tudo na raiz
+  // Se MFA estiver ativo, guarda o idToken temporariamente e retorna tempToken
+  if (userData?.mfaEnabled) {
+    const tempToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(tempToken).digest('hex');
+
+    await getDb().collection('mfaChallengePending').doc(uid).set({
+      tokenHash,
+      idToken,
+      refreshToken,
+      expiresAt: Timestamp.fromDate(new Date(Date.now() + 5 * 60 * 1000)), // 5 min
+    });
+
+    return { mfaRequired: true, tempToken, uid };
+  }
+
+  // Sem MFA: fluxo normal
   return {
+    mfaRequired: false,
     idToken,
-    refreshToken: firebaseResponse.data.refreshToken,
+    refreshToken,
     uid,
     ...userData,
   };

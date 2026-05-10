@@ -193,7 +193,6 @@ class _InformacoesPageState extends State<InformacoesPage> {
     try {
       await _repo.atualizarPerfil(
         nome: _nome,
-        email: _email,
         telefone: _telefone,
       );
 
@@ -325,7 +324,7 @@ class _InformacoesPageState extends State<InformacoesPage> {
                       const SizedBox(height: 8),
                       CampoInfo(
                         icon: Icons.email_outlined,
-                        label: 'Email',
+                        label: 'Email  •  Não editável',
                         valor: _email,
                         editavel: false,
                       ),

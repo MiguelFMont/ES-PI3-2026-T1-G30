@@ -16,15 +16,31 @@ class PerfilRepository {
   }
   Future<void> atualizarPerfil({
     required String nome,
-    required String email,
     required String telefone,
   }) async {
     try {
       await _datasource.atualizarPerfil(
         nome: nome,
-        email: email,
         telefone: telefone,
       );
+    } catch (e) {
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  // ───── MFA ─────
+
+  Future<Map<String, dynamic>> setupMfa() async {
+    try {
+      return await _datasource.setupMfa();
+    } catch (e) {
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  Future<void> verifyMfa(String code) async {
+    try {
+      await _datasource.verifyMfa(code);
     } catch (e) {
       throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
@@ -53,4 +69,7 @@ class PerfilRepository {
   //       response.body.isNotEmpty ? jsonDecode(response.body) : <String, dynamic>{};
   //   throw Exception(body['message'] ?? 'Erro ao adicionar saldo');
   // }
+
+  
+  
 }
