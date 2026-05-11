@@ -3,12 +3,12 @@ Autora: Maria Júlia Lazarini Oleto
 RA: 25006031
 significado do arquivo:
 ele vai herdar a classe base do repositório do firestore 
-acessa a wallets/{uid}/operações
+entra na coleção de transações, filtra pelo uid do usuário 
 ordena esses dados por data, de forma decrescente (mais recente primeiro)
 retornar a lista de operações 
 
 acessar a wallet 
-pegar os dados sa subcoleção dos tokens e das operações 
+pegar os dados sa subcoleção das holdings e das transações 
 trasnformar esses documentos em objetos
 retornar as coleções de objetos como informações pro dashboard e para os gráficos de valorização 
 */
@@ -30,10 +30,9 @@ export class WalletRepo extends FirestoreBaseRepo {
         const db = getDb(); // retorna a instancia do firestore
 
         const operacoesSnapshot = await db 
-            .collection('wallets') // acessa a coleção wallets 
-            .doc(uid)
-            .collection('operacoes')// acessa o documento do usuário 
-            .orderBy('data', 'desc') // ordena os resultados por data (mais recente pro mais antigo)
+            .collection('transactions') // acessa a coleção transactions 
+            .where('userId', '==', uid)
+            .orderBy('createdAt', 'desc') // ordena os resultados por data (mais recente pro mais antigo)
             .get(); // executa e retorna os resultados 
         // verifica se teve retono do resultado
         if (operacoesSnapshot.empty) return [];
@@ -59,32 +58,31 @@ export class WalletRepo extends FirestoreBaseRepo {
         // verifica se o usuário tem wallet cadastrada (documento no firestore)
         if (!walletDoc.exists) return null;
 
-        // busca todos os tokens do usuário
-        const tokensSnapshot = await db
+        // busca todos as holdings do usuário (tokens por startup)
+        const holdingsSnapshot = await db
             .collection('wallets')
             .doc(uid)
-            .collection('tokens')
+            .collection('holdings')
             .get();
-        // busca todas as operações do usuário
-        const operacoesSnapshot = await db
-            .collection('wallets')
-            .doc(uid)
-            .collection('operacoes')
-            .orderBy('data', 'asc')
+        // busca todas as transações do usuário
+        const transacoesSnapshot = await db
+            .collection('transactions')
+            .where('userId', '==', uid)
+            .orderBy('createdAt', 'asc')
             .get();
         // retorna os campos do documento wallet 
         const wallet = walletDoc.data();
-        // obejtos tokens 
-        const tokens =tokensSnapshot.docs.map((doc: admin.firestore.QueryDocumentSnapshot) => ({
+        // obejtos holdings 
+        const holdings = holdingsSnapshot.docs.map((doc: admin.firestore.QueryDocumentSnapshot) => ({
             id: doc.id,
             ...doc.data(),
         }));
-        // objetos operações 
-        const operacoes = operacoesSnapshot.docs.map((doc: admin.firestore.QueryDocumentSnapshot) => ({
+        // objetos transações 
+        const transacoes = transacoesSnapshot.docs.map((doc: admin.firestore.QueryDocumentSnapshot) => ({
             id: doc.id, 
             ...doc.data(),
         }));
         // retorna os conjuntos de objetos em um único objeto 
-        return { wallet, tokens, operacoes };
+        return { wallet, holdings, transacoes };
     }
 }

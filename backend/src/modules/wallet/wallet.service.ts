@@ -10,7 +10,7 @@ chama o repo para buscar os dados
 retorna uma mensagem e a lista de operações 
 
 verifica se o usuário tem wallet cadastrada
-se tem, retorna os dados (wallet, tokense e operações)
+se tem, retorna os dados (wallet, holdings e transações)
 tranforma esses dados em variáveis 
 faz os calculos de: valor total da carteira, total investido, lucro, retorno
 faz os pontos do gráfico com data e valor 
@@ -63,20 +63,23 @@ export async function getDadosDashboardService(uid: string) {
     }
 
     // torna a coleção de objetos recebida em tres variáveis separadas 
-    const { wallet, tokens, operacoes } = dados;
+    const { wallet, holdings, transacoes } = dados;
 
-    // calcula valor total atual de todos os tokens
+    // converte o saldo de centavos para reais 
+    const saldoDisponivel = (wallet?.saldoCentavos ?? 0) / 100;
+
+    // calcula valor total atual de todos os holdings 
     // .reduce percorre o array e soma os valores 
-    const valorTotalCarteira = tokens.reduce(
-        (soma: number, token: any) => soma + (token.quantidade * token.precoAtual),
+    const valorTotalCarteira = holdings.reduce(
+        (soma: number, holding: any) => soma + (holding.quantidade * holding.precoMedioCentavos) / 100,
         0);
     
-    // calcula o total investido somando todas as compras de tokens
-    // filtra as operações do tipo 'compra' 
-    const totalInvestido = operacoes 
-        .filter((op: any) => op.tipo == 'compra') 
+    // calcula o total investido somando todas as compras de tokens (holdings)
+    // filtra as transações do tipo 'DIRECT_BUY' ou 'MARKET_BUY' e soma os valores
+    const totalInvestido = transacoes 
+        .filter((tx: any) => tx.tipo === 'DIRECT_BUY' || tx.tipo === 'MARKET_BUY') 
         .reduce(
-            (soma: number, op: any) => soma + (op.quantidade * op.preco),
+            (soma: number, tx: any) => soma + (tx.valorTotalCentavos / 100),
             0
         );
         
@@ -89,20 +92,21 @@ export async function getDadosDashboardService(uid: string) {
         ? ((lucro / totalInvestido) * 100).toFixed(2) // limita duas casas decimais 
         : '0.00';
 
-    // monta os pontos do gráfico a partir das operações 
+    // monta os pontos do gráfico a partir das transações 
     // cada ponto tem data e valor 
-    const pontosGrafico = operacoes.map((op: any) => ({
-        data: op.data, // eixo x 
-        valor: op.quantidade * op.preco, // eixo y
+    const pontosGrafico = transacoes.map((tx: any) => ({
+        data: tx.createdAt, // eixo x 
+        valor: tx.valorTotalCentavos / 100, // eixo y
     }));
 
     // retorna todos os dados calculados 
     return {
         message: 'Dados do dashboard retornados com sucesso',
         dashboard: {
-            saldoDisponivel: wallet?.saldo ?? 0, // se a wallet existir: pega o saldo, se não retorna 0
+            saldoDisponivel,
             valorTotalCarteira,
             totalInvestido,
+            lucro,
             retorno: `${retorno}%`,
             pontosGrafico,
         },
