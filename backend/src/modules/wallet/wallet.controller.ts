@@ -1,13 +1,50 @@
+/*
+Autora: Maria Júlia Lazarini Oleto
+RA: 25006031
+significado do arquivo:
+
+recebe a requisição http da busca 
+pega o uid do usuário pelos parametros da rota (/historico/:uid)
+chama o service 
+retorna o resultado com status 200
+*/
+
+import  {NextFunction, Request, Response } from 'express';
+import { 
+  getHistoricoOperacoesService, 
+  getDadosDashboardService,
+  addBalanceService,
+  getWalletService,
+  listHoldingsService
+} from './wallet.service';
+
+// controller histórico de operações 
+export async function getHistoricoOperacoesController (req: Request, res: Response) {
+    // pega o uid do usuário pelos parametros da rota 
+    const uid = req.params.uid as string;
+
+    // chama o service 
+    const result = await getHistoricoOperacoesService(uid);
+
+    // retorna o resultado 
+    res.status(200).json(result);
+}
+
+// controller dos dados do dashboard 
+export async function getDadosDashboardController (req: Request, res: Response) {
+    // pega o uid do usuário pelos parametros da rota 
+    const uid = req.params.uid as string;
+
+    // chama o service 
+    const result = await getDadosDashboardService(uid);
+
+    // retorna o resultado
+    res.status(200).json(result);
+}
+
 // Samuel Campovilla
 // Este arquivo converte requisições HTTP em chamadas para a camada de service.
 // Ele é usado por wallet.routes.ts e não acessa Firestore diretamente.
-
-import { NextFunction, Request, Response } from "express";
-import {
-  addBalanceService,
-  getWalletService,
-  listHoldingsService,
-} from "./wallet.service";
 
 // Extrai o uid já validado pelo authMiddleware.
 // Todos os controllers deste módulo usam essa função antes de chamar o service.

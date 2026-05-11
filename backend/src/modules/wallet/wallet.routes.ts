@@ -1,10 +1,21 @@
+/*
+Autora: Maria Júlia Lazarini Oleto
+RA: 25006031
+significado do arquivo: 
+
+define a rota
+aponta para o controller 
+o :uid é o ID do usuário que será passado na URL
+*/
+
 // Samuel Campovilla
 // Este arquivo registra as rotas HTTP do módulo de carteira.
 // Ele é importado em src/modules/index.ts, que monta o prefixo /wallet.
 // O server.ts aplica /v1 acima disso, então os caminhos finais ficam /api/v1/wallet...
-
 import { Router } from 'express';
 import {
+  getHistoricoOperacoesController,
+  getDadosDashboardController,
   addBalanceController,
   getWalletController,
   listHoldingsController,
@@ -28,5 +39,12 @@ router.get('/holdings', listHoldingsController);
 // Soma saldo fictício em centavos na carteira do usuário autenticado.
 // Chama addBalanceController, que valida req.body.valorCentavos no service.
 router.post('/add-balance', addBalanceController);
+
+// Retorna o histórico de operações do usuário
+// o :uid é o ID do usuário que será passado na URL
+router.get('/historico/:uid', getHistoricoOperacoesController);
+
+// Retorna os dados agregados da wallet para o dashboard
+router.get('/dashboard/:uid', getDadosDashboardController);
 
 export default router;
