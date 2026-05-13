@@ -22,7 +22,7 @@ import { FirestoreBaseRepo } from "../../infra/repositories/firestore.base.repo"
 // função que retorna a instancia do firestore 
 // ela permite acessar o banco de dados 
 import { getDb } from "../../config/firebase";
-import { Timestamp } from "firebase-admin/firestore";
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { AppError } from "../../shared/errors/app.error";
 
 // Representa o documento wallets/{uid} como ele é manipulado internamente no backend.
@@ -45,6 +45,40 @@ export interface HoldingRecord {
   updatedAt: unknown;
 }
 
+// Fonte única dos tipos oficiais aceitos pelo contrato público do histórico.
+// Service e repository reutilizam esta lista para manter validação e persistência consistentes.
+export const VALID_TRANSACTION_TYPES = [
+  "ADICIONAR_SALDO",
+  "COMPRA_DIRETA",
+  "VENDA_DIRETA",
+  "COMPRA_BALCAO",
+  "VENDA_BALCAO",
+] as const;
+
+export type TipoTransacao = (typeof VALID_TRANSACTION_TYPES)[number];
+
+// Representa o documento transactions/{transactionId} como ele é transportado internamente.
+// O service normaliza os tipos e omite userId do DTO público antes de responder ao cliente.
+export interface TransactionRecord {
+  id: string;
+  userId: unknown;
+  counterpartyUserId?: unknown;
+  startupId?: unknown;
+  offerId?: unknown;
+  tipo: unknown;
+  quantidade?: unknown;
+  precoUnitarioCentavos?: unknown;
+  valorTotalCentavos: unknown;
+  saldoAnteriorCentavos?: unknown;
+  saldoNovoCentavos?: unknown;
+  createdAt: unknown;
+}
+
+export interface TransactionFilters {
+  startupId?: string;
+  tipo?: TipoTransacao;
+}
+
 // função que herda o que o firebaserepo tem 
 export class WalletRepo extends FirestoreBaseRepo {
   // Referência compartilhada do Firestore para todas as operações deste repositório.
@@ -59,6 +93,12 @@ export class WalletRepo extends FirestoreBaseRepo {
   // É usada por getWallet, getOrCreateWallet, listHoldings e addBalance.
   private getWalletRef(uid: string) {
     return this.db.collection("wallets").doc(uid);
+  }
+
+  // Monta a referência da coleção transactions.
+  // É usada pelo histórico e pelo registro atômico de ADICIONAR_SALDO.
+  private getTransactionsRef() {
+    return this.db.collection("transactions");
   }
 
   // Garante que um valor vindo do Firestore é inteiro e não negativo.
@@ -143,27 +183,51 @@ export class WalletRepo extends FirestoreBaseRepo {
     };
   }
 
-  // busca o histórico de operações do usuário, ordenado por data 
-  async getHistoricoOperacoes(uid: string) {
-    const db = getDb(); // retorna a instancia do firestore
+  // Samuel Campovilla:
+  // A query do histórico sempre começa pelo userId autenticado.
+  // Filtros extras apenas refinam o conjunto já limitado ao dono da carteira.
+  async listTransactions(
+    uid: string,
+    filters: TransactionFilters,
+  ): Promise<TransactionRecord[]> {
+    let query: admin.firestore.Query = this
+      .getTransactionsRef()
+      .where('userId', '==', uid);
 
-    const operacoesSnapshot = await db
-      .collection('transactions') // acessa a coleção transactions 
-      .where('userId', '==', uid)
-      .orderBy('createdAt', 'desc') // ordena os resultados por data (mais recente pro mais antigo)
-      .get(); // executa e retorna os resultados 
+    if (filters.startupId) {
+      query = query.where('startupId', '==', filters.startupId);
+    }
 
-    // verifica se teve retono do resultado
-    if (operacoesSnapshot.empty) return [];
+    if (filters.tipo) {
+      query = query.where('tipo', '==', filters.tipo);
+    }
 
-    // retorna a lista de documentos encontrados (array)
-    // .map transforma cada documento em um objeto simples
-    // doc.id é o id do documento do firestore 
-    // doc.data espalha todos os campos do documento 
-    return operacoesSnapshot.docs.map((doc: admin.firestore.QueryDocumentSnapshot) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    const operacoesSnapshot = await query
+      .orderBy('createdAt', 'desc')
+      .get();
+
+    if (operacoesSnapshot.empty) {
+      return [];
+    }
+
+    return operacoesSnapshot.docs.map((doc: admin.firestore.QueryDocumentSnapshot) => {
+      const data = doc.data();
+
+      return {
+        id: doc.id,
+        userId: data.userId,
+        counterpartyUserId: data.counterpartyUserId,
+        startupId: data.startupId,
+        offerId: data.offerId,
+        tipo: data.tipo,
+        quantidade: data.quantidade,
+        precoUnitarioCentavos: data.precoUnitarioCentavos,
+        valorTotalCentavos: data.valorTotalCentavos,
+        saldoAnteriorCentavos: data.saldoAnteriorCentavos,
+        saldoNovoCentavos: data.saldoNovoCentavos,
+        createdAt: data.createdAt,
+      };
+    });
   }
 
   // busca os dados agregados da wallet para o dashboard 
@@ -266,8 +330,10 @@ export class WalletRepo extends FirestoreBaseRepo {
   async addBalance(uid: string, valorCentavos: number): Promise<WalletRecord> {
     return this.db.runTransaction<WalletRecord>(async (transaction) => {
       const walletRef = this.getWalletRef(uid);
+      const transactionRef = this.getTransactionsRef().doc();
       const walletDoc = await transaction.get(walletRef);
       const now = Timestamp.now();
+      const createdAt = FieldValue.serverTimestamp();
 
       // Se a carteira ainda não existir, ela já nasce com o valor adicionado.
       if (!walletDoc.exists) {
@@ -279,10 +345,21 @@ export class WalletRepo extends FirestoreBaseRepo {
         };
 
         transaction.set(walletRef, wallet);
+        // O histórico de ADICIONAR_SALDO é escrito na mesma transação da wallet
+        // para não existir saldo atualizado sem o respectivo registro de auditoria.
+        transaction.set(transactionRef, {
+          userId: uid,
+          tipo: "ADICIONAR_SALDO",
+          valorTotalCentavos: valorCentavos,
+          saldoAnteriorCentavos: 0,
+          saldoNovoCentavos: valorCentavos,
+          createdAt,
+        });
         return wallet;
       }
 
       const currentWallet = this.toWalletRecord(uid, walletDoc.data());
+      const saldoAnteriorCentavos = currentWallet.saldoCentavos;
       const saldoCentavos = currentWallet.saldoCentavos + valorCentavos;
 
       if (!this.isNonNegativeInteger(saldoCentavos)) {
@@ -297,6 +374,17 @@ export class WalletRepo extends FirestoreBaseRepo {
       transaction.update(walletRef, {
         saldoCentavos,
         updatedAt: now,
+      });
+
+      // O histórico público da carteira depende deste documento.
+      // A gravação aqui mantém o add-balance alinhado com compra e venda direta na coleção transactions.
+      transaction.set(transactionRef, {
+        userId: uid,
+        tipo: "ADICIONAR_SALDO",
+        valorTotalCentavos: valorCentavos,
+        saldoAnteriorCentavos,
+        saldoNovoCentavos: saldoCentavos,
+        createdAt,
       });
 
       return {

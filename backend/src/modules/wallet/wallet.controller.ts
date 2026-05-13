@@ -4,30 +4,46 @@ RA: 25006031
 significado do arquivo:
 
 recebe a requisição http da busca 
-pega o uid do usuário pelos parametros da rota (/historico/:uid)
+usa o usuário autenticado e os filtros públicos da requisição
 chama o service 
 retorna o resultado com status 200
 */
 
 import  {NextFunction, Request, Response } from 'express';
 import { 
-  getHistoricoOperacoesService, 
+  getTransactionsService,
   getDadosDashboardService,
   addBalanceService,
   getWalletService,
   listHoldingsService
 } from './wallet.service';
 
-// controller histórico de operações 
-export async function getHistoricoOperacoesController (req: Request, res: Response) {
-    // pega o uid do usuário pelos parametros da rota 
-    const uid = req.params.uid as string;
+// Extrai apenas os filtros públicos aceitos pelo contrato do histórico.
+// O endpoint não aceita uid externo em params, query ou body.
+function getTransactionsFilters(req: Request) {
+  return {
+    startupId: req.query?.startupId,
+    tipo: req.query?.tipo,
+  };
+}
 
-    // chama o service 
-    const result = await getHistoricoOperacoesService(uid);
-
-    // retorna o resultado 
+// Samuel Campovilla:
+// O endpoint oficial do histórico usa exclusivamente o UID autenticado.
+// Isso evita que um cliente force outro userId na URL ou na query para ler transações alheias.
+export async function getTransactionsController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const result = await getTransactionsService(
+      getUid(req),
+      getTransactionsFilters(req),
+    );
     res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
 }
 
 // controller dos dados do dashboard 
