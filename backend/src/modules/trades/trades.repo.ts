@@ -1,4 +1,4 @@
-// Este arquivo concentra o acesso ao Firestore para a compra direta de tokens.
+// Este arquivo concentra o acesso ao Firestore para compra e venda direta de tokens.
 // O service chama este repositório depois de validar o body e a autenticação.
 
 import { getDb } from "../../config/firebase";
@@ -25,6 +25,11 @@ interface StartupRecord {
   precoTokenAtualCentavos: number;
 }
 
+interface DirectSellStartupRecord extends StartupRecord {
+  descontoVendaDiretaBps: number;
+  totalTokens?: number;
+}
+
 export interface DirectBuyResult {
   transactionId: string;
   startupId: string;
@@ -36,6 +41,18 @@ export interface DirectBuyResult {
   quantidadeAtual: number;
   quantidadeBloqueada: number;
   precoMedioCentavos: number;
+}
+
+export interface DirectSellResult {
+  transactionId: string;
+  startupId: string;
+  quantidade: number;
+  precoUnitarioCentavos: number;
+  valorTotalCentavos: number;
+  saldoAnteriorCentavos: number;
+  saldoNovoCentavos: number;
+  quantidadeAtual: number;
+  quantidadeBloqueada: number;
 }
 
 export class TradesRepo {
@@ -52,6 +69,17 @@ export class TradesRepo {
   // É usada para saldo, tokens disponíveis e campos da holding.
   private isNonNegativeInteger(value: unknown): value is number {
     return typeof value === "number" && Number.isInteger(value) && value >= 0;
+  }
+
+  // Valida desconto em basis points no intervalo [0, 10000).
+  // É usada para impedir recompra com desconto inválido na venda direta.
+  private isBpsDiscount(value: unknown): value is number {
+    return (
+      typeof value === "number" &&
+      Number.isInteger(value) &&
+      value >= 0 &&
+      value < 10000
+    );
   }
 
   // Monta a referência wallets/{uid}.
@@ -162,6 +190,53 @@ export class TradesRepo {
     };
   }
 
+  // Samuel Campovilla:
+  // Normaliza startups/{startupId} para o fluxo de venda direta.
+  // É usada apenas por directSell, depois que a existência da startup já foi confirmada.
+  // Aqui validamos os campos adicionais da Fase 3:
+  // - descontoVendaDiretaBps, usado no cálculo do preço de recompra;
+  // - totalTokens, quando existir, para impedir recompra acima do limite da startup.
+  // Valida os campos extras usados exclusivamente na venda direta.
+  // O totalTokens continua opcional para não quebrar startups legadas sem esse campo.
+  private toDirectSellStartupRecord(
+    startupId: string,
+    data: FirebaseFirestore.DocumentData | undefined,
+  ): DirectSellStartupRecord {
+    const startup = this.toStartupRecord(startupId, data);
+
+    if (!this.isBpsDiscount(data?.descontoVendaDiretaBps)) {
+      throw new AppError(
+        "Startup com descontoVendaDiretaBps inválido.",
+        500,
+        "INVALID_STARTUP_STATE",
+      );
+    }
+
+    let totalTokens: number | undefined;
+
+    if (
+      data &&
+      Object.prototype.hasOwnProperty.call(data, "totalTokens") &&
+      data.totalTokens !== undefined
+    ) {
+      if (!this.isPositiveInteger(data.totalTokens)) {
+        throw new AppError(
+          "Startup com totalTokens inválido.",
+          500,
+          "INVALID_STARTUP_STATE",
+        );
+      }
+
+      totalTokens = data.totalTokens;
+    }
+
+    return {
+      ...startup,
+      descontoVendaDiretaBps: data.descontoVendaDiretaBps,
+      totalTokens,
+    };
+  }
+
   // Calcula o novo preço médio da holding existente.
   // Essa conta roda dentro da transação porque depende do estado atual lido do Firestore.
   private calculateAveragePriceInCents(
@@ -193,6 +268,32 @@ export class TradesRepo {
     }
 
     return Math.floor(weightedTotal / novaQuantidade);
+  }
+
+  // Samuel Campovilla:
+  // Calcula o preço unitário pago pela startup na recompra.
+  // É usada apenas por directSell e segue a fórmula:
+  // floor(precoTokenAtualCentavos * (10000 - descontoVendaDiretaBps) / 10000).
+  // O valor final precisa permanecer inteiro positivo em centavos.
+  // Calcula o preço unitário da recompra com desconto em bps.
+  // O valor precisa continuar inteiro positivo em centavos.
+  private calculateDirectSellPriceInCents(
+    precoTokenAtualCentavos: number,
+    descontoVendaDiretaBps: number,
+  ): number {
+    const precoUnitarioCentavos = Math.floor(
+      (precoTokenAtualCentavos * (10000 - descontoVendaDiretaBps)) / 10000,
+    );
+
+    if (!this.isPositiveInteger(precoUnitarioCentavos)) {
+      throw new AppError(
+        "Startup com preço de recompra inválido.",
+        500,
+        "INVALID_STARTUP_STATE",
+      );
+    }
+
+    return precoUnitarioCentavos;
   }
 
   // Executa a compra direta inteira dentro de uma Firestore Transaction.
@@ -340,6 +441,179 @@ export class TradesRepo {
         quantidadeAtual,
         quantidadeBloqueada,
         precoMedioCentavos,
+      };
+    });
+  }
+
+  // Samuel Campovilla:
+  // Executa a Fase 3 inteira dentro de uma única Firestore Transaction.
+  // Este método é chamado somente por directSellService e centraliza todo o fluxo atômico:
+  // 1) lê startup, wallet e holding do usuário;
+  // 2) valida estado dos documentos;
+  // 3) calcula o preço de recompra com desconto;
+  // 4) valida posse usando apenas holding.quantidade;
+  // 5) atualiza saldoCentavos, holding.quantidade e startup.tokensDisponiveis;
+  // 6) registra a transaction com tipo VENDA_DIRETA.
+  //
+  // Regra crítica: quantidadeBloqueada nunca é somada na validação de posse.
+  // Tokens bloqueados em oferta continuam preservados e não podem ser vendidos aqui.
+  // Executa a venda direta inteira dentro de uma Firestore Transaction.
+  // Usa apenas holding.quantidade como tokens livres e preserva quantidadeBloqueada.
+  async directSell(
+    uid: string,
+    startupId: string,
+    quantidade: number,
+  ): Promise<DirectSellResult> {
+    return this.db.runTransaction<DirectSellResult>(async (transaction) => {
+      const walletRef = this.getWalletRef(uid);
+      const holdingRef = this.getHoldingRef(uid, startupId);
+      const startupRef = this.getStartupRef(startupId);
+      const transactionRef = this.db.collection("transactions").doc();
+
+      const [startupDoc, walletDoc, holdingDoc] = await Promise.all([
+        transaction.get(startupRef),
+        transaction.get(walletRef),
+        transaction.get(holdingRef),
+      ]);
+
+      if (!startupDoc.exists) {
+        throw new AppError(
+          "Startup não encontrada.",
+          404,
+          "STARTUP_NOT_FOUND",
+        );
+      }
+
+      if (!walletDoc.exists) {
+        throw new AppError(
+          "Carteira não encontrada.",
+          404,
+          "WALLET_NOT_FOUND",
+        );
+      }
+
+      if (!holdingDoc.exists) {
+        throw new AppError(
+          "Holding não encontrada para a startup informada.",
+          404,
+          "HOLDING_NOT_FOUND",
+        );
+      }
+
+      const startup = this.toDirectSellStartupRecord(startupId, startupDoc.data());
+      const wallet = this.toWalletRecord(uid, walletDoc.data());
+      const holding = this.toHoldingRecord(uid, startupId, holdingDoc.data());
+
+      // Samuel Campovilla:
+      // A posse para venda direta considera somente tokens livres em holding.quantidade.
+      // quantidadeBloqueada representa tokens presos em ofertas abertas e não entra aqui.
+      if (holding.quantidade < quantidade) {
+        throw new AppError(
+          "Você não possui tokens livres suficientes para vender.",
+          409,
+          "INSUFFICIENT_TOKENS",
+        );
+      }
+
+      const precoUnitarioCentavos = this.calculateDirectSellPriceInCents(
+        startup.precoTokenAtualCentavos,
+        startup.descontoVendaDiretaBps,
+      );
+      const valorTotalCentavos = precoUnitarioCentavos * quantidade;
+
+      if (!Number.isSafeInteger(valorTotalCentavos) || valorTotalCentavos <= 0) {
+        throw new AppError(
+          "Valor total da venda é inválido.",
+          500,
+          "INTERNAL_ERROR",
+        );
+      }
+
+      const saldoAnteriorCentavos = wallet.saldoCentavos;
+      const saldoNovoCentavos = saldoAnteriorCentavos + valorTotalCentavos;
+
+      if (
+        !Number.isSafeInteger(saldoNovoCentavos) ||
+        saldoNovoCentavos < saldoAnteriorCentavos
+      ) {
+        throw new AppError(
+          "Saldo resultante da venda é inválido.",
+          500,
+          "INVALID_WALLET_STATE",
+        );
+      }
+
+      const tokensDisponiveisAtualizados = startup.tokensDisponiveis + quantidade;
+
+      if (
+        !Number.isSafeInteger(tokensDisponiveisAtualizados) ||
+        tokensDisponiveisAtualizados < startup.tokensDisponiveis
+      ) {
+        throw new AppError(
+          "Quantidade de tokens da startup é inválida após a venda.",
+          500,
+          "INVALID_STARTUP_STATE",
+        );
+      }
+
+      if (
+        startup.totalTokens !== undefined &&
+        tokensDisponiveisAtualizados > startup.totalTokens
+      ) {
+        throw new AppError(
+          "A startup excederia totalTokens após a recompra.",
+          500,
+          "INVALID_STARTUP_STATE",
+        );
+      }
+
+      const quantidadeAtual = holding.quantidade - quantidade;
+      const quantidadeBloqueada = holding.quantidadeBloqueada;
+      const commonTimestamp = FieldValue.serverTimestamp();
+
+      // A escrita preserva explicitamente quantidadeBloqueada e precoMedioCentavos.
+      // A Fase 3 só reduz os tokens livres do usuário e credita o saldo correspondente.
+      transaction.update(walletRef, {
+        saldoCentavos: saldoNovoCentavos,
+        updatedAt: commonTimestamp,
+      });
+
+      transaction.update(holdingRef, {
+        uid,
+        startupId,
+        quantidade: quantidadeAtual,
+        quantidadeBloqueada,
+        precoMedioCentavos: holding.precoMedioCentavos,
+        updatedAt: commonTimestamp,
+      });
+
+      transaction.update(startupRef, {
+        tokensDisponiveis: tokensDisponiveisAtualizados,
+        updatedAt: commonTimestamp,
+      });
+
+      transaction.set(transactionRef, {
+        userId: uid,
+        startupId,
+        tipo: "VENDA_DIRETA",
+        quantidade,
+        precoUnitarioCentavos,
+        valorTotalCentavos,
+        saldoAnteriorCentavos,
+        saldoNovoCentavos,
+        createdAt: commonTimestamp,
+      });
+
+      return {
+        transactionId: transactionRef.id,
+        startupId,
+        quantidade,
+        precoUnitarioCentavos,
+        valorTotalCentavos,
+        saldoAnteriorCentavos,
+        saldoNovoCentavos,
+        quantidadeAtual,
+        quantidadeBloqueada,
       };
     });
   }
