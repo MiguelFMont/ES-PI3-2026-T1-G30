@@ -58,7 +58,7 @@ interface TransactionsResponse {
 }
 
 // retorna os dados agregados da wallet para o dashboard 
-export async function getDadosDashboardService(uid: string) {
+export async function getDadosDashboardService(uid: string | undefined) {
     // valida se o uid foi informado 
     if (!uid){
         throw new AppError('UID do usuário é obrigatório', 400, 'INVALID_UID');

@@ -66,15 +66,18 @@ export async function getHistoricoOperacoesController(
 }
 
 // controller dos dados do dashboard 
-export async function getDadosDashboardController (req: Request, res: Response) {
-    // pega o uid do usuário pelos parametros da rota 
-    const uid = req.params.uid as string;
-
-    // chama o service 
-    const result = await getDadosDashboardService(uid);
-
-    // retorna o resultado
+// usa o token JWT para identificar o usuário 
+export async function getDadosDashboardController (
+  req: Request, 
+  res: Response, 
+  next: NextFunction,
+) {
+  try {
+    const result = await getDadosDashboardService(getUid(req));
     res.status(200).json(result);
+  } catch (error) {
+      next(error);
+    }
 }
 
 // Samuel Campovilla

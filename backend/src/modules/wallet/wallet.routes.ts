@@ -47,6 +47,6 @@ router.post('/add-balance', addBalanceController);
 router.get('/transactions', getTransactionsController);
 
 // Retorna os dados agregados da wallet para o dashboard
-router.get('/dashboard/:uid', getDadosDashboardController);
+router.get('/dashboard', getDadosDashboardController);
 
 export default router;
