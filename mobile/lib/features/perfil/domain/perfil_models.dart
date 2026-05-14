@@ -10,6 +10,8 @@ class PerfilModel {
   final String cpf;
   final String dataNascimento;
   final bool mfaAtivo;
+  final String ultimaAlteracaoSenha;
+
 
   const PerfilModel({
     required this.nome,
@@ -20,6 +22,7 @@ class PerfilModel {
     required this.cpf,
     required this.dataNascimento,
     required this.mfaAtivo,
+    this.ultimaAlteracaoSenha = '—',
   });
 
   factory PerfilModel.fromJson(Map<String, dynamic> json) {
@@ -32,6 +35,7 @@ class PerfilModel {
       cpf: json['cpf'] as String? ?? '',
       dataNascimento: json['dataNascimento'] as String? ?? '—',
       mfaAtivo: json['mfaEnabled'] as bool? ?? false,
+      ultimaAlteracaoSenha: json['ultimaAlteracaoSenha'] as String? ?? '—',
     );
   }
 }

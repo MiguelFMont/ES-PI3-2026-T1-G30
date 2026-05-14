@@ -27,6 +27,22 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   String? _email;
   String? _token;
 
+  // ── Requisitos da senha ────────────────────────────────────────────────────
+  bool get _temMinimo => _passwordController.text.length >= 8;
+  bool get _temMaiuscula => _passwordController.text.contains(RegExp(r'[A-Z]'));
+  bool get _temNumero => _passwordController.text.contains(RegExp(r'[0-9]'));
+  bool get _temEspecial =>
+      _passwordController.text.contains(RegExp(r'[!@#\$%^&*(),.?":{}|<>]'));
+  bool get _senhaValida =>
+      _temMinimo && _temMaiuscula && _temNumero && _temEspecial;
+ 
+
+  @override
+  void initState() {
+    super.initState();
+    _passwordController.addListener(() => setState(() {}));
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -50,10 +66,14 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
       return;
     }
 
-    if (novaSenha.length < 6) {
-      _showSnackBar('A nova senha deve ter pelo menos 6 caracteres.', isError: true);
+    if (!_senhaValida) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('A senha não atende todos os requisitos.'),
+        backgroundColor: Colors.red,
+      ));
       return;
     }
+
 
     if (novaSenha != confirmaSenha) {
       _showSnackBar('As senhas não coincidem.', isError: true);
@@ -92,7 +112,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
         backgroundColor: isError ? Colors.red : Colors.green,
       ),
     );
-  }
+  } 
 
   @override
   void dispose() {
@@ -106,7 +126,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     return MesclaAuthLayout(
       children: [
         _cabecalho(),
-        const SizedBox(height: 40),
+        const SizedBox(height: 30),
         Column(
           children: [
             CampoTexto(
@@ -119,6 +139,11 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
               controller: _confirmPasswordController,
               label: 'Confirmar Nova Senha',
               obscureText: true,
+            ),
+            const SizedBox(height: 5),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40),
+              child: _requisitos(),
             ),
             const SizedBox(height: 32),
             _botaoConfirmar(),
@@ -141,15 +166,58 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
             fontWeight: FontWeight.bold
           ),
         ),
-        SizedBox(height: 8),
-        Text(
-          'Escolha uma nova senha forte e segura para a sua conta.',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: AppColors.mutedForeground, fontSize: 14),
-        ),
       ],
     );
   }
+
+  
+  Widget _requisitos() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Requisitos da senha:',
+          style: TextStyle(
+              color: AppColors.mutedForeground.withOpacity(0.8), fontSize: 12),
+        ),
+        const SizedBox(height: 6),
+        _itemRequisito('Mínimo 8 caracteres', _temMinimo),
+        _itemRequisito('Letra maiúscula', _temMaiuscula),
+        _itemRequisito('Número', _temNumero),
+        _itemRequisito('Caractere especial', _temEspecial),
+      ],
+    );
+  }
+
+  Widget _itemRequisito(String texto, bool valido) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Icon(
+            valido
+                ? Icons.check_circle_outline
+                : Icons.radio_button_unchecked,
+            size: 14,
+            color: valido
+                ? Colors.green
+                : AppColors.mutedForeground.withOpacity(0.4),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            texto,
+            style: TextStyle(
+              fontSize: 12,
+              color: valido
+                  ? Colors.green
+                  : AppColors.mutedForeground.withOpacity(0.6),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
 
   Widget _botaoConfirmar() {
     return _isLoading
