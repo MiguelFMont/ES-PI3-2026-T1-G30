@@ -3,6 +3,7 @@ Autora: Maria Júlia Lazarini Oleto
 RA: 25006031
 
 significado do arquivo:
+modelo da carteira do usuário
 representa os dados gerais da carteira do usuário
 o que aparece no card principal da tela
 */
@@ -13,20 +14,24 @@ import 'operacao_model.dart';
 class WalletModel {
   // uid do usuário da carteira (mesmo do Firebase Auth)
   final String uid;
-  final double saldo;
-  // lista de startups que o usuário possui tokens (participações)
+  final double saldoCentavos;
+  // lista de startups que o usuário possui tokens (holdings)
   final List<ParticipacaoModel> participacoes;
-  // lista das últimas operações do usuário
+  // lista das operações do usuário
   final List<OperacaoModel> operacoes;
 
   const WalletModel({
     required this.uid,
-    required this.saldo,
+    required this.saldoCentavos,
     required this.participacoes,
     required this.operacoes,
   });
 
+  // saldo disponível em reais 
+  double get saldo => saldoCentavos / 100;
+
   // calculo do valor total da carteira 
+  // soma o valor de todas as participações 
   double get valorTotalCarteira {
     // .fold() - percorre a lista acumulando os valores
     // comeca em 0.0 e soma o valor da posicão de cada participção
@@ -41,6 +46,7 @@ class WalletModel {
     );
   }
 
+  // calcula o lucro total
   double get lucroTotal => valorTotalCarteira - totalInvestido;
 
   // calculo do retorno percentual 
@@ -50,11 +56,12 @@ class WalletModel {
   }
 
   // tranforma o retorno do Firestore (Map) em instancia da classe (objeto dart)
-  factory WalletModel.fromMap(String uid, Map<String, dynamic> map,
+  factory WalletModel.fromDashboard(String uid, Map<String, dynamic> dashboardMap,
     List<ParticipacaoModel> participacoes, List<OperacaoModel> operacoes) {
       return WalletModel (
         uid: uid,
-        saldo: (map['saldo'] ?? 0).toDouble(),
+        // back retorna saldo em reais - converte para centavos 
+        saldoCentavos: ((dashboardMap['saldoDisponivel'] ?? 0) * 100).toInt(),
         participacoes: participacoes,
         operacoes: operacoes,
       );

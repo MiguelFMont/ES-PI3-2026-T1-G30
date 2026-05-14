@@ -4,6 +4,8 @@ RA: 25006031
 
 significado do arquivo:
 "ponte" entre a tela e o datasource  
+trata os erros antes de chegar na tela 
+recebe o token JWT e repassa pro datasource
 */
 
 // importa o datasource 
@@ -12,16 +14,13 @@ import '../datasource/portfolio_datasource.dart';
 import '../../domain/models/wallet_model.dart';
 import '../../domain/models/participacao_model.dart';
 import '../../domain/models/operacao_model.dart';
-
-// classe que é a ponte entre a tela e o datasource 
+ 
 class PortfolioRepository {
   // instancia do datasource 
     final PortfolioDatasource _datasource;
     PortfolioRepository(this._datasource);
     
-    // busca todos os dados da carteira do usuário
-    // repassa a chamada para o datasource
-    // trata erros 
+    // busca todos os dados da carteira do usuário 
     Future<WalletModel> getWallet(String uid) async {
       try {
         // chama o datasource e retorna o resultado
@@ -35,7 +34,7 @@ class PortfolioRepository {
     // busca as participações do usuário
     Future<List<ParticipacaoModel>> getParticipacoes (String uid) async {
       try {
-        return await _datasource.getParticipacoes(uid);
+        return await _datasource.getParticipacoes();
       } catch (e) {
         throw Exception(e.toString().replaceAll('Exception: ', ''));
       }
@@ -44,7 +43,7 @@ class PortfolioRepository {
     // busca o histórico de operações do usuário
     Future<List<OperacaoModel>> getOperacoes(String uid) async {
       try {
-        return await _datasource.getOperacoes(uid);
+        return await _datasource.getOperacoes();
       } catch (e) {
         throw Exception(e.toString().replaceAll('Exception: ', ''));
       }

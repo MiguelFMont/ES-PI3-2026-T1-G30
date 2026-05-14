@@ -5,6 +5,8 @@ RA: 25006031
 significado do arquivo:
 responsável por fazer as chamadas HTTP para o backend (Firebase Functions)
 ele usa a url do backend e busca os dados 
+envia o token JWT no header para autenticação 
+endpoints usam esse token pra autenticação
 */
 
 // importa o pacote http para fazer as requisições
@@ -20,78 +22,84 @@ import '../../domain/models/operacao_model.dart';
 class PortfolioDatasource {
     // url base do backend 
     final String _baseUrl;
-    // construtor
-    PortfolioDatasource(this._baseUrl);
+    // token JWT do usuário autenticado
+    // enviado no header de todas as requisições 
+    final String _token;
+
+    // construtor 
+    PortfolioDatasource(this._baseUrl, this._token);
+
+    // header padrão com o token JWT 
+    Map<String, String> get _headers => {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $_token',
+    };
+
+    // busca os dados do dashboard 
+    Future<Map<String, dynamic>> getDashboard(String uid) async {
+        // url do endpoint do dashboard
+        final url = Uri.parse('$_baseUrl/v1/wallet/dashboard');
+        // faz a requisição GET pro endpoint com o header de autenticação
+        final response = await http.get(url, headers: _headers);
+        // caso de erro 
+        if (response.statusCode != 200) {
+          throw Exception('Erro ao buscar dados do dashboard');
+        }
+        // converte o corpo da resposta de JSON para Map
+        final Map<String, dynamic> body = jsonDecode(response.body);
+        // retorna o mapa do dashboard com os dados 
+        return body['dashboard'] as Map<String, dynamic>;
+    }
 
     // busca todos os dados da carteira do usuário 
     Future<WalletModel> getWallet(String uid) async {
-        // monta a url completa pra buscar os dados 
-        final url = Uri.parse('$_baseUrl/api/v1/wallet/dashboard/$uid');
-        // faz a requisição GET para o backend 
-        final response = await http.get(
-            url,
-            // envia o header informando que esperamos JSON de volta
-            headers: {'Content-Type': 'application/json'},
+        // busca os dados do dashboard (saldo disponível)
+        final dashboardData = await getDashboard(uid);
+        // busca as participações 
+        final participacoes = await getParticipacoes();
+        // busca o histórico de operações 
+        final operacoes = await getOperacoes();
+        // monta e retorna o walletmodel com os dados 
+        return WalletModel.fromDashboard(
+          uid,
+          dashboardData,
+          participacoes,
+          operacoes,
         );
-        // verifica se a requisição foi bem sucedida 
-        if (response.statusCode != 200) {
-            throw Exception('Erro ao buscar dados da carteira');
-        }
-        // converte o body da resposta de String pra Map (jsonDecode) 
-        final Map<String, dynamic> body = jsonDecode(response.body);
-        // pega os dados do dashboard dentro do body 
-        final Map<String, dynamic> dashboardData = body['dashboard'];
-        // busca as participações do usuário
-        final participacoes = await getParticipacoes(uid);
-        // busca o histórico de operações
-        final operacoes = await getOperacoes(uid);
-        // monta e retorna o wallet model com os dados 
-        return WalletModel.fromMap(uid, dashboardData, participacoes, operacoes);
     }
 
     // busca as participações do usuário
-    Future<List<ParticipacaoModel>> getParticipacoes(String uid) async {
-        final url = Uri.parse('$_baseUrl/api/v1/wallet/participacoes/$uid');
-        final response = await http.get(
-            url,
-            headers: {'Content-Type': 'application/json'},
-        );
+    // usa o token JWT para identificar o usuário
+    Future<List<ParticipacaoModel>> getParticipacoes() async {
+        final url = Uri.parse('$_baseUrl/v1/wallet/holdings');
+        final response = await http.get(url, headers: _headers);
         if (response.statusCode != 200) {
             throw Exception('Erro ao buscar participações');
         }
         final Map<String, dynamic> body = jsonDecode(response.body);
         // pega a lista de participações do body
         // converte para o formato list do dart
-        final List participacoesData = body['participacoes'] as List;
+        final List items = body['items'] as List;
         // parcorre a lista e converte cada item em participacao model
-        return participacoesData.map((item) { 
-            return ParticipacaoModel.fromMap(
-                // pega o id 
-                item['id'],
-                // passa o map completo do item 
-                item as Map<String, dynamic>,
-            );
+        return items.map((item) { 
+            return ParticipacaoModel.fromMap(item as Map<String, dynamic>);
         }).toList();
     }
 
     // pega o histórico de operações do usuário
-    Future<List<OperacaoModel>> getOperacoes(String uid) async {
-        final url = Uri.parse('$_baseUrl/api/v1/wallet/historico/$uid');
-        final response = await http.get (
-            url,
-            headers: {'Content-Type': 'application/json'},
-        );
+    // usa o token JWT para identificar o usuário
+    Future<List<OperacaoModel>> getOperacoes() async {
+        final url = Uri.parse('$_baseUrl/v1/wallet/transactions');
+        final response = await http.get (url, headers: _headers);
         if (response.statusCode != 200) {
             throw Exception('Erro ao buscar histórico de operações');
         }
         final Map<String, dynamic> body = jsonDecode(response.body);
-        final List operacoesData = body['operacoes'] as List;
+        final List items = body['items'] as List;
         // percorre a lista e converte cada item em operacao model
-        return operacoesData.map((item) {
-            return OperacaoModel.fromMap(
-                item['id'],
-                item as Map<String, dynamic>,
-            );
+        return items.map((item) {
+            final map = item as Map<String, dynamic>;
+            return OperacaoModel.fromMap(map['id'], map);
         }).toList();
     }
 }
