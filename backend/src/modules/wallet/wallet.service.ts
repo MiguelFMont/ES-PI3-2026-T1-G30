@@ -489,6 +489,11 @@ export async function getTransactionsService(
   };
 }
 
+// Alias de compatibilidade com o nome antigo do histórico de operações.
+// O contrato atual do módulo usa getTransactionsService e o endpoint /wallet/transactions,
+// mas este export evita erro em imports locais que ainda não foram atualizados.
+export const getHistoricoOperacoesService = getTransactionsService;
+
 // Regra de negócio do POST /wallet/add-balance.
 // É chamada pelo addBalanceController e valida valorCentavos antes de atualizar a wallet.
 export async function addBalanceService(

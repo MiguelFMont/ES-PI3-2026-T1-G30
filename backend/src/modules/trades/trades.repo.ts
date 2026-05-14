@@ -2,6 +2,7 @@
 // O service chama este repositório depois de validar o body e a autenticação.
 
 import { getDb } from "../../config/firebase";
+import { PriceService } from "../prices/price.service";
 import { AppError } from "../../shared/errors/app.error";
 import { FieldValue } from "firebase-admin/firestore";
 
@@ -58,6 +59,7 @@ export interface DirectSellResult {
 export class TradesRepo {
   // Referência compartilhada do Firestore usada por este módulo.
   private db = getDb();
+  private priceService = new PriceService();
 
   // Valida inteiros estritamente positivos.
   // É usada para preço do token e quantidade de compra.
@@ -335,6 +337,8 @@ export class TradesRepo {
         ? this.toHoldingRecord(uid, startupId, holdingDoc.data())
         : null;
 
+      // A compra usa o preço lido no início da transaction.
+      // A oscilação simulada desta própria negociação só vale para o próximo estado.
       const precoUnitarioCentavos = startup.precoTokenAtualCentavos;
       const valorTotalCentavos = precoUnitarioCentavos * quantidade;
 
@@ -392,11 +396,6 @@ export class TradesRepo {
         });
       }
 
-      transaction.update(startupRef, {
-        tokensDisponiveis: startup.tokensDisponiveis - quantidade,
-        updatedAt: commonTimestamp,
-      });
-
       if (!holdingDoc.exists) {
         transaction.set(holdingRef, {
           uid,
@@ -428,6 +427,23 @@ export class TradesRepo {
         saldoAnteriorCentavos,
         saldoNovoCentavos,
         createdAt: commonTimestamp,
+      });
+
+      // Depois de registrar a compra, delegamos ao PriceService a parte da Fase 5.
+      // Essa chamada acontece na mesma Firestore Transaction para manter consistentes:
+      // wallet, holding, startup, transaction e priceHistory.
+      this.priceService.applyTradePriceUpdateToTransaction({
+        transaction,
+        startupRef,
+        startupId,
+        startupData: startupDoc.data(),
+        quantidade,
+        motivo: "COMPRA_DIRETA",
+        commonTimestamp,
+        transactionId: transactionRef.id,
+        extraStartupUpdateData: {
+          tokensDisponiveis: startup.tokensDisponiveis - quantidade,
+        },
       });
 
       return {
@@ -515,6 +531,7 @@ export class TradesRepo {
         );
       }
 
+      // A venda liquida a recompra com o preço atual antes da própria queda simulada.
       const precoUnitarioCentavos = this.calculateDirectSellPriceInCents(
         startup.precoTokenAtualCentavos,
         startup.descontoVendaDiretaBps,
@@ -587,11 +604,6 @@ export class TradesRepo {
         updatedAt: commonTimestamp,
       });
 
-      transaction.update(startupRef, {
-        tokensDisponiveis: tokensDisponiveisAtualizados,
-        updatedAt: commonTimestamp,
-      });
-
       transaction.set(transactionRef, {
         userId: uid,
         startupId,
@@ -602,6 +614,23 @@ export class TradesRepo {
         saldoAnteriorCentavos,
         saldoNovoCentavos,
         createdAt: commonTimestamp,
+      });
+
+      // A queda simulada da venda é aplicada só depois de liquidar a recompra atual.
+      // O serviço de preço também grava os pontos de histórico na mesma transaction,
+      // para o dashboard futuro enxergar a evolução exata que saiu da operação.
+      this.priceService.applyTradePriceUpdateToTransaction({
+        transaction,
+        startupRef,
+        startupId,
+        startupData: startupDoc.data(),
+        quantidade,
+        motivo: "VENDA_DIRETA",
+        commonTimestamp,
+        transactionId: transactionRef.id,
+        extraStartupUpdateData: {
+          tokensDisponiveis: tokensDisponiveisAtualizados,
+        },
       });
 
       return {

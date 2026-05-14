@@ -4,13 +4,14 @@ RA: 25006031
 significado do arquivo:
 
 recebe a requisição http da busca 
-usa o usuário autenticado e os filtros públicos da requisição
+pega o uid do usuário pelos parametros da rota (/historico/:uid)
 chama o service 
 retorna o resultado com status 200
 */
 
 import  {NextFunction, Request, Response } from 'express';
 import { 
+  getHistoricoOperacoesService, 
   getTransactionsService,
   getDadosDashboardService,
   addBalanceService,
@@ -37,6 +38,24 @@ export async function getTransactionsController(
 ) {
   try {
     const result = await getTransactionsService(
+      getUid(req),
+      getTransactionsFilters(req),
+    );
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+// A rota legada /wallet/historico/:uid continua disponível por compatibilidade.
+// O parâmetro da URL é ignorado deliberadamente; a consulta usa apenas req.user.uid.
+export async function getHistoricoOperacoesController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const result = await getHistoricoOperacoesService(
       getUid(req),
       getTransactionsFilters(req),
     );
