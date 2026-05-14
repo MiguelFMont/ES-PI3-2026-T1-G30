@@ -1,4 +1,4 @@
-name: mobile
+name: mesclainvest
 description: "A new Flutter project."
 publish_to: 'none' 
 
@@ -26,8 +26,15 @@ dependencies:
   flutter_dotenv: ^6.0.1
 
 dev_dependencies:
+  flutter_launcher_icons: ^0.13.1
   flutter_test:
     sdk: flutter
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  image_path: "assets/images/logoMescla.png"
 
   flutter_lints: ^6.0.0
 flutter:

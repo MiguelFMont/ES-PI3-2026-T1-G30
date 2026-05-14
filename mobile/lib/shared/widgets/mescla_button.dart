@@ -6,7 +6,7 @@ import '../../core/theme/app_colors.dart';
 
 class MesclaButton extends StatelessWidget {
   final String label;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final double width;
 
   const MesclaButton({

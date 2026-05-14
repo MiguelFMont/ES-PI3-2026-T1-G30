@@ -14,15 +14,13 @@ class PerfilRepository {
       throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
   }
+
   Future<void> atualizarPerfil({
     required String nome,
     required String telefone,
   }) async {
     try {
-      await _datasource.atualizarPerfil(
-        nome: nome,
-        telefone: telefone,
-      );
+      await _datasource.atualizarPerfil(nome: nome, telefone: telefone);
     } catch (e) {
       throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
@@ -70,6 +68,17 @@ class PerfilRepository {
   //   throw Exception(body['message'] ?? 'Erro ao adicionar saldo');
   // }
 
-  
-  
+  Future<void> alterarSenha({
+    required String senhaAtual,
+    required String novaSenha,
+  }) async {
+    try {
+      await _datasource.alterarSenha(
+        senhaAtual: senhaAtual,
+        novaSenha: novaSenha,
+      );
+    } catch (e) {
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
 }

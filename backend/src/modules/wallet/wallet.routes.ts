@@ -5,7 +5,7 @@ significado do arquivo:
 
 define a rota
 aponta para o controller 
-o :uid é o ID do usuário que será passado na URL
+registra os endpoints atuais da carteira
 */
 
 // Samuel Campovilla
@@ -14,7 +14,7 @@ o :uid é o ID do usuário que será passado na URL
 // O server.ts aplica /v1 acima disso, então os caminhos finais ficam /api/v1/wallet...
 import { Router } from 'express';
 import {
-  getHistoricoOperacoesController,
+  getTransactionsController,
   getDadosDashboardController,
   addBalanceController,
   getWalletController,
@@ -37,12 +37,14 @@ router.get('/', getWalletController);
 router.get('/holdings', listHoldingsController);
 
 // Soma saldo fictício em centavos na carteira do usuário autenticado.
-// Chama addBalanceController, que valida req.body.valorCentavos no service.
+// Chama addBalanceController, que valida req.body.valorCentavos no service
+// e agora registra ADICIONAR_SALDO no histórico de forma atômica.
 router.post('/add-balance', addBalanceController);
 
-// Retorna o histórico de operações do usuário
-// o :uid é o ID do usuário que será passado na URL
-router.get('/historico/:uid', getHistoricoOperacoesController);
+// Samuel Campovilla:
+// O histórico da carteira expõe apenas o contrato atual /transactions.
+// O UID nunca entra pela URL para evitar qualquer brecha de consulta a dados de terceiros.
+router.get('/transactions', getTransactionsController);
 
 // Retorna os dados agregados da wallet para o dashboard
 router.get('/dashboard/:uid', getDadosDashboardController);

@@ -8,7 +8,8 @@ import '../../../../core/storage/session_manager.dart';
 class PerfilDatasource {
   Future<Map<String, String>> get _headers async {
     final token = await SessionManager.getToken();
-    if (token == null) throw Exception('Sessão expirada. Faça login novamente.');
+    if (token == null)
+      throw Exception('Sessão expirada. Faça login novamente.');
     return {
       'Authorization': 'Bearer $token',
       'Content-Type': 'application/json',
@@ -16,22 +17,22 @@ class PerfilDatasource {
   }
 
   Future<Map<String, dynamic>> buscarPerfil() async {
-  final response = await http.get(
-    Uri.parse('${AppHttpClient.baseUrl}/users/me'),
-    headers: await _headers,
-  );
+    final response = await http.get(
+      Uri.parse('${AppHttpClient.baseUrl}/users/me'),
+      headers: await _headers,
+    );
 
-  final data = jsonDecode(response.body);
+    final data = jsonDecode(response.body);
 
-  if (response.statusCode == 200) return data;
+    if (response.statusCode == 200) return data;
 
-  if (response.statusCode == 401 || response.statusCode == 404) {
-    await SessionManager.fazerLogout();
-    throw Exception('Sessão inválida. Faça login novamente.');
+    if (response.statusCode == 401 || response.statusCode == 404) {
+      await SessionManager.fazerLogout();
+      throw Exception('Sessão inválida. Faça login novamente.');
+    }
+
+    throw Exception(data['message'] ?? 'Erro ao buscar perfil.');
   }
-
-  throw Exception(data['message'] ?? 'Erro ao buscar perfil.');
-}
 
   Future<void> atualizarPerfil({
     required String nome,
@@ -78,5 +79,20 @@ class PerfilDatasource {
     final data = jsonDecode(response.body);
     if (response.statusCode == 200) return;
     throw Exception(data['message'] ?? 'Código inválido.');
+  }
+
+  Future<void> alterarSenha({
+    required String senhaAtual,
+    required String novaSenha,
+  }) async {
+    final response = await http.patch(
+      Uri.parse('${AppHttpClient.baseUrl}/users/me/senha'),
+      headers: await _headers,
+      body: jsonEncode({'senhaAtual': senhaAtual, 'novaSenha': novaSenha}),
+    );
+
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200) return;
+    throw Exception(data['message'] ?? 'Erro ao alterar senha.');
   }
 }

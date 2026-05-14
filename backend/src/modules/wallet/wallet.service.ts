@@ -18,36 +18,43 @@ retorna os dados pro dashboard
 */
 
 // Autor: Samuel Campovilla
-// Este arquivo concentra a regra de negócio da Fase 1 da carteira.
+// Este arquivo concentra a regra de negócio da carteira.
 // Os controllers chamam estas funções; elas validam entrada, estado e normalizam a resposta.
 
-import { WalletRepo } from "./wallet.repo";
+import {
+  type TipoTransacao,
+  VALID_TRANSACTION_TYPES,
+  WalletRepo,
+} from "./wallet.repo";
 import { AppError } from "../../shared/errors/app.error";
 import { Timestamp } from "firebase-admin/firestore";
 
-// retorna o histórico de operações do usuário
-export async function getHistoricoOperacoesService(uid: string) {
-    // valida se o uid foi informado 
-    if (!uid) {
-        throw new AppError('UID do usuário é obrigatório', 400, 'INVALID_UID');
-    }
+interface TransactionFiltersInput {
+  startupId?: unknown;
+  tipo?: unknown;
+}
 
-    // busca o histórico no repositório e guarda na const 
-    const historico = await walletRepo.getHistoricoOperacoes(uid);
+interface TransactionFilters {
+  startupId?: string;
+  tipo?: TipoTransacao;
+}
 
-    // valida se encontrou as operações 
-    if (!historico || historico.length === 0){
-        return {
-            message: 'Nenhuma operação encontrada',
-            operacoes: [],
-        };
-    }
+interface TransactionResponse {
+  id: string;
+  startupId?: string;
+  offerId?: string;
+  counterpartyUserId?: string;
+  tipo: TipoTransacao;
+  quantidade?: number;
+  precoUnitarioCentavos?: number;
+  valorTotalCentavos: number;
+  saldoAnteriorCentavos?: number;
+  saldoNovoCentavos?: number;
+  createdAt: string;
+}
 
-    // retorna o histórico de operações
-    return {
-        message: 'Histórico retornado com sucesso',
-        operacoes: historico,
-    };
+interface TransactionsResponse {
+  items: TransactionResponse[];
 }
 
 // retorna os dados agregados da wallet para o dashboard 
@@ -154,6 +161,12 @@ interface HoldingResponse {
   updatedAt: string;
 }
 
+// Valida strings não vazias.
+// É usada para filtros do histórico e para validar campos textuais do DTO público.
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
 // Valida inteiros maiores ou iguais a zero.
 // É usada para checar saldo e campos de holding já lidos do banco.
 function isNonNegativeInteger(value: unknown): value is number {
@@ -164,6 +177,15 @@ function isNonNegativeInteger(value: unknown): value is number {
 // É usada no POST /wallet/add-balance para aceitar apenas valorCentavos válido.
 function isPositiveInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value > 0;
+}
+
+// Garante que o filtro "tipo" só aceite os nomes oficiais do contrato em português.
+// O endpoint não expõe aliases em inglês para evitar ambiguidade com contratos antigos.
+function isTransactionType(value: unknown): value is TipoTransacao {
+  return (
+    typeof value === "string" &&
+    VALID_TRANSACTION_TYPES.includes(value as TipoTransacao)
+  );
 }
 
 // Garante que o uid foi preenchido pelo authMiddleware.
@@ -180,13 +202,45 @@ function assertAuthenticated(uid: string | undefined): string {
 // É usada na serialização de wallet e holdings antes da resposta HTTP.
 function toIsoString(
   value: unknown,
-  code: "INVALID_WALLET_STATE" | "INVALID_HOLDING_STATE",
+  code: "INVALID_WALLET_STATE" | "INVALID_HOLDING_STATE" | "INTERNAL_ERROR",
 ): string {
   if (!(value instanceof Timestamp)) {
-    throw new AppError("Timestamp inválido na carteira.", 500, code);
+    throw new AppError("Timestamp inválido nos dados retornados.", 500, code);
   }
 
   return value.toDate().toISOString();
+}
+
+// Normaliza os filtros opcionais aceitos pelo contrato do histórico.
+// Campos ausentes são ignorados; campos presentes mas inválidos geram AppError explícito.
+function parseTransactionFilters(input: TransactionFiltersInput): TransactionFilters {
+  const filters: TransactionFilters = {};
+
+  if (input.startupId !== undefined) {
+    if (!isNonEmptyString(input.startupId)) {
+      throw new AppError(
+        "startupId deve ser uma string não vazia.",
+        400,
+        "INVALID_STARTUP_ID",
+      );
+    }
+
+    filters.startupId = input.startupId.trim();
+  }
+
+  if (input.tipo !== undefined) {
+    if (!isTransactionType(input.tipo)) {
+      throw new AppError(
+        "tipo de transação inválido.",
+        400,
+        "INVALID_TRANSACTION_TYPE",
+      );
+    }
+
+    filters.tipo = input.tipo;
+  }
+
+  return filters;
 }
 
 // Normaliza o documento de wallet retornado pelo repo.
@@ -287,6 +341,114 @@ function toHoldingResponse(
   };
 }
 
+// Samuel Campovilla:
+// O DTO público do histórico é montado aqui para não acoplar a API ao documento cru do Firestore.
+// Campos opcionais são omitidos quando não existem, seguindo o padrão mais enxuto já usado no módulo wallet.
+function toTransactionResponse(
+  transaction: Awaited<ReturnType<WalletRepo["listTransactions"]>>[number],
+): TransactionResponse {
+  if (!isNonEmptyString(transaction.id)) {
+    throw new AppError("Transação sem id válido.", 500, "INTERNAL_ERROR");
+  }
+
+  if (!isNonEmptyString(transaction.userId)) {
+    throw new AppError("Transação sem userId válido.", 500, "INTERNAL_ERROR");
+  }
+
+  if (!isTransactionType(transaction.tipo)) {
+    throw new AppError("Transação com tipo inválido.", 500, "INTERNAL_ERROR");
+  }
+
+  if (!isPositiveInteger(transaction.valorTotalCentavos)) {
+    throw new AppError(
+      "Transação com valor total inválido.",
+      500,
+      "INTERNAL_ERROR",
+    );
+  }
+
+  const response: TransactionResponse = {
+    id: transaction.id,
+    tipo: transaction.tipo,
+    valorTotalCentavos: transaction.valorTotalCentavos,
+    createdAt: toIsoString(transaction.createdAt, "INTERNAL_ERROR"),
+  };
+
+  if (transaction.startupId !== undefined) {
+    if (!isNonEmptyString(transaction.startupId)) {
+      throw new AppError("Transação com startupId inválido.", 500, "INTERNAL_ERROR");
+    }
+
+    response.startupId = transaction.startupId.trim();
+  }
+
+  if (transaction.offerId !== undefined) {
+    if (!isNonEmptyString(transaction.offerId)) {
+      throw new AppError("Transação com offerId inválido.", 500, "INTERNAL_ERROR");
+    }
+
+    response.offerId = transaction.offerId.trim();
+  }
+
+  if (transaction.counterpartyUserId !== undefined) {
+    if (!isNonEmptyString(transaction.counterpartyUserId)) {
+      throw new AppError(
+        "Transação com counterpartyUserId inválido.",
+        500,
+        "INTERNAL_ERROR",
+      );
+    }
+
+    response.counterpartyUserId = transaction.counterpartyUserId.trim();
+  }
+
+  if (transaction.quantidade !== undefined) {
+    if (!isPositiveInteger(transaction.quantidade)) {
+      throw new AppError("Transação com quantidade inválida.", 500, "INTERNAL_ERROR");
+    }
+
+    response.quantidade = transaction.quantidade;
+  }
+
+  if (transaction.precoUnitarioCentavos !== undefined) {
+    if (!isPositiveInteger(transaction.precoUnitarioCentavos)) {
+      throw new AppError(
+        "Transação com preço unitário inválido.",
+        500,
+        "INTERNAL_ERROR",
+      );
+    }
+
+    response.precoUnitarioCentavos = transaction.precoUnitarioCentavos;
+  }
+
+  if (transaction.saldoAnteriorCentavos !== undefined) {
+    if (!isNonNegativeInteger(transaction.saldoAnteriorCentavos)) {
+      throw new AppError(
+        "Transação com saldo anterior inválido.",
+        500,
+        "INTERNAL_ERROR",
+      );
+    }
+
+    response.saldoAnteriorCentavos = transaction.saldoAnteriorCentavos;
+  }
+
+  if (transaction.saldoNovoCentavos !== undefined) {
+    if (!isNonNegativeInteger(transaction.saldoNovoCentavos)) {
+      throw new AppError(
+        "Transação com saldo novo inválido.",
+        500,
+        "INTERNAL_ERROR",
+      );
+    }
+
+    response.saldoNovoCentavos = transaction.saldoNovoCentavos;
+  }
+
+  return response;
+}
+
 // Regra de negócio do GET /wallet.
 // É chamada pelo getWalletController e cria a carteira automaticamente se ela não existir.
 export async function getWalletService(
@@ -309,6 +471,28 @@ export async function listHoldingsService(
     items: holdings.map(toHoldingResponse),
   };
 }
+
+// Samuel Campovilla:
+// O histórico sempre deriva do UID autenticado e nunca de parâmetros externos.
+// O DTO e os filtros ficam centralizados aqui para o endpoint atual /transactions não depender
+// do formato cru do Firestore nem de contratos antigos.
+export async function getTransactionsService(
+  uid: string | undefined,
+  filtersInput: TransactionFiltersInput = {},
+): Promise<TransactionsResponse> {
+  const authenticatedUid = assertAuthenticated(uid);
+  const filters = parseTransactionFilters(filtersInput);
+  const transactions = await walletRepo.listTransactions(authenticatedUid, filters);
+
+  return {
+    items: transactions.map(toTransactionResponse),
+  };
+}
+
+// Alias de compatibilidade com o nome antigo do histórico de operações.
+// O contrato atual do módulo usa getTransactionsService e o endpoint /wallet/transactions,
+// mas este export evita erro em imports locais que ainda não foram atualizados.
+export const getHistoricoOperacoesService = getTransactionsService;
 
 // Regra de negócio do POST /wallet/add-balance.
 // É chamada pelo addBalanceController e valida valorCentavos antes de atualizar a wallet.

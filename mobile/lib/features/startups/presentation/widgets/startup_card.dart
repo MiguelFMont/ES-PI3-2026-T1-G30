@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:mobile/core/theme/app_colors.dart';
+import 'package:mesclainvest/core/theme/app_colors.dart';
 import '../../domain/startup_model.dart';
 
 class StartupCard extends StatelessWidget {
