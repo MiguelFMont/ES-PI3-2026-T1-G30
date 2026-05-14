@@ -2,7 +2,7 @@
 // RA: 25014808
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:mobile/core/theme/app_colors.dart';
+import 'package:mesclainvest/core/theme/app_colors.dart';
 
 class CampoTexto extends StatefulWidget {
   final TextEditingController controller;

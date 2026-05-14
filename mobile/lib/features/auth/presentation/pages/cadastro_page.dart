@@ -8,14 +8,14 @@ import '../../../../shared/widgets/mescla_auth_layout.dart';
 import '../../../../shared/formatters/cpf_formatter.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/mescla_button.dart';
-
+ 
 class CadastroPage extends StatefulWidget {
   const CadastroPage({super.key});
-
+ 
   @override
   State<CadastroPage> createState() => _CadastroPageState();
 }
-
+ 
 class _CadastroPageState extends State<CadastroPage> {
   final _nomeController = TextEditingController();
   final _emailController = TextEditingController();
@@ -24,12 +24,27 @@ class _CadastroPageState extends State<CadastroPage> {
   final _senhaController = TextEditingController();
 
   DateTime? _dataNascimento;
-
+ 
   final _repository = AuthRepository();
   final _pageController = PageController();
   int _etapaAtual = 0;
   bool _isLoading = false;
-
+ 
+  // ── Requisitos da senha ────────────────────────────────────────────────────
+  bool get _temMinimo => _senhaController.text.length >= 8;
+  bool get _temMaiuscula => _senhaController.text.contains(RegExp(r'[A-Z]'));
+  bool get _temNumero => _senhaController.text.contains(RegExp(r'[0-9]'));
+  bool get _temEspecial =>
+      _senhaController.text.contains(RegExp(r'[!@#\$%^&*(),.?":{}|<>]'));
+  bool get _senhaValida =>
+      _temMinimo && _temMaiuscula && _temNumero && _temEspecial;
+ 
+  @override
+  void initState() {
+    super.initState();
+    _senhaController.addListener(() => setState(() {}));
+  }
+ 
   @override
   void dispose() {
     _pageController.dispose();
@@ -71,12 +86,13 @@ class _CadastroPageState extends State<CadastroPage> {
     );
     return;
   }
-  if (_senhaController.text.length < 6) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('A senha deve ter pelo menos 6 caracteres.'), backgroundColor: Colors.red)
-    );
-    return;
-  }
+   if (!_senhaValida) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('A senha não atende todos os requisitos.'),
+        backgroundColor: Colors.red,
+      ));
+      return;
+    }
 
   setState(() => _isLoading = true);
 
@@ -115,7 +131,8 @@ class _CadastroPageState extends State<CadastroPage> {
   @override
   Widget build(BuildContext context) {
 
-    return MesclaAuthLayout(
+    return 
+    MesclaAuthLayout(
       children: [
         Expanded(
           child: Padding(
@@ -194,8 +211,6 @@ class _CadastroPageState extends State<CadastroPage> {
   Widget _etapaEmailSenha() {
     return Column(
       children: [
-        _mensagemEtapa(2),
-        const SizedBox(height: 48),
         CampoTexto(
           controller: _emailController,
           label: 'E-mail',
@@ -207,6 +222,12 @@ class _CadastroPageState extends State<CadastroPage> {
           label: 'Senha',
           obscureText: true,
         ),
+        // ── Requisitos em tempo real ───────────────────────────────────────
+        const SizedBox(height: 16),
+        Padding(padding: const EdgeInsets.only(left: 20),
+         child: _requisitos(),
+        ),
+
         const SizedBox(height: 20),
         _isLoading
             ? const CircularProgressIndicator(
@@ -224,6 +245,54 @@ class _CadastroPageState extends State<CadastroPage> {
     );
   }
 
+  Widget _requisitos() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Requisitos da senha:',
+          style: TextStyle(
+              color: AppColors.mutedForeground.withOpacity(0.8), fontSize: 12),
+        ),
+        const SizedBox(height: 6),
+        _itemRequisito('Mínimo 8 caracteres', _temMinimo),
+        _itemRequisito('Letra maiúscula', _temMaiuscula),
+        _itemRequisito('Número', _temNumero),
+        _itemRequisito('Caractere especial', _temEspecial),
+      ],
+    );
+  }
+
+  Widget _itemRequisito(String texto, bool valido) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Icon(
+            valido
+                ? Icons.check_circle_outline
+                : Icons.radio_button_unchecked,
+            size: 14,
+            color: valido
+                ? Colors.green
+                : AppColors.mutedForeground.withOpacity(0.4),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            texto,
+            style: TextStyle(
+              fontSize: 12,
+              color: valido
+                  ? Colors.green
+                  : AppColors.mutedForeground.withOpacity(0.6),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
   Widget _mensagemEtapa(int index) {
     final mensagens = [
       'Precisamos verificar sua identidade. Seus dados estão protegidos.',
@@ -232,7 +301,7 @@ class _CadastroPageState extends State<CadastroPage> {
     ];
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 35, top: 8),
+      padding: const EdgeInsets.only(bottom: 35),
       child: Text(
         mensagens[index],
         style: const TextStyle(

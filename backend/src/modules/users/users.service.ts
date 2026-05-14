@@ -1,6 +1,10 @@
 // Autor: Miguel Fernandes Monteiro — RA: 25014808
 
 import { UsersRepo } from "./users.repo";
+import axios from 'axios';
+import { getAuth } from '../../config/firebase';
+import { FieldValue } from 'firebase-admin/firestore';
+import { env } from '../../config/env';
 
 // Converte uma string de data (ISO, timestamp ou DD/MM/AAAA) para DD/MM/AAAA.
 // Retorna '—' se o valor for inválido ou ausente.
@@ -55,6 +59,15 @@ export class UsersService {
     const saldo = this.getSaldoInCents(wallet);
     const patrimonio = saldo * 1.05;
 
+    let ultimaAlteracaoSenha = '—';
+    if (user.passwordChangedAt) {
+      const dias = Math.floor(
+        (Date.now() - user.passwordChangedAt.toDate().getTime()) / 86_400_000
+      );
+      ultimaAlteracaoSenha =
+        dias === 0 ? 'hoje' : dias === 1 ? 'há 1 dia' : `há ${dias} dias`;
+    }
+
     return {
       uid: user.uid,
       nome: user.nomeCompleto?.trim() ?? "Usuário",
@@ -66,6 +79,7 @@ export class UsersService {
       patrimonio,
       desde,
       mfaEnabled: user.mfaEnabled ?? false,
+      ultimaAlteracaoSenha,
     };
   }
 
@@ -86,10 +100,30 @@ export class UsersService {
 
     // Mapeia os nomes da API para os campos do Firestore
     const dadosFirestore: Record<string, string> = {};
-    if (payload.nome)     dadosFirestore['nomeCompleto'] = payload.nome;
-    if (payload.telefone) dadosFirestore['telefone']     = payload.telefone;
+    if (payload.nome) dadosFirestore['nomeCompleto'] = payload.nome;
+    if (payload.telefone) dadosFirestore['telefone'] = payload.telefone;
 
     // update() vem do FirestoreBaseRepo e já adiciona updatedAt automaticamente
     await this.repo.update(user.id, dadosFirestore);
   }
+
+  async alterarSenha(uid: string, senhaAtual: string, novaSenha: string) {
+  const user = await this.repo.findByUid(uid);
+  if (!user) throw new Error('Usuário não encontrado.');
+
+  // Re-autentica com a senha atual antes de alterar
+  try {
+    await axios.post(
+      `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${env.firebaseApiKey}`,
+      { email: user.email, password: senhaAtual, returnSecureToken: false },
+    );
+  } catch {
+    throw new Error('Senha atual incorreta.');
+  }
+
+  await getAuth().updateUser(uid, { password: novaSenha });
+  await this.repo.update(user.id, {
+    passwordChangedAt: FieldValue.serverTimestamp(),
+  });
+}
 }

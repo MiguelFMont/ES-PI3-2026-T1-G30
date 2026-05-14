@@ -49,7 +49,7 @@ class MesclaHeader extends StatelessWidget {
       children: [
         AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          height: tecladoAberto ? 40 : 80,
+          height: tecladoAberto ? 30 : 80,
         ),
         const MesclaLogo(),
         const SizedBox(height: 32),

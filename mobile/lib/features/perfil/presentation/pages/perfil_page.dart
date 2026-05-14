@@ -33,6 +33,9 @@ class _PerfilPageState extends State<PerfilPage> {
   void _mfa(){
     Navigator.pushNamed(context, '/mfa');
   }
+  void _senha(){
+    Navigator.pushNamed(context, '/seguranca-senha');
+  }
 
   void _confirmarSaida() {
     showDialog(
@@ -153,7 +156,7 @@ class _PerfilPageState extends State<PerfilPage> {
                       icon: Icons.lock_outline,
                       titulo: 'Segurança e Senha',
                       subtitulo: 'Alterar senha, verificação',
-                      onTap: () {},
+                      onTap: _senha,
                     ),
                   ]),
                   const SizedBox(height: 24),

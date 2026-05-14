@@ -1,7 +1,7 @@
 // Autor: Miguel Fernandes Monteiro
 // RA: 25014808
 import 'package:flutter/material.dart';
-import 'package:mobile/shared/widgets/mescla_button.dart';
+import 'package:mesclainvest/shared/widgets/mescla_button.dart';
 import '../../../../shared/widgets/campo_texto.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/mescla_auth_layout.dart';
