@@ -12,8 +12,12 @@ final List<Startup> mockStartups = [
     descricao:
         'Monitoramento de safras por IoT e IA para pequenos agricultores',
     estagio: 'Em Expansão',
+    setor: 'Agritech',
     capitalAportado: 1200000,
     totalTokens: 50000,
+    precoToken: 125.50,
+    variacaoPreco: 12.5,
+    investido: true,
     resumoExecutivo:
         'A VerdeTech desenvolve sensores IoT de baixo custo integrados a '
         'uma plataforma de IA que permite ao agricultor monitorar umidade do '
@@ -64,8 +68,12 @@ final List<Startup> mockStartups = [
         'https://ui-avatars.com/api/?name=MC&size=128&background=3b82f6&color=fff&bold=true',
     descricao: 'Telemedicina acessível para regiões com baixa cobertura médica',
     estagio: 'Em Operação',
+    setor: 'Saúde',
     capitalAportado: 320000,
     totalTokens: 25000,
+    precoToken: 89.30,
+    variacaoPreco: -3.2,
+    investido: false,
     resumoExecutivo:
         'A MedConnect conecta pacientes de municípios com menos de 50 mil '
         'habitantes a especialistas via videoconsulta assíncrona. A plataforma '
@@ -109,8 +117,12 @@ final List<Startup> mockStartups = [
         'https://ui-avatars.com/api/?name=ES&size=128&background=a855f7&color=fff&bold=true',
     descricao: 'Plataforma adaptativa de ensino com IA para escolas públicas',
     estagio: 'Nova',
+    setor: 'Educação',
     capitalAportado: 80000,
     totalTokens: 10000,
+    precoToken: 45.20,
+    variacaoPreco: 8.7,
+    investido: false,
     resumoExecutivo:
         'A EduSpace usa modelos de linguagem leves para personalizar exercícios '
         'de matemática e português conforme o ritmo de cada aluno do ensino '

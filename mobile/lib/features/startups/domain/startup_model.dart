@@ -78,15 +78,19 @@ class Atualizacao {
   }
 }
 
-// representa uma startup completa 
+// representa uma startup completa
 class Startup {
   final String id;
   final String nome;
   final String logo;
   final String descricao;
   final String estagio;
+  final String setor;
   final double capitalAportado;
   final int totalTokens;
+  final double precoToken;
+  final double variacaoPreco;
+  final bool investido;
   final String resumoExecutivo;
   final List<Socio> socios;
   final List<Membro> conselho;
@@ -100,8 +104,12 @@ class Startup {
     required this.logo,
     required this.descricao,
     required this.estagio,
+    this.setor = '',
     required this.capitalAportado,
     required this.totalTokens,
+    this.precoToken = 0,
+    this.variacaoPreco = 0,
+    this.investido = false,
     required this.resumoExecutivo,
     required this.socios,
     required this.conselho,
@@ -117,8 +125,12 @@ class Startup {
       logo: json['logo'] ?? '',
       descricao: json['descricao'] ?? '',
       estagio: json['estagio'] ?? '',
+      setor: json['setor'] ?? '',
       capitalAportado: (json['capitalAportado'] ?? 0).toDouble(),
       totalTokens: json['totalTokens'] ?? 0,
+      precoToken: (json['precoToken'] ?? 0).toDouble(),
+      variacaoPreco: (json['variacaoPreco'] ?? 0).toDouble(),
+      investido: json['investido'] ?? false,
       resumoExecutivo: json['resumoExecutivo'] ?? '',
       // Converte cada item da lista JSON para o objeto correspondente
       socios: (json['socios'] as List<dynamic>? ?? [])
