@@ -13,7 +13,10 @@ class SessionManager {
   static const _idTokenKey = 'idToken';
   static const _refreshTokenKey = 'refreshToken';
   static const _uidKey = 'uid';
-  static String get _firebaseApiKey => dotenv.env['FIREBASE_WEB_API_KEY'] ?? '';
+  static String get _firebaseApiKey =>
+      dotenv.env['FIREBASE_WEB_API_KEY'] ??
+      dotenv.env['FIREBASE_API_KEY'] ??
+      '';
 
   // ==========================================
   // 1. SALVAR DADOS DO LOGIN

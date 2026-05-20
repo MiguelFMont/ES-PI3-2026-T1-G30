@@ -1,4 +1,35 @@
-//representa um socio da startup
+double _asDouble(dynamic value) {
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value) ?? 0;
+  return 0;
+}
+
+int _asInt(dynamic value) {
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value) ?? 0;
+  return 0;
+}
+
+String _asString(dynamic value) {
+  return value?.toString() ?? '';
+}
+
+String _asDateString(dynamic value) {
+  if (value == null) return '';
+  if (value is String) return value;
+
+  if (value is Map<String, dynamic>) {
+    final seconds = value['_seconds'] ?? value['seconds'];
+    if (seconds is num) {
+      return DateTime.fromMillisecondsSinceEpoch(
+        (seconds * 1000).toInt(),
+      ).toIso8601String();
+    }
+  }
+
+  return value.toString();
+}
+
 class Socio {
   final String nome;
   final String foto;
@@ -6,17 +37,15 @@ class Socio {
 
   Socio({required this.nome, required this.foto, required this.participacao});
 
-  //converte o json da api para o objeto dart
   factory Socio.fromJson(Map<String, dynamic> json) {
     return Socio(
-      nome: json['nome'] ?? '',
-      foto: json['foto'] ?? '',
-      participacao: (json['participacao'] ?? 0).toDouble(),
+      nome: _asString(json['nome'] ?? json['name']),
+      foto: _asString(json['foto']),
+      participacao: _asDouble(json['participacao']),
     );
   }
 }
 
-// representa um membro do conselho ou mentor
 class Membro {
   final String nome;
   final String foto;
@@ -32,15 +61,14 @@ class Membro {
 
   factory Membro.fromJson(Map<String, dynamic> json) {
     return Membro(
-      nome: json['nome'] ?? '',
-      foto: json['foto'] ?? '',
-      cargo: json['cargo'] ?? '',
-      area: json['area'] ?? '',
+      nome: _asString(json['nome']),
+      foto: _asString(json['foto']),
+      cargo: _asString(json['cargo']),
+      area: _asString(json['area']),
     );
   }
 }
 
-// representa um video da startup
 class Video {
   final String titulo;
   final String url;
@@ -50,14 +78,13 @@ class Video {
 
   factory Video.fromJson(Map<String, dynamic> json) {
     return Video(
-      titulo: json['titulo'] ?? '',
-      url: json['url'] ?? '',
-      thumbnail: json['thumbnail'] ?? '',
+      titulo: _asString(json['titulo'] ?? json['title']),
+      url: _asString(json['url']),
+      thumbnail: _asString(json['thumbnail']),
     );
   }
 }
 
-// representa uma atualização da startup
 class Atualizacao {
   final String titulo;
   final String descricao;
@@ -71,14 +98,13 @@ class Atualizacao {
 
   factory Atualizacao.fromJson(Map<String, dynamic> json) {
     return Atualizacao(
-      titulo: json['titulo'] ?? '',
-      descricao: json['descricao'] ?? '',
-      data: json['data'] ?? '',
+      titulo: _asString(json['titulo']),
+      descricao: _asString(json['descricao']),
+      data: _asDateString(json['data']),
     );
   }
 }
 
-// representa uma startup completa
 class Startup {
   final String id;
   final String nome;
@@ -89,7 +115,7 @@ class Startup {
   final double capitalAportado;
   final int totalTokens;
   final double precoToken;
-  final double variacaoPreco;
+  final double? variacaoPreco;
   final bool investido;
   final String resumoExecutivo;
   final List<Socio> socios;
@@ -108,7 +134,7 @@ class Startup {
     required this.capitalAportado,
     required this.totalTokens,
     this.precoToken = 0,
-    this.variacaoPreco = 0,
+    this.variacaoPreco,
     this.investido = false,
     required this.resumoExecutivo,
     required this.socios,
@@ -119,35 +145,40 @@ class Startup {
   });
 
   factory Startup.fromJson(Map<String, dynamic> json) {
+    final precoToken = json['precoToken'] ??
+        (json['precoTokenAtualCentavos'] != null
+            ? _asDouble(json['precoTokenAtualCentavos']) / 100
+            : 0);
+
     return Startup(
-      id: json['id'] ?? '',
-      nome: json['nome'] ?? '',
-      logo: json['logo'] ?? '',
-      descricao: json['descricao'] ?? '',
-      estagio: json['estagio'] ?? '',
-      setor: json['setor'] ?? '',
-      capitalAportado: (json['capitalAportado'] ?? 0).toDouble(),
-      totalTokens: json['totalTokens'] ?? 0,
-      precoToken: (json['precoToken'] ?? 0).toDouble(),
-      variacaoPreco: (json['variacaoPreco'] ?? 0).toDouble(),
-      investido: json['investido'] ?? false,
-      resumoExecutivo: json['resumoExecutivo'] ?? '',
-      // Converte cada item da lista JSON para o objeto correspondente
-      socios: (json['socios'] as List<dynamic>? ?? [])
-          .map((s) => Socio.fromJson(s))
-          .toList(),
-      conselho: (json['conselho'] as List<dynamic>? ?? [])
-          .map((c) => Membro.fromJson(c))
-          .toList(),
-      mentores: (json['mentores'] as List<dynamic>? ?? [])
-          .map((m) => Membro.fromJson(m))
-          .toList(),
-      videos: (json['videos'] as List<dynamic>? ?? [])
-          .map((v) => Video.fromJson(v))
-          .toList(),
-      atualizacoes: (json['atualizacoes'] as List<dynamic>? ?? [])
-          .map((a) => Atualizacao.fromJson(a))
-          .toList(),
+      id: _asString(json['id']),
+      nome: _asString(json['nome']),
+      logo: _asString(json['logo']),
+      descricao: _asString(json['descricao']),
+      estagio: _asString(json['estagio']),
+      setor: _asString(json['setor']),
+      capitalAportado: _asDouble(json['capitalAportado']),
+      totalTokens: _asInt(json['totalTokens']),
+      precoToken: _asDouble(precoToken),
+      variacaoPreco: json['variacaoPreco'] != null ? _asDouble(json['variacaoPreco']) : null,
+      investido: json['investido'] == true,
+      resumoExecutivo: _asString(json['resumoExecutivo']),
+      socios: _listFromJson(json['socios'], Socio.fromJson),
+      conselho: _listFromJson(json['conselho'], Membro.fromJson),
+      mentores: _listFromJson(json['mentores'], Membro.fromJson),
+      videos: _listFromJson(json['videos'], Video.fromJson),
+      atualizacoes: _listFromJson(json['atualizacoes'], Atualizacao.fromJson),
     );
+  }
+
+  static List<T> _listFromJson<T>(
+    dynamic value,
+    T Function(Map<String, dynamic>) mapper,
+  ) {
+    final items = value is List ? value : const [];
+    return items
+        .whereType<Map>()
+        .map((item) => mapper(Map<String, dynamic>.from(item)))
+        .toList();
   }
 }

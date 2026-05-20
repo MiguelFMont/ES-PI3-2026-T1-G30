@@ -1,13 +1,13 @@
 import { Timestamp } from 'firebase-admin/firestore';
 
 export interface Video {
-    title: string;
+    titulo: string;
     url: string;
     thumbnail: string;
 }
 
 export interface Socio {
-    name: string;
+    nome: string;
     foto: string;
     participacao: number;
 }
@@ -30,8 +30,14 @@ export interface Startup {
     nome: string;
     logo: string;
     descricao: string;
-    estagio: 'Nova' | 'Em Operacao' | 'Em Expansao';
+    estagio: 'Nova' | 'Em Operação' | 'Em Expansão';
+    setor?: string;
     capitalAportado: number;
+    totalTokens: number;
+    precoToken?: number;
+    precoTokenAtualCentavos?: number;
+    variacaoPreco?: number;
+    investido?: boolean;
     resumoExecutivo: string;
     socios: Socio[];
     conselho: Membro[];

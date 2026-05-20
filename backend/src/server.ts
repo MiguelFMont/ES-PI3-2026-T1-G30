@@ -20,6 +20,18 @@ app.use(express.json());
 app.use('/v1', routes);
 app.use(errorMiddleware);
 
+const port = Number(process.env.PORT) || 3000;
+const isFunctionsRuntime =
+    process.env.FUNCTION_TARGET ||
+    process.env.K_SERVICE ||
+    process.env.FUNCTIONS_EMULATOR;
+
+if (!isFunctionsRuntime) {
+    app.listen(port, () => {
+        console.log(`Servidor rodando em http://localhost:${port}`);
+    });
+}
+
 export const api = onRequest(
     {
         secrets: [RESEND_API_KEY],
@@ -27,3 +39,5 @@ export const api = onRequest(
     },
     app
 );
+
+export { app };
