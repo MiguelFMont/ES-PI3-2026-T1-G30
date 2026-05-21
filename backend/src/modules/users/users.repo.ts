@@ -1,34 +1,38 @@
-
 // Autor: Miguel Fernandes Monteiro — RA: 25014808
 
-import { getFirestore } from 'firebase-admin/firestore';
+import { FirestoreBaseRepo } from '../../infra/repositories/firestore.base.repo';
+import { getDb } from '../../config/firebase';
 
-export interface UserRecord {
-  uid: string;
-  nomeCompleto: string;
-  email: string;
-  telefone?: string;
-  walletId?: string;
-  createdAt?: FirebaseFirestore.Timestamp;
-}
-
-export interface WalletRecord {
-  saldo: number;
-  startupIds?: string[];
-}
-
-export class UsersRepo {
-  private db = getFirestore();
-
-  async findByUid(uid: string): Promise<UserRecord | null> {
-    const snap = await this.db.collection('users').doc(uid).get();
-    if (!snap.exists) return null;
-    return { uid: snap.id, ...snap.data() } as UserRecord;
+export class UsersRepo extends FirestoreBaseRepo {
+  constructor() {
+    super('users');
   }
 
-  async findWalletByUid(uid: string): Promise<WalletRecord | null> {
-    const snap = await this.db.doc(`wallets/${uid}`).get();
-    if (!snap.exists) return null;
-    return snap.data() as WalletRecord;
+  // Busca o documento do usuário pelo campo uid
+  // (o Firestore usa doc IDs gerados automaticamente, então uid é um campo separado)
+  async findByUid(uid: string) {
+    const snapshot = await getDb()
+      .collection(this.collectionName)
+      .where('uid', '==', uid)
+      .limit(1)
+      .get();
+
+    if (snapshot.empty) return null;
+
+    const doc = snapshot.docs[0];
+    return { id: doc.id, ...doc.data() } as any;
+  }
+
+  // Busca a carteira do usuário na coleção 'wallets'
+  async findWalletByUid(uid: string) {
+    const snapshot = await getDb()
+      .collection('wallets')
+      .where('uid', '==', uid)
+      .limit(1)
+      .get();
+
+    if (snapshot.empty) return null;
+
+    return snapshot.docs[0].data() as any;
   }
 }

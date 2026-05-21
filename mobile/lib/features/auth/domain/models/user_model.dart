@@ -10,6 +10,8 @@ class UserModel {
   final String telefone;
   final String? idToken;
   final String? refreshToken;
+  final bool mfaRequired;
+  final String? tempToken;
 
   UserModel({
     required this.id,
@@ -20,12 +22,27 @@ class UserModel {
     required this.telefone,
     this.idToken,
     this.refreshToken,
+    this.mfaRequired = false,
+    this.tempToken,
   });
 
-  // Converte o JSON da API para um UserModel
-  // Equivalente a um construtor que recebe um objeto JS
   factory UserModel.fromJson(Map<String, dynamic> json) {
     final data = json['data'] as Map<String, dynamic>;
+
+    // Se o backend indicou MFA obrigatório, cria um model parcial
+    if (data['mfaRequired'] == true) {
+      return UserModel(
+        id: data['uid'] as String,
+        dataNascimento: '',
+        nomeCompleto: '',
+        email: '',
+        cpf: '',
+        telefone: '',
+        mfaRequired: true,
+        tempToken: data['tempToken'] as String,
+      );
+    }
+
     return UserModel(
       id: data['uid'],
       dataNascimento: data['dataNascimento'],
@@ -35,11 +52,10 @@ class UserModel {
       telefone: data['telefone'],
       idToken: data['idToken'],
       refreshToken: data['refreshToken'],
+      mfaRequired: false,
     );
   }
 
-  // Converte o UserModel para JSON para enviar à API
-  // Equivalente ao JSON.stringify() no JavaScript
   Map<String, dynamic> toJson() {
     return {
       'uid': id,
