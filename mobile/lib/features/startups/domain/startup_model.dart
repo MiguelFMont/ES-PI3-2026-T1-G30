@@ -85,6 +85,10 @@ class Startup {
   final String logo;
   final String descricao;
   final String estagio;
+  final String setor;
+  final double precoToken;
+  final double? variacaoPreco;
+  final bool investido;
   final double capitalAportado;
   final int totalTokens;
   final String resumoExecutivo;
@@ -100,6 +104,10 @@ class Startup {
     required this.logo,
     required this.descricao,
     required this.estagio,
+    this.setor = '',
+    this.precoToken = 0,
+    this.variacaoPreco,
+    this.investido = false,
     required this.capitalAportado,
     required this.totalTokens,
     required this.resumoExecutivo,
@@ -117,6 +125,15 @@ class Startup {
       logo: json['logo'] ?? '',
       descricao: json['descricao'] ?? '',
       estagio: json['estagio'] ?? '',
+      setor: json['setor'] ?? '',
+      precoToken: _doubleFromJson(
+        json['precoToken'] ?? json['precoTokenAtualCentavos'],
+        fromCentavos: json['precoToken'] == null,
+      ),
+      variacaoPreco: json['variacaoPreco'] == null
+          ? null
+          : _doubleFromJson(json['variacaoPreco']),
+      investido: json['investido'] == true,
       capitalAportado: (json['capitalAportado'] ?? 0).toDouble(),
       totalTokens: json['totalTokens'] ?? 0,
       resumoExecutivo: json['resumoExecutivo'] ?? '',
@@ -137,5 +154,11 @@ class Startup {
           .map((a) => Atualizacao.fromJson(a))
           .toList(),
     );
+  }
+
+  static double _doubleFromJson(dynamic value, {bool fromCentavos = false}) {
+    if (value == null) return 0;
+    final number = value is num ? value.toDouble() : double.tryParse('$value') ?? 0;
+    return fromCentavos ? number / 100 : number;
   }
 }

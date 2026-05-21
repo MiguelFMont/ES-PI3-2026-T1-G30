@@ -8,7 +8,9 @@ import '../features/auth/presentation/pages/token_verification_page.dart';
 import '../features/perfil/presentation/pages/perfil_page.dart';
 import '../features/auth/presentation/pages/splash_page.dart';
 import '../features/auth/presentation/pages/mfa_challenge_page.dart';
+import '../features/startups/domain/startup_model.dart';
 import '../features/startups/presentation/pages/catalog_page.dart';
+import '../features/startups/presentation/pages/startup_details_page.dart';
 import '../features/perfil/presentation/pages/informacoes_pessoais_page.dart';
 import '../features/perfil/presentation/pages/mfa_page.dart';
 import '../features/perfil/presentation/pages/senha_page.dart';
@@ -24,6 +26,7 @@ class AppRoutes {
   static const tokenVerification = '/token-verification';
   static const perfil = '/perfil';
   static const catalog = '/catalog';
+  static const startupDetail = '/startup-detail';
   static const informacoesPessoais = '/informacoes-pessoais';
   static const mfa = '/mfa';
   static const mfaChallenge = '/mfa-challenge';
@@ -40,6 +43,13 @@ class AppRoutes {
     tokenVerification: (_) => TokenVerificationPage(),
     perfil: (_) => PerfilPage(),
     catalog: (_) => CatalogPage(),
+    startupDetail: (context) {
+      final startup = ModalRoute.of(context)?.settings.arguments;
+      if (startup is Startup) {
+        return StartupDetailsPage(startup: startup);
+      }
+      return const StartupDetailsArgumentErrorPage();
+    },
     informacoesPessoais: (_) => InformacoesPage(),
     mfa: (_) => MfaPage(),
     mfaChallenge: (_) => MfaChallengePage(),

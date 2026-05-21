@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:mesclainvest/app/routes.dart';
+import 'package:mesclainvest/core/theme/app_colors.dart';
+
 import '../../data/startup_service.dart';
 import '../../domain/startup_model.dart';
 import '../widgets/startup_card.dart';
 
-/// Estado possível da tela de catálogo separando em 3
 enum CatalogState { loading, error, success }
 
-/// Tela principal do catálogo de startups do MesclaInvest
 class CatalogPage extends StatefulWidget {
   const CatalogPage({super.key});
 
@@ -15,74 +16,130 @@ class CatalogPage extends StatefulWidget {
 }
 
 class _CatalogPageState extends State<CatalogPage> {
-  /// Serviço responsável pelas chamadas HTTP ao backend
   final StartupService _service = StartupService();
+  final TextEditingController _searchController = TextEditingController();
 
-  /// Lista de startups retornadas pela API
   List<Startup> _startups = [];
-
-  /// Estado atual da tela.
   CatalogState _state = CatalogState.loading;
-
-  // tratamento de erro
   String? _errorMessage;
 
   String? _selectedStage;
+  final Set<String> _selectedSectors = {};
+  String _sortBy = 'recentes';
 
-  static const List<String> _stages = [
-    'Todos',
+  static const List<String> _stageOptions = [
     'Nova',
     'Em Operação',
     'Em Expansão',
+  ];
+
+  static const List<String> _sectorOptions = [
+    'Sustentabilidade',
+    'Saúde',
+    'Educação',
+    'Fintech',
+    'Agritech',
+    'Mobilidade',
   ];
 
   @override
   void initState() {
     super.initState();
     _fetchStartups();
+    _searchController.addListener(() => setState(() {}));
   }
 
-  /// Busca startups na API aplicando o filtro de estágio atual
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   Future<void> _fetchStartups() async {
     setState(() {
       _state = CatalogState.loading;
       _errorMessage = null;
+      _startups = [];
     });
 
     try {
-      final startups = await _service.listarStartups(
-        estagio: _selectedStage,
-      );
+      final startups = await _service.listarStartups(estagio: _selectedStage);
+      final seen = <String>{};
 
       setState(() {
-        _startups = startups;
+        _startups = startups.where((s) => seen.add(s.id)).toList();
         _state = CatalogState.success;
       });
     } catch (e) {
       setState(() {
-        _errorMessage = 'Não foi possível carregar as startups.\n'
-            'Verifique sua conexão e tente novamente.';
+        _errorMessage =
+            'Não foi possível carregar as startups.\nVerifique sua conexão e tente novamente.';
         _state = CatalogState.error;
       });
     }
   }
 
-  /// Atualiza o filtro selecionado e recarrega as startups
-  void _onStageSelected(String stage) {
-    final selected = stage == 'Todos' ? null : stage;
+  List<Startup> get _filteredStartups {
+    var list = List<Startup>.from(_startups);
 
-    if (selected == _selectedStage) return;
+    final query = _searchController.text.trim().toLowerCase();
+    if (query.isNotEmpty) {
+      list = list
+          .where(
+            (s) =>
+                s.nome.toLowerCase().contains(query) ||
+                s.setor.toLowerCase().contains(query),
+          )
+          .toList();
+    }
 
-    setState(() => _selectedStage = selected);
-    _fetchStartups();
+    if (_selectedSectors.isNotEmpty) {
+      list = list.where((s) => _selectedSectors.contains(s.setor)).toList();
+    }
+
+    if (_sortBy == 'preco') {
+      list.sort((a, b) => b.precoToken.compareTo(a.precoToken));
+    }
+
+    return list;
   }
 
-  /// Navega para a tela de detalhe da [startup] selecionada
   void _onStartupTapped(Startup startup) {
     Navigator.pushNamed(
       context,
-      '/startup-detail',
+      AppRoutes.startupDetail,
       arguments: startup,
+    );
+  }
+
+  void _showFilterSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _FilterSheet(
+        selectedStage: _selectedStage,
+        selectedSectors: Set.of(_selectedSectors),
+        sortBy: _sortBy,
+        stageOptions: _stageOptions,
+        sectorOptions: _sectorOptions,
+        onApply: (stage, sectors, sortBy) {
+          final stageChanged = stage != _selectedStage;
+
+          setState(() {
+            _selectedStage = stage;
+            _selectedSectors
+              ..clear()
+              ..addAll(sectors);
+            _sortBy = sortBy;
+          });
+
+          if (stageChanged) _fetchStartups();
+        },
+      ),
     );
   }
 
@@ -95,7 +152,6 @@ class _CatalogPageState extends State<CatalogPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeader(),
-            _buildStageFilters(),
             _buildResultCount(),
             Expanded(child: _buildContent()),
           ],
@@ -104,35 +160,62 @@ class _CatalogPageState extends State<CatalogPage> {
     );
   }
 
-  /// Constrói o cabeçalho com título e subtítulo do catálogo
   Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFFE91E8C), Color(0xFFC2185B)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return ClipRect(
+      child: Stack(
         children: [
-          const Text(
-            'Catálogo de Startups',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+          Positioned.fill(
+            child: Container(color: const Color(0xFFAD1457)),
+          ),
+          Positioned(
+            top: -55,
+            right: -45,
+            child: Container(
+              width: 210,
+              height: 210,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE91E8C).withValues(alpha: 0.22),
+                shape: BoxShape.circle,
+              ),
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            'Ecossistema Mescla · PUC-Campinas',
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.white.withValues(alpha: 0.85),
+          Positioned(
+            bottom: -18,
+            right: 55,
+            child: Container(
+              width: 95,
+              height: 95,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.07),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Catálogo de Startups',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Ecossistema Mescla · PUC-Campinas',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.white.withValues(alpha: 0.85),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                _buildSearchBar(),
+              ],
             ),
           ),
         ],
@@ -140,88 +223,98 @@ class _CatalogPageState extends State<CatalogPage> {
     );
   }
 
-  /// Constrói a barra de filtros por estágio de desenvolvimento
-  Widget _buildStageFilters() {
-    return SizedBox(
-      height: 52,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        itemCount: _stages.length,
-        itemBuilder: (context, index) {
-          final stage = _stages[index];
-          final isActive = stage == 'Todos'
-              ? _selectedStage == null
-              : _selectedStage == stage;
-
-          return GestureDetector(
-            onTap: () => _onStageSelected(stage),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: isActive
-                    ? const Color(0xFFE91E8C)
-                    : Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: isActive
-                      ? const Color(0xFFE91E8C)
-                      : Colors.grey[300]!,
+  Widget _buildSearchBar() {
+    return Container(
+      height: 44,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: 14),
+          const Icon(
+            Icons.search_rounded,
+            size: 20,
+            color: AppColors.mutedForeground,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              style: const TextStyle(fontSize: 13, color: Color(0xFF1E293B)),
+              decoration: const InputDecoration(
+                hintText: 'Buscar startups ou setores...',
+                hintStyle: TextStyle(
+                  fontSize: 13,
+                  color: AppColors.mutedForeground,
                 ),
-              ),
-              child: Center(
-                child: Text(
-                  stage,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: isActive ? Colors.white : Colors.grey[600],
-                  ),
-                ),
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
               ),
             ),
-          );
-        },
+          ),
+          const VerticalDivider(
+            width: 1,
+            thickness: 1,
+            color: Color(0xFFE2E8F0),
+          ),
+          GestureDetector(
+            onTap: _showFilterSheet,
+            child: const SizedBox(
+              width: 44,
+              height: 44,
+              child: Icon(
+                Icons.filter_alt_rounded,
+                size: 20,
+                color: AppColors.primary,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  /// Constrói o contador de resultados abaixo dos filtros.
   Widget _buildResultCount() {
+    final filtered = _filteredStartups;
     final label = _state == CatalogState.loading
         ? 'Carregando...'
-        : '${_startups.length} startup${_startups.length != 1 ? 's' : ''} encontrada${_startups.length != 1 ? 's' : ''}';
+        : '${filtered.length} startup${filtered.length != 1 ? 's' : ''} encontrada${filtered.length != 1 ? 's' : ''}';
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       child: Text(
         label,
-        style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+        style: const TextStyle(
+          fontSize: 13,
+          color: AppColors.mutedForeground,
+        ),
       ),
     );
   }
 
-  /// Constrói o conteúdo principal da tela conforme o [_state] atual
   Widget _buildContent() {
     switch (_state) {
       case CatalogState.loading:
         return const Center(
-          child: CircularProgressIndicator(
-            color: Color(0xFFE91E8C),
-          ),
+          child: CircularProgressIndicator(color: AppColors.primary),
         );
-
       case CatalogState.error:
         return _buildErrorState();
-
       case CatalogState.success:
         return _buildStartupList();
     }
   }
 
-  /// Constrói o estado de erro com mensagem e botão para tentar novamente
   Widget _buildErrorState() {
     return Center(
       child: Padding(
@@ -229,14 +322,18 @@ class _CatalogPageState extends State<CatalogPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.cloud_off_rounded, size: 56, color: Colors.grey[400]),
+            const Icon(
+              Icons.cloud_off_rounded,
+              size: 56,
+              color: AppColors.muted,
+            ),
             const SizedBox(height: 16),
             Text(
               _errorMessage ?? 'Erro desconhecido.',
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 14,
-                color: Colors.grey[600],
+                color: AppColors.mutedForeground,
                 height: 1.5,
               ),
             ),
@@ -246,7 +343,7 @@ class _CatalogPageState extends State<CatalogPage> {
               icon: const Icon(Icons.refresh_rounded),
               label: const Text('Tentar novamente'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFE91E8C),
+                backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
@@ -259,19 +356,24 @@ class _CatalogPageState extends State<CatalogPage> {
     );
   }
 
-  /// Exibe um estado vazio quando nenhuma startup é retornada pela API
   Widget _buildStartupList() {
-    if (_startups.isEmpty) {
-      return Center(
+    final list = _filteredStartups;
+
+    if (list.isEmpty) {
+      return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.search_off_rounded, size: 56, color: Colors.grey[400]),
-            const SizedBox(height: 16),
+            Icon(
+              Icons.search_off_rounded,
+              size: 56,
+              color: AppColors.muted,
+            ),
+            SizedBox(height: 16),
             Text(
               'Nenhuma startup encontrada\npara o filtro selecionado.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              style: TextStyle(fontSize: 14, color: AppColors.mutedForeground),
             ),
           ],
         ),
@@ -279,17 +381,263 @@ class _CatalogPageState extends State<CatalogPage> {
     }
 
     return RefreshIndicator(
-      color: const Color(0xFFE91E8C),
+      color: AppColors.primary,
       onRefresh: _fetchStartups,
       child: ListView.builder(
-        padding: const EdgeInsets.only(top: 8, bottom: 24),
-        itemCount: _startups.length,
-        itemBuilder: (context, index) {
-          return StartupCard(
-            startup: _startups[index],
-            onTap: () => _onStartupTapped(_startups[index]),
-          );
-        },
+        padding: const EdgeInsets.only(top: 4, bottom: 24),
+        itemCount: list.length,
+        itemBuilder: (context, index) => StartupCard(
+          startup: list[index],
+          onTap: () => _onStartupTapped(list[index]),
+        ),
+      ),
+    );
+  }
+}
+
+class _FilterSheet extends StatefulWidget {
+  final String? selectedStage;
+  final Set<String> selectedSectors;
+  final String sortBy;
+  final List<String> stageOptions;
+  final List<String> sectorOptions;
+  final void Function(String? stage, Set<String> sectors, String sortBy) onApply;
+
+  const _FilterSheet({
+    required this.selectedStage,
+    required this.selectedSectors,
+    required this.sortBy,
+    required this.stageOptions,
+    required this.sectorOptions,
+    required this.onApply,
+  });
+
+  @override
+  State<_FilterSheet> createState() => _FilterSheetState();
+}
+
+class _FilterSheetState extends State<_FilterSheet> {
+  late String? _stage;
+  late Set<String> _sectors;
+  late String _sortBy;
+
+  @override
+  void initState() {
+    super.initState();
+    _stage = widget.selectedStage;
+    _sectors = Set.of(widget.selectedSectors);
+    _sortBy = widget.sortBy;
+  }
+
+  String _stageLabel(String stage) {
+    switch (stage) {
+      case 'Em Expansão':
+        return 'Expansão';
+      case 'Em Operação':
+        return 'Operação';
+      default:
+        return stage;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.muted,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Filtros',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF1E293B),
+                ),
+              ),
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: AppColors.secondary,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Icon(
+                    Icons.close_rounded,
+                    size: 18,
+                    color: AppColors.mutedForeground,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          _buildSectionLabel('Estágio da Startup'),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: widget.stageOptions.map((stage) {
+              final selected = _stage == stage;
+              return _FilterChip(
+                label: _stageLabel(stage),
+                selected: selected,
+                onTap: () => setState(() => _stage = selected ? null : stage),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 20),
+          _buildSectionLabel('Setor'),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: widget.sectorOptions.map((sector) {
+              final selected = _sectors.contains(sector);
+              return _FilterChip(
+                label: sector,
+                selected: selected,
+                onTap: () => setState(() {
+                  if (selected) {
+                    _sectors.remove(sector);
+                  } else {
+                    _sectors.add(sector);
+                  }
+                }),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 20),
+          _buildSectionLabel('Ordenar por'),
+          const SizedBox(height: 10),
+          _buildSortOption('recentes', 'Mais recentes'),
+          const SizedBox(height: 8),
+          _buildSortOption('preco', 'Preço'),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                widget.onApply(_stage, _sectors, _sortBy);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text(
+                'Aplicar filtros',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionLabel(String label) {
+    return Text(
+      label,
+      style: const TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+        color: AppColors.mutedForeground,
+      ),
+    );
+  }
+
+  Widget _buildSortOption(String value, String label) {
+    final selected = _sortBy == value;
+
+    return GestureDetector(
+      onTap: () => setState(() => _sortBy = value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primary : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? AppColors.primary : const Color(0xFFE2E8F0),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: selected ? Colors.white : const Color(0xFF1E293B),
+              ),
+            ),
+            if (selected)
+              const Icon(Icons.check_rounded, size: 18, color: Colors.white),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _FilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primary : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? AppColors.primary : const Color(0xFFE2E8F0),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: selected ? Colors.white : const Color(0xFF475569),
+          ),
+        ),
       ),
     );
   }
