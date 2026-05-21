@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:mesclainvest/core/theme/app_colors.dart';
+import 'package:mesclainvest/features/balcao/presentation/pages/balcao_page.dart';
 import 'package:mesclainvest/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:mesclainvest/features/perfil/presentation/pages/perfil_page.dart';
 import 'package:mesclainvest/features/startups/presentation/pages/startups_page.dart';
-import 'package:mesclainvest/features/trading/presentation/pages/balcao_page.dart';
 
 class MainNavigationShell extends StatefulWidget {
   const MainNavigationShell({super.key});

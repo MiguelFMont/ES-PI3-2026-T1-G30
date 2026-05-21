@@ -30,6 +30,8 @@ interface OfferRecord {
   precoUnitarioCentavos: number;
   valorTotalCentavos: number;
   status: StatusOferta;
+  createdAt: unknown;
+  updatedAt: unknown;
 }
 
 export interface CreateOfferResult {
@@ -257,7 +259,26 @@ export class OffersRepo {
       precoUnitarioCentavos: data.precoUnitarioCentavos,
       valorTotalCentavos: data.valorTotalCentavos,
       status: data.status,
+      createdAt: data?.createdAt,
+      updatedAt: data?.updatedAt,
     };
+  }
+
+  // Lista todas as ofertas ordenadas da mais recente para a mais antiga.
+  // O filtro mais sensível continua no service para manter o contrato HTTP explícito.
+  async listOffers(): Promise<OfferRecord[]> {
+    const snapshot = await this
+      .getOffersRef()
+      .orderBy("createdAt", "desc")
+      .get();
+
+    if (snapshot.empty) {
+      return [];
+    }
+
+    return snapshot.docs.map((offerDoc) =>
+      this.toOfferRecord(offerDoc.id, offerDoc.data()),
+    );
   }
 
   // Executa a criação de oferta inteira dentro de uma Firestore Transaction.

@@ -13,7 +13,7 @@ import './config/firebase';
 
 const RESEND_API_KEY = defineSecret('RESEND_API_KEY');
 
-const app = express();
+export const app = express();
 
 app.use(cors(corsOptions));
 app.use(express.json());
