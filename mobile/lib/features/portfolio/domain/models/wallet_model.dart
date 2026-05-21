@@ -1,10 +1,10 @@
-/* 
-Autora: Maria Júlia Lazarini Oleto
+/*
+Autora: Maria Julia Lazarini Oleto
 RA: 25006031
 
 significado do arquivo:
-modelo da carteira do usuário
-representa os dados gerais da carteira do usuário
+modelo da carteira do usuario
+representa os dados gerais da carteira do usuario
 o que aparece no card principal da tela
 */
 
@@ -12,58 +12,83 @@ import 'participacao_model.dart';
 import 'operacao_model.dart';
 
 class WalletModel {
-  // uid do usuário da carteira (mesmo do Firebase Auth)
   final String uid;
   final double saldoCentavos;
-  // lista de startups que o usuário possui tokens (holdings)
+  final double valorTotalCarteiraDashboard;
+  final double totalInvestidoDashboard;
+  final double lucroTotalDashboard;
+  final double retornoPercentDashboard;
+  final List<double> pontosGrafico;
   final List<ParticipacaoModel> participacoes;
-  // lista das operações do usuário
   final List<OperacaoModel> operacoes;
 
   const WalletModel({
     required this.uid,
     required this.saldoCentavos,
+    required this.valorTotalCarteiraDashboard,
+    required this.totalInvestidoDashboard,
+    required this.lucroTotalDashboard,
+    required this.retornoPercentDashboard,
+    required this.pontosGrafico,
     required this.participacoes,
     required this.operacoes,
   });
 
-  // saldo disponível em reais 
   double get saldo => saldoCentavos / 100;
 
-  // calculo do valor total da carteira 
-  // soma o valor de todas as participações 
-  double get valorTotalCarteira {
-    // .fold() - percorre a lista acumulando os valores
-    // comeca em 0.0 e soma o valor da posicão de cada participção
-    return participacoes.fold (0.0,
-    (soma, participacao) => soma + participacao.valorDaPosicao,
-    );
-  }
-  // calculo do total investido 
-  double get totalInvestido {
-    return participacoes.fold (0.0, 
-    (soma, participacao) => soma + participacao.totalInvestido,
-    );
-  }
+  double get valorTotalCarteira => valorTotalCarteiraDashboard;
 
-  // calcula o lucro total
-  double get lucroTotal => valorTotalCarteira - totalInvestido;
+  double get totalInvestido => totalInvestidoDashboard;
 
-  // calculo do retorno percentual 
-  double get retornoPercent {
-    if (totalInvestido == 0) return 0.0;
-    return (lucroTotal / totalInvestido) * 100;
-  }
+  double get lucroTotal => lucroTotalDashboard;
 
-  // tranforma o retorno do Firestore (Map) em instancia da classe (objeto dart)
-  factory WalletModel.fromDashboard(String uid, Map<String, dynamic> dashboardMap,
-    List<ParticipacaoModel> participacoes, List<OperacaoModel> operacoes) {
-      return WalletModel (
-        uid: uid,
-        // back retorna saldo em reais - converte para centavos 
-        saldoCentavos: ((dashboardMap['saldoDisponivel'] ?? 0) * 100).toInt(),
-        participacoes: participacoes,
-        operacoes: operacoes,
-      );
+  double get retornoPercent => retornoPercentDashboard;
+
+  // converte o valor do dashboard para double, pois ele pode vir como string ou número
+  static double _toDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    if (value is String) {
+      return double.tryParse(
+            value.replaceAll('%', '').replaceAll(',', '.'),
+          ) ??
+          0.0;
     }
+    return 0.0;
+  }
+
+  // extrai os pontos do gráfico do dashboard 
+  static List<double> _pontosFromDashboard(Map<String, dynamic> dashboardMap) {
+    final pontos = dashboardMap['pontosGrafico'];
+    if (pontos is! List) return const [];
+
+    return pontos
+        .map((ponto) {
+          if (ponto is num) return ponto.toDouble();
+          if (ponto is Map<String, dynamic>) return _toDouble(ponto['valor']);
+          if (ponto is Map) return _toDouble(ponto['valor']);
+          return 0.0;
+        })
+        .where((valor) => valor > 0)
+        .toList();
+  }
+
+  // método factory que cria um walletmoedl a partir do dados do dashboard, participações e operações 
+  factory WalletModel.fromDashboard(
+    String uid,
+    Map<String, dynamic> dashboardMap,
+    List<ParticipacaoModel> participacoes,
+    List<OperacaoModel> operacoes,
+  ) {
+    return WalletModel(
+      uid: uid,
+      saldoCentavos: (_toDouble(dashboardMap['saldoDisponivel']) * 100).toInt().toDouble(),
+      valorTotalCarteiraDashboard: _toDouble(dashboardMap['valorTotalCarteira']),
+      totalInvestidoDashboard: _toDouble(dashboardMap['totalInvestido']),
+      lucroTotalDashboard: _toDouble(dashboardMap['lucro']),
+      retornoPercentDashboard: _toDouble(dashboardMap['retorno']),
+      pontosGrafico: _pontosFromDashboard(dashboardMap),
+      participacoes: participacoes,
+      operacoes: operacoes,
+    );
+  }
 }

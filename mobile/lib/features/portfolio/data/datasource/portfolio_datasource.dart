@@ -17,6 +17,7 @@ import 'dart:convert';
 import '../../domain/models/wallet_model.dart';
 import '../../domain/models/participacao_model.dart';
 import '../../domain/models/operacao_model.dart';
+import '../../domain/models/startup_model.dart';
 
 // classe responsável por fazer as chamadas HTTP para o backend 
 class PortfolioDatasource {
@@ -38,7 +39,7 @@ class PortfolioDatasource {
     // busca os dados do dashboard 
     Future<Map<String, dynamic>> getDashboard(String uid) async {
         // url do endpoint do dashboard
-        final url = Uri.parse('$_baseUrl/v1/wallet/dashboard');
+        final url = Uri.parse('$_baseUrl/wallet/dashboard');
         // faz a requisição GET pro endpoint com o header de autenticação
         final response = await http.get(url, headers: _headers);
         // caso de erro 
@@ -71,7 +72,7 @@ class PortfolioDatasource {
     // busca as participações do usuário
     // usa o token JWT para identificar o usuário
     Future<List<ParticipacaoModel>> getParticipacoes() async {
-        final url = Uri.parse('$_baseUrl/v1/wallet/holdings');
+        final url = Uri.parse('$_baseUrl/wallet/holdings');
         final response = await http.get(url, headers: _headers);
         if (response.statusCode != 200) {
             throw Exception('Erro ao buscar participações');
@@ -89,7 +90,7 @@ class PortfolioDatasource {
     // pega o histórico de operações do usuário
     // usa o token JWT para identificar o usuário
     Future<List<OperacaoModel>> getOperacoes() async {
-        final url = Uri.parse('$_baseUrl/v1/wallet/transactions');
+        final url = Uri.parse('$_baseUrl/wallet/transactions');
         final response = await http.get (url, headers: _headers);
         if (response.statusCode != 200) {
             throw Exception('Erro ao buscar histórico de operações');
@@ -101,5 +102,19 @@ class PortfolioDatasource {
             final map = item as Map<String, dynamic>;
             return OperacaoModel.fromMap(map['id'], map);
         }).toList();
+    }
+
+    // pega lista de startups disponíveis para investimento 
+    Future<List<StartupModel>> getStartups() async {
+      final url = Uri.parse('$_baseUrl/startups');
+      final response = await http.get(url, headers: _headers);
+      if (response.statusCode != 200){
+        throw Exception('Erro ao buscar startups');
+      }
+      final Map<String, dynamic> body = jsonDecode(response.body);
+      final List items = (body['data'] ?? body['items'] ?? []) as List;
+      return items.map((item) {
+        return StartupModel.fromMap(item as Map<String, dynamic>);
+      }).toList();
     }
 }
