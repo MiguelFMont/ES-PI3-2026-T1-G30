@@ -26,6 +26,30 @@ class PerfilRepository {
     }
   }
 
+  Future<WalletBalanceModel> buscarCarteira() async {
+    try {
+      return await _datasource.buscarCarteira();
+    } catch (e) {
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  Future<WalletBalanceModel> adicionarSaldo(int valorCentavos) async {
+    try {
+      return await _datasource.adicionarSaldo(valorCentavos);
+    } catch (e) {
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  Future<WalletBalanceModel> sacar(int valorCentavos) async {
+    try {
+      return await _datasource.sacar(valorCentavos);
+    } catch (e) {
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
   // ───── MFA ─────
 
   Future<Map<String, dynamic>> setupMfa() async {

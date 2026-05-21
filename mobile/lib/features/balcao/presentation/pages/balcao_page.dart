@@ -1097,6 +1097,10 @@ class _CreateOfferSheetState extends State<_CreateOfferSheet> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _quantityController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
+  final NumberFormat _inputPriceFormat = NumberFormat.decimalPatternDigits(
+    locale: 'pt_BR',
+    decimalDigits: 2,
+  );
 
   String? _selectedStartupId;
   bool _isSubmitting = false;
@@ -1123,6 +1127,16 @@ class _CreateOfferSheetState extends State<_CreateOfferSheet> {
 
   int? get _quantityValue => int.tryParse(_quantityController.text.trim());
   int? get _priceInCents => _parseCurrencyToCents(_priceController.text);
+
+  void _useCurrentTokenPrice() {
+    final startup = _selectedStartup;
+    if (startup == null) return;
+
+    _priceController.text = _inputPriceFormat.format(startup.precoAtualReais);
+    setState(() {
+      _backendError = null;
+    });
+  }
 
   @override
   void dispose() {
@@ -1206,6 +1220,14 @@ class _CreateOfferSheetState extends State<_CreateOfferSheet> {
                 holding: holding,
                 startup: startup,
                 currencyFormat: widget.currencyFormat,
+              ),
+            ],
+            if (startup != null) ...[
+              const SizedBox(height: 12),
+              _CurrentTokenPriceCard(
+                startup: startup,
+                currencyFormat: widget.currencyFormat,
+                onUseCurrentPrice: _isSubmitting ? null : _useCurrentTokenPrice,
               ),
             ],
             const SizedBox(height: 16),
@@ -1448,6 +1470,184 @@ class _HoldingSummary extends StatelessWidget {
             style: const TextStyle(
               fontSize: 13,
               color: AppColors.mutedForeground,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CurrentTokenPriceCard extends StatelessWidget {
+  const _CurrentTokenPriceCard({
+    required this.startup,
+    required this.currencyFormat,
+    required this.onUseCurrentPrice,
+  });
+
+  final StartupModel startup;
+  final NumberFormat currencyFormat;
+  final VoidCallback? onUseCurrentPrice;
+
+  @override
+  Widget build(BuildContext context) {
+    final variation = startup.variacaoPercent;
+    final variationPrefix = variation > 0 ? '+' : '';
+    final variationColor = variation > 0
+        ? AppColors.success
+        : variation < 0
+        ? AppColors.destructive
+        : AppColors.mutedForeground;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.12)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.trending_up_rounded,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Preço atual do token',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.foreground,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      startup.nome,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.mutedForeground,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              TextButton(
+                onPressed: onUseCurrentPrice,
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  textStyle: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                child: const Text('Usar valor'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                currencyFormat.format(startup.precoAtualReais),
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.foreground,
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Padding(
+                padding: EdgeInsets.only(bottom: 2),
+                child: Text(
+                  'por token',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.mutedForeground,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _PriceReferenceChip(
+                icon: Icons.flag_outlined,
+                label:
+                    'Inicial ${currencyFormat.format(startup.precoInicialReais)}',
+              ),
+              _PriceReferenceChip(
+                icon: variation >= 0
+                    ? Icons.north_east_rounded
+                    : Icons.south_east_rounded,
+                label:
+                    'Variação $variationPrefix${variation.toStringAsFixed(1)}%',
+                color: variationColor,
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            'Use esse valor como referência para definir o preço unitário da oferta. A validação final continua no backend.',
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.5,
+              color: AppColors.mutedForeground,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PriceReferenceChip extends StatelessWidget {
+  const _PriceReferenceChip({
+    required this.icon,
+    required this.label,
+    this.color = AppColors.primary,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: color,
             ),
           ),
         ],

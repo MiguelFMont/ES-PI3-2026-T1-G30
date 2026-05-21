@@ -15,6 +15,7 @@ import {
   getTransactionsService,
   getDadosDashboardService,
   addBalanceService,
+  withdrawService,
   getWalletService,
   listHoldingsService
 } from './wallet.service';
@@ -129,6 +130,21 @@ export async function addBalanceController(
 ) {
   try {
     const result = await addBalanceService(getUid(req), req.body?.valorCentavos);
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+// Controller do POST /wallet/withdraw.
+// Reaproveita o mesmo contrato de valorCentavos do add-balance.
+export async function withdrawController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const result = await withdrawService(getUid(req), req.body?.valorCentavos);
     res.status(200).json(result);
   } catch (error) {
     next(error);
