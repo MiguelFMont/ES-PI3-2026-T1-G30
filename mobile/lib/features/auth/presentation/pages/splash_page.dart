@@ -21,12 +21,25 @@ class _SplashPageState extends State<SplashPage> {
   }
 
   Future<void> _verificarSessao() async {
+    // Mantem a splash visivel por um curto periodo antes de decidir a rota.
     await Future.delayed(const Duration(milliseconds: 1800));
-    final token = await SessionManager.getToken();
+    String? token;
+
+    try {
+      // No navegador, o storage pode falhar ou retornar estado inconsistente.
+      // Em vez de quebrar a rota inicial, tentamos ler a sessao com tolerancia.
+      token = await SessionManager.getToken();
+    } catch (_) {
+      // Se o storage falhar, limpamos qualquer resto de sessao e seguimos como
+      // usuario deslogado para evitar loop ou tela branca na inicializacao.
+      await SessionManager.fazerLogout();
+    }
+
     if (!mounted) return;
-    Navigator.of(context).pushReplacementNamed(
-      token != null ? '/home' : '/welcome',
-    );
+    // Com sessao valida vai para /home; sem sessao vai para /welcome.
+    Navigator.of(
+      context,
+    ).pushReplacementNamed(token != null ? '/home' : '/welcome');
   }
 
   @override
@@ -38,7 +51,8 @@ class _SplashPageState extends State<SplashPage> {
           _buildDecoracoes(),
           SafeArea(
             child: Center(
-              // Adicione este widget
+              // A splash continua sendo a primeira tela renderizada depois do
+              // bootstrap, entao qualquer falha anterior nao pode mais matar a UI.
               child: Column(
                 children: [
                   const Spacer(),
@@ -162,7 +176,6 @@ class _SplashPageState extends State<SplashPage> {
           ),
         ),
         const SizedBox(height: 28),
-
       ],
     );
   }
