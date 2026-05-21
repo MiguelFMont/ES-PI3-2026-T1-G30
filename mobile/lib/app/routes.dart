@@ -7,11 +7,7 @@ import '../features/auth/presentation/pages/reset_password_page.dart';
 import '../features/auth/presentation/pages/token_verification_page.dart';
 import '../features/perfil/presentation/pages/perfil_page.dart';
 import '../features/auth/presentation/pages/splash_page.dart';
-import '../features/auth/presentation/pages/mfa_challenge_page.dart';
-import '../features/startups/presentation/pages/catalog_page.dart';
-import '../features/perfil/presentation/pages/informacoes_pessoais_page.dart';
-import '../features/perfil/presentation/pages/mfa_page.dart';
-import '../features/perfil/presentation/pages/senha_page.dart';
+import '../features/portfolio/presentation/screens/portfolio_screen.dart';
 
 class AppRoutes {
   static const splash = '/';
@@ -23,11 +19,7 @@ class AppRoutes {
   static const resetPassword = '/reset-password';
   static const tokenVerification = '/token-verification';
   static const perfil = '/perfil';
-  static const catalog = '/catalog';
-  static const informacoesPessoais = '/informacoes-pessoais';
-  static const mfa = '/mfa';
-  static const mfaChallenge = '/mfa-challenge';
-  static const segurancaSenha = '/seguranca-senha';
+  static const portfolio = '/portfolio';
 
   static Map<String, Widget Function(BuildContext)> get routes => {
     splash: (_) => SplashPage(),
@@ -39,10 +31,6 @@ class AppRoutes {
     resetPassword: (_) => ResetPasswordPage(),
     tokenVerification: (_) => TokenVerificationPage(),
     perfil: (_) => PerfilPage(),
-    catalog: (_) => CatalogPage(),
-    informacoesPessoais: (_) => InformacoesPage(),
-    mfa: (_) => MfaPage(),
-    mfaChallenge: (_) => MfaChallengePage(),
-    segurancaSenha: (_) => SenhaPage(),
+    portfolio: (_) => const PortfolioScreen(),
   };
 }
