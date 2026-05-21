@@ -1,6 +1,6 @@
 // Samuel Campovilla:
 // Serviço reutilizável da Fase 5 para cálculo e persistência do preço dos tokens.
-// Hoje ele é chamado por trades.repo.ts nos fluxos de compra e venda direta.
+// Hoje ele é chamado por trades.repo.ts e offers.repo.ts nos fluxos de compra, venda e aceite de oferta.
 // A responsabilidade aqui é concentrar regras de valorização natural, impacto da negociação
 // e escrita do histórico de preço dentro da mesma Firestore Transaction da operação.
 import { getDb } from "../../config/firebase";
@@ -384,8 +384,9 @@ export class PriceService {
     );
   }
 
-  // Regra futura para aceite de oferta.
-  // Ainda não há endpoint nesta fase, mas a função já fica pronta para reutilização futura.
+  // Calcula o impacto de OFERTA_ACEITA a partir do preço negociado entre as partes.
+  // É chamada pelo fluxo de aceite do balcão para refletir se a negociação ocorreu
+  // acima ou abaixo do preço corrente consolidado da startup.
   private calculateAcceptedOfferImpact(
     precoAtualCentavos: number,
     precoNegociadoCentavos: number | undefined,

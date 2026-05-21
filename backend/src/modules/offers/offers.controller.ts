@@ -3,7 +3,11 @@
 // Ele é chamado por offers.routes.ts e não acessa Firestore diretamente.
 
 import { NextFunction, Request, Response } from "express";
-import { cancelOfferService, createOfferService } from "./offers.service";
+import {
+  acceptOfferService,
+  cancelOfferService,
+  createOfferService,
+} from "./offers.service";
 
 // Extrai o uid autenticado preenchido pelo authMiddleware.
 // Os services usam esse uid para garantir que a oferta pertença ao usuário logado.
@@ -40,6 +44,24 @@ export async function cancelOfferController(
 ) {
   try {
     const result = await cancelOfferService(getUid(req), {
+      offerId: req.params.offerId,
+    });
+
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+// Controller do POST /offers/:offerId/accept.
+// Lê offerId da URL e delega ao service a transferência atômica entre comprador e vendedor.
+export async function acceptOfferController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const result = await acceptOfferService(getUid(req), {
       offerId: req.params.offerId,
     });
 

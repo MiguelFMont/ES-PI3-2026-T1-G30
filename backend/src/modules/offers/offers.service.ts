@@ -1,10 +1,11 @@
 // Autor: Samuel Campovilla
-// Este service concentra a regra de negócio da Fase 6.
+// Este service concentra a regra de negócio das Fases 6 e 7.
 // Os controllers chamam estas funções para validar entrada, calcular totais
 // e delegar a persistência atômica ao offers.repo.ts.
 
 import { AppError } from "../../shared/errors/app.error";
 import {
+  AcceptOfferResult,
   CancelOfferResult,
   CreateOfferResult,
   OffersRepo,
@@ -23,6 +24,10 @@ interface CancelOfferInput {
   offerId: unknown;
 }
 
+interface AcceptOfferInput {
+  offerId: unknown;
+}
+
 interface CreateOfferResponse {
   offerId: string;
   startupId: string;
@@ -37,6 +42,19 @@ interface CancelOfferResponse {
   offerId: string;
   status: "CANCELADA";
   quantidadeDevolvida: number;
+}
+
+interface AcceptOfferResponse {
+  offerId: string;
+  status: "ACEITA";
+  startupId: string;
+  compradorId: string;
+  vendedorId: string;
+  quantidade: number;
+  precoUnitarioCentavos: number;
+  valorTotalCentavos: number;
+  buyerTransactionId: string;
+  sellerTransactionId: string;
 }
 
 // Valida inteiros positivos usados no body dos endpoints e nos DTOs devolvidos.
@@ -108,6 +126,24 @@ function parseCreateOfferInput(input: CreateOfferInput): {
 // Normaliza o parâmetro da rota POST /offers/:offerId/cancel.
 // É chamada por cancelOfferService antes de abrir a transaction no Firestore.
 function parseCancelOfferInput(input: CancelOfferInput): {
+  offerId: string;
+} {
+  if (!isNonEmptyString(input.offerId)) {
+    throw new AppError(
+      "offerId deve ser uma string não vazia.",
+      400,
+      "INVALID_OFFER_ID",
+    );
+  }
+
+  return {
+    offerId: input.offerId.trim(),
+  };
+}
+
+// Normaliza o parâmetro da rota POST /offers/:offerId/accept.
+// É chamada por acceptOfferService antes de abrir a transaction no Firestore.
+function parseAcceptOfferInput(input: AcceptOfferInput): {
   offerId: string;
 } {
   if (!isNonEmptyString(input.offerId)) {
@@ -226,6 +262,87 @@ function toCancelOfferResponse(result: CancelOfferResult): CancelOfferResponse {
   };
 }
 
+// Valida e converte o resultado interno do repo no DTO público do aceite de oferta.
+// É chamada por acceptOfferService para manter o contrato do endpoint consistente.
+function toAcceptOfferResponse(result: AcceptOfferResult): AcceptOfferResponse {
+  if (!isNonEmptyString(result.offerId)) {
+    throw new AppError("Oferta sem identificador válido.", 500, "INTERNAL_ERROR");
+  }
+
+  if (!isNonEmptyString(result.startupId)) {
+    throw new AppError("Resposta com startupId inválido.", 500, "INTERNAL_ERROR");
+  }
+
+  if (!isNonEmptyString(result.compradorId)) {
+    throw new AppError("Resposta com compradorId inválido.", 500, "INTERNAL_ERROR");
+  }
+
+  if (!isNonEmptyString(result.vendedorId)) {
+    throw new AppError("Resposta com vendedorId inválido.", 500, "INTERNAL_ERROR");
+  }
+
+  if (!isPositiveInteger(result.quantidade)) {
+    throw new AppError("Resposta com quantidade inválida.", 500, "INTERNAL_ERROR");
+  }
+
+  if (!isPositiveInteger(result.precoUnitarioCentavos)) {
+    throw new AppError(
+      "Resposta com precoUnitarioCentavos inválido.",
+      500,
+      "INTERNAL_ERROR",
+    );
+  }
+
+  if (!isPositiveInteger(result.valorTotalCentavos)) {
+    throw new AppError(
+      "Resposta com valorTotalCentavos inválido.",
+      500,
+      "INTERNAL_ERROR",
+    );
+  }
+
+  if (result.valorTotalCentavos !== result.quantidade * result.precoUnitarioCentavos) {
+    throw new AppError(
+      "Resposta com valorTotalCentavos inconsistente.",
+      500,
+      "INTERNAL_ERROR",
+    );
+  }
+
+  if (!isNonEmptyString(result.buyerTransactionId)) {
+    throw new AppError(
+      "Resposta com buyerTransactionId inválido.",
+      500,
+      "INTERNAL_ERROR",
+    );
+  }
+
+  if (!isNonEmptyString(result.sellerTransactionId)) {
+    throw new AppError(
+      "Resposta com sellerTransactionId inválido.",
+      500,
+      "INTERNAL_ERROR",
+    );
+  }
+
+  if (result.status !== "ACEITA" || !isStatusOferta(result.status)) {
+    throw new AppError("Resposta com status inválido.", 500, "INTERNAL_ERROR");
+  }
+
+  return {
+    offerId: result.offerId,
+    status: result.status,
+    startupId: result.startupId,
+    compradorId: result.compradorId,
+    vendedorId: result.vendedorId,
+    quantidade: result.quantidade,
+    precoUnitarioCentavos: result.precoUnitarioCentavos,
+    valorTotalCentavos: result.valorTotalCentavos,
+    buyerTransactionId: result.buyerTransactionId,
+    sellerTransactionId: result.sellerTransactionId,
+  };
+}
+
 // Regra de negócio do POST /offers.
 // É chamada por createOfferController e coordena autenticação, validação, cálculo do total
 // e a transaction que bloqueia tokens livres e cria a oferta ABERTA.
@@ -262,4 +379,18 @@ export async function cancelOfferService(
   const result = await offersRepo.cancelOffer(authenticatedUid, offerId);
 
   return toCancelOfferResponse(result);
+}
+
+// Regra de negócio do POST /offers/:offerId/accept.
+// É chamada por acceptOfferController e coordena a validação com a transaction
+// que move saldo, transfere tokens bloqueados e registra os dois lados do histórico.
+export async function acceptOfferService(
+  uid: string | undefined,
+  input: AcceptOfferInput,
+): Promise<AcceptOfferResponse> {
+  const authenticatedUid = assertAuthenticated(uid);
+  const { offerId } = parseAcceptOfferInput(input);
+  const result = await offersRepo.acceptOffer(authenticatedUid, offerId);
+
+  return toAcceptOfferResponse(result);
 }
