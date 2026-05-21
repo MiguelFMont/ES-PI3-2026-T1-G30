@@ -39,7 +39,7 @@ class PortfolioDatasource {
     // busca os dados do dashboard 
     Future<Map<String, dynamic>> getDashboard(String uid) async {
         // url do endpoint do dashboard
-        final url = Uri.parse('$_baseUrl/v1/wallet/dashboard');
+        final url = Uri.parse('$_baseUrl/wallet/dashboard');
         // faz a requisição GET pro endpoint com o header de autenticação
         final response = await http.get(url, headers: _headers);
         // caso de erro 
@@ -72,7 +72,7 @@ class PortfolioDatasource {
     // busca as participações do usuário
     // usa o token JWT para identificar o usuário
     Future<List<ParticipacaoModel>> getParticipacoes() async {
-        final url = Uri.parse('$_baseUrl/v1/wallet/holdings');
+        final url = Uri.parse('$_baseUrl/wallet/holdings');
         final response = await http.get(url, headers: _headers);
         if (response.statusCode != 200) {
             throw Exception('Erro ao buscar participações');
@@ -90,7 +90,7 @@ class PortfolioDatasource {
     // pega o histórico de operações do usuário
     // usa o token JWT para identificar o usuário
     Future<List<OperacaoModel>> getOperacoes() async {
-        final url = Uri.parse('$_baseUrl/v1/wallet/transactions');
+        final url = Uri.parse('$_baseUrl/wallet/transactions');
         final response = await http.get (url, headers: _headers);
         if (response.statusCode != 200) {
             throw Exception('Erro ao buscar histórico de operações');
@@ -106,7 +106,7 @@ class PortfolioDatasource {
 
     // pega lista de startups disponíveis para investimento 
     Future<List<StartupModel>> getStartups() async {
-      final url = Uri.parse('$_baseUrl/v1/startups');
+      final url = Uri.parse('$_baseUrl/startups');
       final response = await http.get(url, headers: _headers);
       if (response.statusCode != 200){
         throw Exception('Erro ao buscar startups');

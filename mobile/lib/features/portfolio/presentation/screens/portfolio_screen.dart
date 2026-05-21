@@ -154,7 +154,7 @@ class _PortfolioContent extends StatelessWidget {
             child: Column(
               children: [
                 Transform.translate(
-                  offset: const Offset(0, -40),
+                  offset: const Offset(0, -30),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: SaldoCard(
@@ -261,7 +261,7 @@ class _PortfolioHeader extends StatelessWidget {
         top: 56,
         left: 24,
         right: 24,
-        bottom: 64,
+        bottom: 48,
       ),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
