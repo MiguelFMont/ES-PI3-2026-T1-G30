@@ -1,5 +1,6 @@
 import { Router } from "express";
 import authRoutes from "./auth/auth.routes";
+import offersRoutes from "./offers/offers.routes";
 import startupsRoutes from "./startups/startups.routes";
 import tradesRoutes from "./trades/trades.routes";
 import walletRoutes from "./wallet/wallet.routes";
@@ -10,6 +11,7 @@ import questionsRoutes from './questions/questions.routes';
 const router = Router();
 
 router.use("/auth", authRoutes);
+router.use("/offers", offersRoutes);
 router.use("/startups", startupsRoutes);
 router.use("/trades", tradesRoutes);
 router.use("/wallet", walletRoutes);
