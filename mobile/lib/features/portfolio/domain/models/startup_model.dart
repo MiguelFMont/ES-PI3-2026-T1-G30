@@ -35,12 +35,20 @@ class StartupModel {
   double get precoInicialReais => precoTokenInicialCentavos / 100;
   double get variacaoPercent {
     if (precoTokenInicialCentavos == 0) return 0;
-    return ((precoTokenAtualCentavos - precoTokenInicialCentavos) / precoTokenInicialCentavos * 100);
+    return ((precoTokenAtualCentavos - precoTokenInicialCentavos) /
+        precoTokenInicialCentavos *
+        100);
   }
 
   factory StartupModel.fromMap(Map<String, dynamic> map) {
-    final precoInicial = (map['precoTokenInicialCentavos'] ?? map['precoInicialCentavos'] ?? 0).toInt();
-    final precoAtual = (map['precoTokenAtualCentavos'] ?? map['precoAtualCentavos'] ?? precoInicial).toInt();
+    final precoInicial =
+        (map['precoTokenInicialCentavos'] ?? map['precoInicialCentavos'] ?? 0)
+            .toInt();
+    final precoAtual =
+        (map['precoTokenAtualCentavos'] ??
+                map['precoAtualCentavos'] ??
+                precoInicial)
+            .toInt();
 
     return StartupModel(
       id: map['id'] ?? '',

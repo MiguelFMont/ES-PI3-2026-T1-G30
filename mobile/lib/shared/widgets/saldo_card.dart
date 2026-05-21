@@ -39,12 +39,14 @@ class SaldoCard extends StatelessWidget {
     required this.onNegociar,
   });
 
-  // formata números grandes 
+  // formata números grandes
   String _formatarValor(double valor) {
-    return valor.toStringAsFixed(0).replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-      (m) => '${m[1]}.',
-    );
+    return valor
+        .toStringAsFixed(0)
+        .replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (m) => '${m[1]}.',
+        );
   }
 
   @override
@@ -148,7 +150,7 @@ class SaldoCard extends StatelessWidget {
             ),
           ),
           const Divider(color: Color(0xFFECEFF1), height: 1),
-          // valor total + investido, lucro, retorno 
+          // valor total + investido, lucro, retorno
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(

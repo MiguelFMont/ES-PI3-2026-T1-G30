@@ -8,8 +8,9 @@ import '../../../../core/storage/session_manager.dart';
 class PerfilDatasource {
   Future<Map<String, String>> get _headers async {
     final token = await SessionManager.getToken();
-    if (token == null)
+    if (token == null) {
       throw Exception('Sessão expirada. Faça login novamente.');
+    }
     return {
       'Authorization': 'Bearer $token',
       'Content-Type': 'application/json',

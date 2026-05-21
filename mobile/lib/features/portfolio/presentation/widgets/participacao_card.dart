@@ -14,7 +14,7 @@ import '../../domain/models/startup_model.dart';
 class ParticipacaoCard extends StatelessWidget {
   final ParticipacaoModel participacao;
 
-  // startup vinculada a participação 
+  // startup vinculada a participação
   final StartupModel? startup;
 
   // função chamada ao clicar no card — navega para o detalhe da startup
@@ -70,7 +70,7 @@ class ParticipacaoCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // logo + nome + valorização 
+            // logo + nome + valorização
             Row(
               children: [
                 Container(
@@ -233,13 +233,10 @@ class ParticipacaoCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 20),
-            // valor total 
+            // valor total
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 14,
-                vertical: 10,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: lucroPositivo
                     ? const Color(0xFF4CAF50).withValues(alpha: 0.07)
@@ -282,10 +279,7 @@ class _Metrica extends StatelessWidget {
   final String label;
   final String valor;
 
-  const _Metrica({
-    required this.label,
-    required this.valor,
-  });
+  const _Metrica({required this.label, required this.valor});
 
   @override
   Widget build(BuildContext context) {

@@ -1,4 +1,3 @@
-
 // Autor: Miguel Fernandes Monteiro — RA: 25014808
 String formatarReais(double valor) {
   final partes = valor.toStringAsFixed(0).split('');

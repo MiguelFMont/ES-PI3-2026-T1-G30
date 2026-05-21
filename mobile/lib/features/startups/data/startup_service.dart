@@ -54,10 +54,7 @@ class StartupService {
       await Future.delayed(const Duration(milliseconds: 600));
       return mockStartups.firstWhere(
         (startup) => startup.id == startupId,
-        orElse: () => throw StartupApiException(
-          'Startup nao encontrada.',
-          404,
-        ),
+        orElse: () => throw StartupApiException('Startup nao encontrada.', 404),
       );
     }
 

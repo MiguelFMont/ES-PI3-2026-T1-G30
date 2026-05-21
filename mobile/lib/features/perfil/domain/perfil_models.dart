@@ -12,7 +12,6 @@ class PerfilModel {
   final bool mfaAtivo;
   final String ultimaAlteracaoSenha;
 
-
   const PerfilModel({
     required this.nome,
     required this.email,

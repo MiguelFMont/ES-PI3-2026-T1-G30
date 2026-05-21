@@ -1,7 +1,6 @@
 // Autor: Miguel Fernandes Monteiro
 // RA: 25014808
 class CpfValidator {
-  
   static bool isValid(String cpf) {
     // Remove pontos e traço
     cpf = cpf.replaceAll(RegExp(r'[^\d]'), '');

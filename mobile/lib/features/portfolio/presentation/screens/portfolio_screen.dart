@@ -57,22 +57,17 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
 
       // cria o repository da carteira com o datasource que tem a url do backend e o token para autenticação
       final repository = PortfolioRepository(
-        PortfolioDatasource(
-          AppHttpClient.baseUrl,
-          token,
-        ),
+        PortfolioDatasource(AppHttpClient.baseUrl, token),
       );
 
-      // pega os dados da carteira e das startups pelo repository 
+      // pega os dados da carteira e das startups pelo repository
       final wallet = await repository.getWallet(uid);
       final startups = await repository.getStartups();
 
       if (!mounted) return;
       setState(() {
         _wallet = wallet;
-        _startupsPorId = {
-          for (final startup in startups) startup.id: startup,
-        };
+        _startupsPorId = {for (final startup in startups) startup.id: startup};
         _isLoading = false;
       });
     } catch (e) {
@@ -111,24 +106,24 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
               child: CircularProgressIndicator(color: Color(0xFFE91E63)),
             )
           : _erro != null
-              ? _ErroCarteira(onRetry: _carregarDados)
-              : _PortfolioContent(
-                  wallet: _wallet!,
-                  startupPorId: _startupPorId,
-                  nomeStartup: _nomeStartup,
-                  onAcaoIndisponivel: _mostrarEmBreve,
-                ),
+          ? _ErroCarteira(onRetry: _carregarDados)
+          : _PortfolioContent(
+              wallet: _wallet!,
+              startupPorId: _startupPorId,
+              nomeStartup: _nomeStartup,
+              onAcaoIndisponivel: _mostrarEmBreve,
+            ),
     );
   }
 }
 
 // widget que mostra o conteúdo da carteira (saldo, participações, gráfico e operações)
-// depois dos dados serem carregados com sucesso 
+// depois dos dados serem carregados com sucesso
 class _PortfolioContent extends StatelessWidget {
   final WalletModel wallet;
   final StartupModel? Function(String? startupId) startupPorId;
   final String? Function(String? startupId) nomeStartup;
-  // função para mostrar mensagem de recurso indisponível quando tem ações ainda não implementadas 
+  // função para mostrar mensagem de recurso indisponível quando tem ações ainda não implementadas
   final void Function(String recurso) onAcaoIndisponivel;
 
   const _PortfolioContent({
@@ -140,8 +135,8 @@ class _PortfolioContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // se não tem pontos do gráfico 
-    // mostra o valor total da carteira como um único ponto 
+    // se não tem pontos do gráfico
+    // mostra o valor total da carteira como um único ponto
     final pontosGrafico = wallet.pontosGrafico.isEmpty
         ? [wallet.valorTotalCarteira]
         : wallet.pontosGrafico;
@@ -208,7 +203,9 @@ class _PortfolioContent extends StatelessWidget {
                         if (wallet.operacoes.isEmpty)
                           const _EmptyState('Nenhuma operação encontrada')
                         else
-                          ...wallet.operacoes.take(3).map(
+                          ...wallet.operacoes
+                              .take(3)
+                              .map(
                                 (operacao) => OperacaoTile(
                                   operacao: operacao,
                                   nomeStartup: nomeStartup(operacao.startupId),
@@ -257,18 +254,10 @@ class _PortfolioHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.only(
-        top: 56,
-        left: 24,
-        right: 24,
-        bottom: 48,
-      ),
+      padding: const EdgeInsets.only(top: 56, left: 24, right: 24, bottom: 48),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            Color(0xFFE91E63),
-            Color(0xFFC2185B),
-          ],
+          colors: [Color(0xFFE91E63), Color(0xFFC2185B)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -298,13 +287,13 @@ class _PortfolioHeader extends StatelessWidget {
   }
 }
 
-// widget que mostra o título de cada seção 
+// widget que mostra o título de cada seção
 class _SecaoTitulo extends StatelessWidget {
   final String titulo;
   final IconData? icone;
-  // texto to botão de ação 
+  // texto to botão de ação
   final String acao;
-  // função chamada quando clica no botão da ação 
+  // função chamada quando clica no botão da ação
   final VoidCallback onAcao;
 
   const _SecaoTitulo({
@@ -363,7 +352,7 @@ class _SecaoTitulo extends StatelessWidget {
   }
 }
 
-// botões de explorar mais e ir ao balcão que estão no final da tela 
+// botões de explorar mais e ir ao balcão que estão no final da tela
 class _BotaoPortfolio extends StatelessWidget {
   final String label;
   final IconData icon;
@@ -415,7 +404,7 @@ class _BotaoPortfolio extends StatelessWidget {
   }
 }
 
-// se o estado está vazio - ainda não tem participações ou operações 
+// se o estado está vazio - ainda não tem participações ou operações
 class _EmptyState extends StatelessWidget {
   final String message;
 
@@ -438,7 +427,7 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-// mostra erro quando tem falha ao carregar 
+// mostra erro quando tem falha ao carregar
 class _ErroCarteira extends StatelessWidget {
   final VoidCallback onRetry;
 
@@ -450,11 +439,7 @@ class _ErroCarteira extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
-            Icons.error_outline,
-            color: Color(0xFFF44336),
-            size: 48,
-          ),
+          const Icon(Icons.error_outline, color: Color(0xFFF44336), size: 48),
           const SizedBox(height: 12),
           Text(
             'Erro ao carregar dados',

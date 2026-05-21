@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:mesclainvest/app/routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/storage/session_manager.dart';
 
@@ -36,10 +37,10 @@ class _SplashPageState extends State<SplashPage> {
     }
 
     if (!mounted) return;
-    // Com sessao valida vai para /home; sem sessao vai para /welcome.
+    // Com sessao valida vai para a shell autenticada; sem sessao vai para /welcome.
     Navigator.of(
       context,
-    ).pushReplacementNamed(token != null ? '/home' : '/welcome');
+    ).pushReplacementNamed(token != null ? AppRoutes.main : AppRoutes.welcome);
   }
 
   @override
@@ -77,7 +78,7 @@ class _SplashPageState extends State<SplashPage> {
           right: -60,
           child: _circulo(
             220,
-            AppColors.lavanda.withOpacity(0.1),
+            AppColors.lavanda.withValues(alpha: 0.1),
             borderWidth: 40,
           ),
         ),
@@ -86,14 +87,14 @@ class _SplashPageState extends State<SplashPage> {
           left: -80,
           child: _circulo(
             260,
-            AppColors.primary.withOpacity(0.3),
+            AppColors.primary.withValues(alpha: 0.3),
             borderWidth: 50,
           ),
         ),
         Positioned(
           top: 220,
           right: -40,
-          child: _circulo(120, AppColors.primary.withOpacity(0.12)),
+          child: _circulo(120, AppColors.primary.withValues(alpha: 0.12)),
         ),
       ],
     );
@@ -122,10 +123,10 @@ class _SplashPageState extends State<SplashPage> {
           width: 88,
           height: 88,
           decoration: BoxDecoration(
-            color: AppColors.lavanda.withOpacity(0.05),
+            color: AppColors.lavanda.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: AppColors.lavanda.withOpacity(0.15),
+              color: AppColors.lavanda.withValues(alpha: 0.15),
               width: 1.5,
             ),
           ),
@@ -171,7 +172,7 @@ class _SplashPageState extends State<SplashPage> {
           'Invista no futuro das startups',
           style: TextStyle(
             fontSize: 16,
-            color: AppColors.lavanda.withOpacity(0.5),
+            color: AppColors.lavanda.withValues(alpha: 0.5),
             letterSpacing: 0.3,
           ),
         ),
@@ -189,7 +190,7 @@ class _SplashPageState extends State<SplashPage> {
           SizedBox(
             width: 40,
             child: LinearProgressIndicator(
-              backgroundColor: AppColors.lavanda.withOpacity(0.12),
+              backgroundColor: AppColors.lavanda.withValues(alpha: 0.12),
               valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
               borderRadius: BorderRadius.circular(2),
             ),
@@ -199,7 +200,7 @@ class _SplashPageState extends State<SplashPage> {
             'v1.0.0',
             style: TextStyle(
               fontSize: 12,
-              color: AppColors.lavanda.withOpacity(0.25),
+              color: AppColors.lavanda.withValues(alpha: 0.25),
               letterSpacing: 0.5,
             ),
           ),

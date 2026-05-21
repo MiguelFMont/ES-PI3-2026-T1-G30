@@ -25,7 +25,11 @@ class TelaErro extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.cloud_off, color: AppColors.mutedForeground, size: 48),
+            const Icon(
+              Icons.cloud_off,
+              color: AppColors.mutedForeground,
+              size: 48,
+            ),
             const SizedBox(height: 16),
             Text(
               mensagem,

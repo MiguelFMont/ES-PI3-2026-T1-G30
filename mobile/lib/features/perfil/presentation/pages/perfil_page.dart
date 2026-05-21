@@ -30,10 +30,12 @@ class _PerfilPageState extends State<PerfilPage> {
   void _informacoesPessoais() {
     Navigator.pushNamed(context, '/informacoes-pessoais');
   }
-  void _mfa(){
+
+  void _mfa() {
     Navigator.pushNamed(context, '/mfa');
   }
-  void _senha(){
+
+  void _senha() {
     Navigator.pushNamed(context, '/seguranca-senha');
   }
 
@@ -145,49 +147,55 @@ class _PerfilPageState extends State<PerfilPage> {
                   const SizedBox(height: 24),
                   const RotuloSecao('CONTA'),
                   const SizedBox(height: 8),
-                  SecaoMenu(itens: [
-                    ItemMenu(
-                      icon: Icons.person_outline,
-                      titulo: 'Informações Pessoais',
-                      subtitulo: 'Nome, email, telefone',
-                      onTap: _informacoesPessoais,
-                    ),
-                    ItemMenu(
-                      icon: Icons.lock_outline,
-                      titulo: 'Segurança e Senha',
-                      subtitulo: 'Alterar senha, verificação',
-                      onTap: _senha,
-                    ),
-                  ]),
+                  SecaoMenu(
+                    itens: [
+                      ItemMenu(
+                        icon: Icons.person_outline,
+                        titulo: 'Informações Pessoais',
+                        subtitulo: 'Nome, email, telefone',
+                        onTap: _informacoesPessoais,
+                      ),
+                      ItemMenu(
+                        icon: Icons.lock_outline,
+                        titulo: 'Segurança e Senha',
+                        subtitulo: 'Alterar senha, verificação',
+                        onTap: _senha,
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 24),
                   const RotuloSecao('CARTEIRA DIGITAL'),
                   const SizedBox(height: 8),
-                  SecaoMenu(itens: [
-                    ItemMenu(
-                      icon: Icons.account_balance_wallet_outlined,
-                      titulo: 'Saldo e Depósitos',
-                      subtitulo: 'Saldo: ${formatarReais(data.saldo)}',
-                      onTap: () {},
-                    ),
-                    ItemMenu(
-                      icon: Icons.credit_card_outlined,
-                      titulo: 'Métodos de Pagamento',
-                      subtitulo: 'Cartões e contas vinculadas',
-                      onTap: () {},
-                    ),
-                  ]),
+                  SecaoMenu(
+                    itens: [
+                      ItemMenu(
+                        icon: Icons.account_balance_wallet_outlined,
+                        titulo: 'Saldo e Depósitos',
+                        subtitulo: 'Saldo: ${formatarReais(data.saldo)}',
+                        onTap: () {},
+                      ),
+                      ItemMenu(
+                        icon: Icons.credit_card_outlined,
+                        titulo: 'Métodos de Pagamento',
+                        subtitulo: 'Cartões e contas vinculadas',
+                        onTap: () {},
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 24),
                   const RotuloSecao('SEGURANÇA ADICIONAL'),
                   const SizedBox(height: 8),
-                  SecaoMenu(itens: [
-                    ItemMenu(
-                      icon: Icons.vpn_key_outlined,
-                      titulo: 'Autenticação de Dois Fatores',
-                      subtitulo:
-                          'Proteja sua conta com 2FA. Recomendado para todos os investidores do ecossistema Mescla.',
-                      onTap: _mfa,
-                    ),
-                  ]),
+                  SecaoMenu(
+                    itens: [
+                      ItemMenu(
+                        icon: Icons.vpn_key_outlined,
+                        titulo: 'Autenticação de Dois Fatores',
+                        subtitulo:
+                            'Proteja sua conta com 2FA. Recomendado para todos os investidores do ecossistema Mescla.',
+                        onTap: _mfa,
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 8),
                   MesclaOutlineButton(
                     label: 'Sair da conta',
@@ -212,7 +220,7 @@ class _PerfilPageState extends State<PerfilPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: AppColors.accent.withOpacity(0.08),
+            color: AppColors.accent.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),

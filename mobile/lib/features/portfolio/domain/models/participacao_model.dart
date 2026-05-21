@@ -26,9 +26,9 @@ class ParticipacaoModel {
 
   // preço médio em reais
   double get precoMedio => precoMedioCentavos / 100;
-  // valor total da posição em reais 
+  // valor total da posição em reais
   double get valorDaPosicao => quantidade * precoMedio;
-  // total investido em reais 
+  // total investido em reais
   double get totalInvestido => valorDaPosicao;
 
   // tranforma o retorno do Firestore (Map) em instancia da classe (objeto dart)

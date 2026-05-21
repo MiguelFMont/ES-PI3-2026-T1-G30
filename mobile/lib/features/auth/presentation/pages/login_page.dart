@@ -2,6 +2,7 @@
 // RA: 25014808
 
 import 'package:flutter/material.dart';
+import 'package:mesclainvest/app/routes.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../../../shared/widgets/campo_texto.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -33,20 +34,19 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) return;
 
       if (user.mfaRequired) {
-        
         Navigator.pushNamed(
           context,
-          '/mfa-challenge',
+          AppRoutes.mfaChallenge,
           arguments: {'uid': user.id, 'tempToken': user.tempToken},
         );
       } else {
-        Navigator.pushReplacementNamed(context, '/home');
+        Navigator.pushReplacementNamed(context, AppRoutes.main);
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
       setState(() => _isLoading = false);
     }
@@ -95,7 +95,11 @@ class _LoginPageState extends State<LoginPage> {
       margin: const EdgeInsets.only(bottom: 30, top: 20),
       child: const Text(
         'Login',
-        style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.foreground),
+        style: TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.w800,
+          color: AppColors.foreground,
+        ),
       ),
     );
   }
@@ -107,10 +111,17 @@ class _LoginPageState extends State<LoginPage> {
         alignment: Alignment.centerRight,
         child: TextButton(
           onPressed: () => Navigator.pushNamed(context, '/forgot-password'),
-          style: TextButton.styleFrom(splashFactory: NoSplash.splashFactory, overlayColor: Colors.transparent),
+          style: TextButton.styleFrom(
+            splashFactory: NoSplash.splashFactory,
+            overlayColor: Colors.transparent,
+          ),
           child: const Text(
             'Esqueceu sua senha?',
-            style: TextStyle(color: AppColors.accent, fontSize: 14, fontWeight: FontWeight.w500),
+            style: TextStyle(
+              color: AppColors.accent,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
       ),
@@ -121,11 +132,28 @@ class _LoginPageState extends State<LoginPage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Text('Não tem uma conta?', style: TextStyle(color: AppColors.mutedForeground, fontSize: 14, fontWeight: FontWeight.w500)),
+        const Text(
+          'Não tem uma conta?',
+          style: TextStyle(
+            color: AppColors.mutedForeground,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
         TextButton(
           onPressed: () => Navigator.pushReplacementNamed(context, '/register'),
-          style: TextButton.styleFrom(splashFactory: NoSplash.splashFactory, overlayColor: Colors.transparent),
-          child: const Text('Cadastre-se', style: TextStyle(color: AppColors.accent, fontSize: 14, fontWeight: FontWeight.w700)),
+          style: TextButton.styleFrom(
+            splashFactory: NoSplash.splashFactory,
+            overlayColor: Colors.transparent,
+          ),
+          child: const Text(
+            'Cadastre-se',
+            style: TextStyle(
+              color: AppColors.accent,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ),
       ],
     );

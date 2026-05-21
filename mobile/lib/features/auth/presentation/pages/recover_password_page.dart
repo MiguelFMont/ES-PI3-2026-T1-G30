@@ -122,7 +122,7 @@ class _RecoverPasswordPageState extends State<RecoverPasswordPage> {
     return Container(
       padding: const EdgeInsets.all(25),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.15),
+        color: AppColors.primary.withValues(alpha: 0.15),
         shape: BoxShape.circle,
       ),
       child: const Icon(Icons.lock_outline, color: AppColors.primary, size: 40),

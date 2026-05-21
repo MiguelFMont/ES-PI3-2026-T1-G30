@@ -105,11 +105,7 @@ class _CatalogPageState extends State<CatalogPage> {
   }
 
   void _onStartupTapped(Startup startup) {
-    Navigator.pushNamed(
-      context,
-      AppRoutes.startupDetail,
-      arguments: startup,
-    );
+    Navigator.pushNamed(context, AppRoutes.startupDetail, arguments: startup);
   }
 
   void _showFilterSheet() {
@@ -164,9 +160,7 @@ class _CatalogPageState extends State<CatalogPage> {
     return ClipRect(
       child: Stack(
         children: [
-          Positioned.fill(
-            child: Container(color: const Color(0xFFAD1457)),
-          ),
+          Positioned.fill(child: Container(color: const Color(0xFFAD1457))),
           Positioned(
             top: -55,
             right: -45,
@@ -294,10 +288,7 @@ class _CatalogPageState extends State<CatalogPage> {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       child: Text(
         label,
-        style: const TextStyle(
-          fontSize: 13,
-          color: AppColors.mutedForeground,
-        ),
+        style: const TextStyle(fontSize: 13, color: AppColors.mutedForeground),
       ),
     );
   }
@@ -364,11 +355,7 @@ class _CatalogPageState extends State<CatalogPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.search_off_rounded,
-              size: 56,
-              color: AppColors.muted,
-            ),
+            Icon(Icons.search_off_rounded, size: 56, color: AppColors.muted),
             SizedBox(height: 16),
             Text(
               'Nenhuma startup encontrada\npara o filtro selecionado.',
@@ -401,7 +388,8 @@ class _FilterSheet extends StatefulWidget {
   final String sortBy;
   final List<String> stageOptions;
   final List<String> sectorOptions;
-  final void Function(String? stage, Set<String> sectors, String sortBy) onApply;
+  final void Function(String? stage, Set<String> sectors, String sortBy)
+  onApply;
 
   const _FilterSheet({
     required this.selectedStage,

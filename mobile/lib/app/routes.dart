@@ -5,6 +5,7 @@ import '../features/auth/presentation/pages/cadastro_page.dart';
 import '../features/auth/presentation/pages/recover_password_page.dart';
 import '../features/auth/presentation/pages/reset_password_page.dart';
 import '../features/auth/presentation/pages/token_verification_page.dart';
+import '../features/navigation/presentation/pages/main_navigation_shell.dart';
 import '../features/perfil/presentation/pages/perfil_page.dart';
 import '../features/auth/presentation/pages/splash_page.dart';
 import '../features/auth/presentation/pages/mfa_challenge_page.dart';
@@ -18,6 +19,7 @@ import '../features/portfolio/presentation/screens/portfolio_screen.dart';
 
 class AppRoutes {
   static const splash = '/';
+  static const main = '/main';
   static const login = '/login';
   static const register = '/register';
   static const home = '/home';
@@ -36,10 +38,11 @@ class AppRoutes {
 
   static Map<String, Widget Function(BuildContext)> get routes => {
     splash: (_) => SplashPage(),
+    main: (_) => const MainNavigationShell(),
     welcome: (_) => WelcomePage(),
     register: (_) => CadastroPage(),
     login: (_) => LoginPage(),
-    home: (_) => PerfilPage(),
+    home: (_) => const MainNavigationShell(),
     forgotPassword: (_) => RecoverPasswordPage(),
     resetPassword: (_) => ResetPasswordPage(),
     tokenVerification: (_) => TokenVerificationPage(),

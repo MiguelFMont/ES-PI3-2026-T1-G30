@@ -6,7 +6,7 @@ significado do arquivo:
 modelo de transação 
 representa uma transação (compra ou venda) que o usuário fez
 */
- 
+
 // representa uma única operação (compra ou venda) do usuário
 class OperacaoModel {
   // id da operação no firestore
@@ -23,7 +23,7 @@ class OperacaoModel {
   final int? saldoAlteriorCentavos;
   final int? saldoNovoCentavos;
   // data da operação
-  final DateTime createdAt;  
+  final DateTime createdAt;
 
   const OperacaoModel({
     required this.id,
@@ -42,8 +42,9 @@ class OperacaoModel {
   // valor total em reais
   double get valorTotalReais => valorTotalCentavos / 100;
 
-  // preco unitário em reais 
-  double get precoUnitarioReais => precoUnitarioCentavos != null ? precoUnitarioCentavos! / 100 : 0.0;
+  // preco unitário em reais
+  double get precoUnitarioReais =>
+      precoUnitarioCentavos != null ? precoUnitarioCentavos! / 100 : 0.0;
 
   // verifica se é uma operação de compra ou venda
   bool get isCompra => tipo == 'COMPRA_DIRETA' || tipo == 'COMPRA_BALCAO';
@@ -54,7 +55,7 @@ class OperacaoModel {
   // o Firestore retorna os dados no formato de Map (Map<String, dynamic>)
   factory OperacaoModel.fromMap(String id, Map<String, dynamic> map) {
     return OperacaoModel(
-      id: id, 
+      id: id,
       tipo: map['tipo'] ?? '',
       startupId: map['startupId'],
       offerId: map['offerId'],
@@ -64,9 +65,8 @@ class OperacaoModel {
       valorTotalCentavos: (map['valorTotalCentavos'] ?? 0).toInt(),
       saldoAlteriorCentavos: map['saldoAnteriorCentavos'],
       saldoNovoCentavos: map['saldoNovoCentavos'],
-      // back retorna createdAt como string ISO - data e hora 
+      // back retorna createdAt como string ISO - data e hora
       createdAt: DateTime.parse(map['createdAt']),
     );
   }
-
 }

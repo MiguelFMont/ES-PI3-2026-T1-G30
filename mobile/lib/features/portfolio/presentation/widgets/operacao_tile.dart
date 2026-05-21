@@ -16,27 +16,35 @@ class OperacaoTile extends StatelessWidget {
   // nome da startup
   final String? nomeStartup;
 
-  const OperacaoTile({
-    super.key,
-    required this.operacao,
-    this.nomeStartup,
-  });
+  const OperacaoTile({super.key, required this.operacao, this.nomeStartup});
 
-  // formata a data 
+  // formata a data
   String _formatarData(DateTime data) {
     final meses = [
-      'jan.', 'fev.', 'mar.', 'abr.', 'mai.', 'jun.',
-      'jul.', 'ago.', 'set.', 'out.', 'nov.', 'dez.'
+      'jan.',
+      'fev.',
+      'mar.',
+      'abr.',
+      'mai.',
+      'jun.',
+      'jul.',
+      'ago.',
+      'set.',
+      'out.',
+      'nov.',
+      'dez.',
     ];
     return '${data.day} de ${meses[data.month - 1]}';
   }
 
   // formata valores monetários
   String _formatarValor(double valor) {
-    return valor.toStringAsFixed(2).replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-      (m) => '${m[1]}.',
-    );
+    return valor
+        .toStringAsFixed(2)
+        .replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (m) => '${m[1]}.',
+        );
   }
 
   // retorna o label do tipo de operação em português
@@ -94,8 +102,8 @@ class OperacaoTile extends StatelessWidget {
                 operacao.isCompra
                     ? Icons.arrow_downward
                     : operacao.isVenda
-                        ? Icons.arrow_upward
-                        : Icons.add,
+                    ? Icons.arrow_upward
+                    : Icons.add,
                 color: _corTipo,
                 size: 20,
               ),
@@ -130,7 +138,10 @@ class OperacaoTile extends StatelessWidget {
                     const SizedBox(width: 6),
                     // nome da startup ou "saldo"
                     Text(
-                      nomeStartup ?? (operacao.tipo == 'ADICIONAR_SALDO' ? 'Saldo' : operacao.startupId ?? ''),
+                      nomeStartup ??
+                          (operacao.tipo == 'ADICIONAR_SALDO'
+                              ? 'Saldo'
+                              : operacao.startupId ?? ''),
                       style: GoogleFonts.inter(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
