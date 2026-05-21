@@ -17,6 +17,7 @@ import 'dart:convert';
 import '../../domain/models/wallet_model.dart';
 import '../../domain/models/participacao_model.dart';
 import '../../domain/models/operacao_model.dart';
+import '../../domain/models/startup_model.dart';
 
 // classe responsável por fazer as chamadas HTTP para o backend 
 class PortfolioDatasource {
@@ -101,5 +102,18 @@ class PortfolioDatasource {
             final map = item as Map<String, dynamic>;
             return OperacaoModel.fromMap(map['id'], map);
         }).toList();
+    }
+
+    Future<List<StartupModel>> getStartups() async {
+      final url = Uri.parse('$_baseUrl/v1/startups');
+      final response = await http.get(url, headers: _headers);
+      if (response.statusCode != 200){
+        throw Exception('Erro ao buscar startups');
+      }
+      final Map<String, dynamic> body = jsonDecode(response.body);
+      final List items = (body['data'] ?? body['items'] ?? []) as List;
+      return items.map((item) {
+        return StartupModel.fromMap(item as Map<String, dynamic>);
+      }).toList();
     }
 }

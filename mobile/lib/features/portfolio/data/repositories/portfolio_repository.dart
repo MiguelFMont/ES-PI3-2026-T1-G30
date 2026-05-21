@@ -14,6 +14,7 @@ import '../datasource/portfolio_datasource.dart';
 import '../../domain/models/wallet_model.dart';
 import '../../domain/models/participacao_model.dart';
 import '../../domain/models/operacao_model.dart';
+import '../../domain/models/startup_model.dart';
  
 class PortfolioRepository {
   // instancia do datasource 
@@ -44,6 +45,15 @@ class PortfolioRepository {
     Future<List<OperacaoModel>> getOperacoes(String uid) async {
       try {
         return await _datasource.getOperacoes();
+      } catch (e) {
+        throw Exception(e.toString().replaceAll('Exception: ', ''));
+      }
+    }
+
+    // busca as startups para cruzar id, nome, segmento e preço atual nos cards
+    Future<List<StartupModel>> getStartups() async {
+      try {
+        return await _datasource.getStartups();
       } catch (e) {
         throw Exception(e.toString().replaceAll('Exception: ', ''));
       }
