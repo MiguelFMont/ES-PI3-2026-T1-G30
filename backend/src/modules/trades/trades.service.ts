@@ -1,4 +1,4 @@
-// Este arquivo concentra a regra de negócio das Fases 2 e 3.
+// Este arquivo concentra a regra de negócio de compra e venda direta.
 // O controller chama estas funções para validar entrada, executar a operação no repo
 // e normalizar a resposta final antes de enviar JSON ao cliente.
 
@@ -322,7 +322,7 @@ export async function directBuyService(
   const authenticatedUid = assertAuthenticated(uid);
   const { startupId, quantidade } = parseDirectBuyInput(input);
   // Garante a existência da wallet antes da compra.
-  // Isso mantém o comportamento de criação automática definido na Fase 1.
+  // Isso mantém o comportamento atual de criação automática da wallet quando necessário.
   await walletRepo.getOrCreateWallet(authenticatedUid);
   const result = await tradesRepo.directBuy(authenticatedUid, startupId, quantidade);
 
@@ -331,7 +331,7 @@ export async function directBuyService(
 
 // Samuel Campovilla:
 // Regra de negócio do POST /trades/direct-sell.
-// Este service faz a coordenação da Fase 3:
+// Este service faz a coordenação da venda direta:
 // - valida autenticação;
 // - valida startupId e quantidade;
 // - chama o repo, que executa a Firestore Transaction;

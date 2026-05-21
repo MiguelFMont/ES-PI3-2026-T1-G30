@@ -277,7 +277,7 @@ export class WalletRepo extends FirestoreBaseRepo {
   }
 
   // Busca a carteira do usuário sem criar nada.
-  // Este método está disponível para cenários de leitura pura, embora a Fase 1 use getOrCreateWallet.
+  // Este método está disponível para cenários de leitura pura, embora o fluxo principal use getOrCreateWallet.
   async getWallet(uid: string): Promise<WalletRecord | null> {
     const walletDoc = await this.getWalletRef(uid).get();
 
@@ -370,7 +370,7 @@ export class WalletRepo extends FirestoreBaseRepo {
         );
       }
 
-      // A Fase 1 atualiza apenas saldoCentavos e updatedAt.
+      // Esta operação atualiza apenas saldoCentavos e updatedAt.
       transaction.update(walletRef, {
         saldoCentavos,
         updatedAt: now,

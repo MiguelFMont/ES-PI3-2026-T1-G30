@@ -1,5 +1,5 @@
 // Autor: Samuel Campovilla
-// Este repositório concentra o acesso ao Firestore para as Fases 6 e 7 do balcão.
+// Este repositório concentra o acesso ao Firestore para os fluxos do balcão.
 // Ele é chamado por offers.service.ts e executa as mudanças atômicas de holding, offer e histórico.
 
 import { FieldValue } from "firebase-admin/firestore";
@@ -83,7 +83,7 @@ export class OffersRepo {
     return typeof value === "string" && value.trim().length > 0;
   }
 
-  // Garante que o status lido da oferta pertence ao contrato da Fase 6.
+  // Garante que o status lido da oferta pertence ao contrato aceito pelo módulo.
   // É chamada quando a oferta é carregada para cancelamento.
   private isStatusOferta(value: unknown): value is StatusOferta {
     return value === "ABERTA" || value === "ACEITA" || value === "CANCELADA";
@@ -607,7 +607,7 @@ export class OffersRepo {
       }
 
       // O aceite consome apenas quantidadeBloqueada do vendedor.
-      // Esses tokens foram reservados na Fase 6 e são a única fonte legítima da oferta aberta.
+      // Esses tokens foram reservados na criação da oferta e são a única fonte legítima da oferta aberta.
       if (sellerHolding.quantidadeBloqueada < offer.quantidade) {
         throw new AppError(
           "O vendedor não possui tokens bloqueados suficientes para esta oferta.",

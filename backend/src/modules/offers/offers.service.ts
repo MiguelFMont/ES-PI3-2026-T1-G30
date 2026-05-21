@@ -1,5 +1,5 @@
 // Autor: Samuel Campovilla
-// Este service concentra a regra de negócio das Fases 6 e 7.
+// Este service concentra a regra de negócio.
 // Os controllers chamam estas funções para validar entrada, calcular totais
 // e delegar a persistência atômica ao offers.repo.ts.
 

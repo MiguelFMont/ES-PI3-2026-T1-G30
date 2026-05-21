@@ -144,7 +144,7 @@ interface WalletResponse {
 }
 
 // Contrato devolvido pelo POST /wallet/add-balance.
-// Retorna apenas o que a Fase 1 precisa expor depois da atualização.
+// Retorna apenas os campos públicos necessários depois da atualização.
 interface WalletBalanceResponse {
   uid: string;
   saldoCentavos: number;
@@ -271,7 +271,7 @@ function toWalletResponse(
 }
 
 // Normaliza a wallet atualizada depois do add-balance.
-// É chamada por addBalanceService para devolver apenas os campos esperados na Fase 1.
+// É chamada por addBalanceService para devolver apenas os campos públicos esperados após a atualização.
 function toWalletBalanceResponse(
   wallet: Awaited<ReturnType<WalletRepo["addBalance"]>>,
 ): WalletBalanceResponse {

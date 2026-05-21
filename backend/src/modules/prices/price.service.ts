@@ -1,5 +1,5 @@
 // Samuel Campovilla:
-// Serviço reutilizável da Fase 5 para cálculo e persistência do preço dos tokens.
+// Serviço reutilizável para cálculo e persistência do preço dos tokens.
 // Hoje ele é chamado por trades.repo.ts e offers.repo.ts nos fluxos de compra, venda e aceite de oferta.
 // A responsabilidade aqui é concentrar regras de valorização natural, impacto da negociação
 // e escrita do histórico de preço dentro da mesma Firestore Transaction da operação.

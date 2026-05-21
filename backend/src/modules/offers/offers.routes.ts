@@ -12,7 +12,7 @@ import {
 
 const router = Router();
 
-// Todas as rotas do balcão nesta fase exigem autenticação.
+// Todas as rotas do balcão exigem autenticação.
 // O middleware injeta req.user para que os controllers sempre operem no uid autenticado.
 router.use(authMiddleware);
 
