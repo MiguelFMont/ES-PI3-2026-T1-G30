@@ -104,6 +104,7 @@ class PortfolioDatasource {
         }).toList();
     }
 
+    // pega lista de startups disponíveis para investimento 
     Future<List<StartupModel>> getStartups() async {
       final url = Uri.parse('$_baseUrl/v1/startups');
       final response = await http.get(url, headers: _headers);

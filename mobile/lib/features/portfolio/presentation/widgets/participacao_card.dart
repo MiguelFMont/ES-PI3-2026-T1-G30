@@ -277,6 +277,7 @@ class ParticipacaoCard extends StatelessWidget {
   }
 }
 
+// cria um "padrão" pra todos os cards
 class _Metrica extends StatelessWidget {
   final String label;
   final String valor;
