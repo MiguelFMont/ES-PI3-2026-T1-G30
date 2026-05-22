@@ -96,6 +96,13 @@ class PerfilDatasource {
     );
   }
 
+  Future<void> disableMfa() async {
+    await _post(
+      '/auth/mfa/disable',
+      fallbackMessage: 'Erro ao desativar MFA.',
+    );
+  }
+
   Future<void> alterarSenha({
     required String senhaAtual,
     required String novaSenha,

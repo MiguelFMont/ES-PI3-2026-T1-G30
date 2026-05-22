@@ -56,6 +56,24 @@ export async function verifyAndActivateMfaService(uid: string, code: string) {
   });
 }
 
+// ───── DISABLE: desativa MFA e remove secret ─────
+
+export async function disableMfaService(uid: string) {
+  const userDoc = await getDb().collection('users').doc(uid).get();
+  const userData = userDoc.data();
+
+  if (!userData?.mfaEnabled) {
+    throw new Error('MFA já está desativado.');
+  }
+
+  await getDb().collection('users').doc(uid).update({
+    mfaEnabled: false,
+    mfaSecret: FieldValue.delete(),
+    mfaSecretPending: FieldValue.delete(),
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+}
+
 // ───── CHALLENGE: valida MFA no login ─────
 
 export async function mfaChallengeService(uid: string, tempToken: string, code: string) {

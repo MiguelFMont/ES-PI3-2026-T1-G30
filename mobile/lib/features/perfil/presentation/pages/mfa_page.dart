@@ -36,6 +36,68 @@ class _MfaPageState extends State<MfaPage> {
     return contagem;
   }
 
+  Future<void> _desativarMfa() async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.card,
+        title: const Text(
+          'Desativar App Autenticador',
+          style: TextStyle(color: AppColors.foreground),
+        ),
+        content: const Text(
+          'Tem certeza que deseja desativar o App Autenticador? Sua conta ficará menos protegida.',
+          style: TextStyle(color: AppColors.mutedForeground),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              'Desativar',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      ),
+    );
+
+    try {
+      await _repo.disableMfa();
+      if (!mounted) return;
+      Navigator.pop(context); // fecha loading
+      setState(() => _mfaAppAtivo = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('App Autenticador desativado com sucesso.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // fecha loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceAll('Exception: ', '')),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   Future<void> _abrirModalSetupMfa() async {
     // Exibe loading enquanto busca QR do backend
     showDialog(
@@ -149,10 +211,9 @@ class _MfaPageState extends State<MfaPage> {
                               descricao:
                                   'Google Authenticator, Authy, 1Password. Gera códigos de 6 dígitos a cada 30s, mesmo offline. Mais seguro.',
                               valor: _mfaAppAtivo,
-                              // Se já ativo, trava o switch (null desabilita)
-                              onChanged: _mfaAppAtivo
-                                  ? null
-                                  : (_) => _abrirModalSetupMfa(),
+                              onChanged: (_) => _mfaAppAtivo
+                                  ? _desativarMfa()
+                                  : _abrirModalSetupMfa(),
                             ),
                             const SizedBox(height: 12),
                             _itemMetodo(

@@ -68,6 +68,14 @@ class PerfilRepository {
     }
   }
 
+  Future<void> disableMfa() async {
+    try {
+      await _datasource.disableMfa();
+    } catch (e) {
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
   // Future<void> adicionarSaldo(double amount) async {
   //   final token = await SessionManager.getToken();
   //   if (token == null) throw Exception('Sessão expirada. Faça login novamente.');
