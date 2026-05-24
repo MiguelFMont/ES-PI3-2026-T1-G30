@@ -1,5 +1,6 @@
 // Autor: Miguel Fernandes Monteiro
 // RA: 25014808
+/// <reference path="./@types/express.d.ts" />
 
 import express from 'express';
 import cors from 'cors';
@@ -27,3 +28,11 @@ export const api = onRequest(
     },
     app
 );
+
+if (require.main === module) {
+    const port = Number(process.env.PORT) || 3000;
+
+    app.listen(port, () => {
+        console.log(`Servidor rodando em http://localhost:${port}/v1`);
+    });
+}
