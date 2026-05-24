@@ -7,11 +7,7 @@ import '../../core/theme/app_colors.dart';
 ///
 /// Ex.: "Patrimônio" / "R$ 12.500"
 class ItemEstatistica extends StatelessWidget {
-  const ItemEstatistica({
-    super.key,
-    required this.label,
-    required this.valor,
-  });
+  const ItemEstatistica({super.key, required this.label, required this.valor});
 
   final String label;
   final String valor;
@@ -22,7 +18,10 @@ class ItemEstatistica extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 11, color: AppColors.mutedForeground),
+          style: const TextStyle(
+            fontSize: 11,
+            color: AppColors.mutedForeground,
+          ),
         ),
         const SizedBox(height: 4),
         Text(

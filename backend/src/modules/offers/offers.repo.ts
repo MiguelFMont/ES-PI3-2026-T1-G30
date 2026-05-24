@@ -1,5 +1,5 @@
 // Autor: Samuel Campovilla
-// Este repositório concentra o acesso ao Firestore para as Fases 6 e 7 do balcão.
+// Este repositório concentra o acesso ao Firestore para os fluxos do balcão.
 // Ele é chamado por offers.service.ts e executa as mudanças atômicas de holding, offer e histórico.
 
 import { FieldValue } from "firebase-admin/firestore";
@@ -30,6 +30,8 @@ interface OfferRecord {
   precoUnitarioCentavos: number;
   valorTotalCentavos: number;
   status: StatusOferta;
+  createdAt: unknown;
+  updatedAt: unknown;
 }
 
 export interface CreateOfferResult {
@@ -83,7 +85,7 @@ export class OffersRepo {
     return typeof value === "string" && value.trim().length > 0;
   }
 
-  // Garante que o status lido da oferta pertence ao contrato da Fase 6.
+  // Garante que o status lido da oferta pertence ao contrato aceito pelo módulo.
   // É chamada quando a oferta é carregada para cancelamento.
   private isStatusOferta(value: unknown): value is StatusOferta {
     return value === "ABERTA" || value === "ACEITA" || value === "CANCELADA";
@@ -257,7 +259,26 @@ export class OffersRepo {
       precoUnitarioCentavos: data.precoUnitarioCentavos,
       valorTotalCentavos: data.valorTotalCentavos,
       status: data.status,
+      createdAt: data?.createdAt,
+      updatedAt: data?.updatedAt,
     };
+  }
+
+  // Lista todas as ofertas ordenadas da mais recente para a mais antiga.
+  // O filtro mais sensível continua no service para manter o contrato HTTP explícito.
+  async listOffers(): Promise<OfferRecord[]> {
+    const snapshot = await this
+      .getOffersRef()
+      .orderBy("createdAt", "desc")
+      .get();
+
+    if (snapshot.empty) {
+      return [];
+    }
+
+    return snapshot.docs.map((offerDoc) =>
+      this.toOfferRecord(offerDoc.id, offerDoc.data()),
+    );
   }
 
   // Executa a criação de oferta inteira dentro de uma Firestore Transaction.
@@ -607,7 +628,7 @@ export class OffersRepo {
       }
 
       // O aceite consome apenas quantidadeBloqueada do vendedor.
-      // Esses tokens foram reservados na Fase 6 e são a única fonte legítima da oferta aberta.
+      // Esses tokens foram reservados na criação da oferta e são a única fonte legítima da oferta aberta.
       if (sellerHolding.quantidadeBloqueada < offer.quantidade) {
         throw new AppError(
           "O vendedor não possui tokens bloqueados suficientes para esta oferta.",

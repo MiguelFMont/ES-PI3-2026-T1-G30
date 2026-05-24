@@ -191,10 +191,7 @@ class _InformacoesPageState extends State<InformacoesPage> {
     setState(() => _salvando = true);
 
     try {
-      await _repo.atualizarPerfil(
-        nome: _nome,
-        telefone: _telefone,
-      );
+      await _repo.atualizarPerfil(nome: _nome, telefone: _telefone);
 
       if (!mounted) return;
 
@@ -277,13 +274,12 @@ class _InformacoesPageState extends State<InformacoesPage> {
         return SingleChildScrollView(
           child: Wrap(
             direction: Axis.vertical,
-            spacing: -_sobreposicaoCard, // Subtrai o espaço exato da sobreposição
+            spacing:
+                -_sobreposicaoCard, // Subtrai o espaço exato da sobreposição
             children: [
               SizedBox(
                 width: constraints.maxWidth,
-                child: const AppGradientHeader(
-                  titulo: '', 
-                ),
+                child: const AppGradientHeader(titulo: ''),
               ),
               SizedBox(
                 width: constraints.maxWidth,
@@ -369,7 +365,7 @@ class _InformacoesPageState extends State<InformacoesPage> {
                               backgroundColor: AppColors.primary,
                               foregroundColor: Colors.white,
                               disabledBackgroundColor: AppColors.primary
-                                  .withOpacity(0.6),
+                                  .withValues(alpha: 0.6),
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(14),
@@ -415,7 +411,7 @@ class _InformacoesPageState extends State<InformacoesPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: AppColors.accent.withOpacity(0.08),
+            color: AppColors.accent.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),

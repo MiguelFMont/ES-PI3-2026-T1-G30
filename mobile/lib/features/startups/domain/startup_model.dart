@@ -78,7 +78,7 @@ class Atualizacao {
   }
 }
 
-// representa uma startup completa 
+// representa uma startup completa
 class Startup {
   final String id;
   final String nome;
@@ -158,7 +158,9 @@ class Startup {
 
   static double _doubleFromJson(dynamic value, {bool fromCentavos = false}) {
     if (value == null) return 0;
-    final number = value is num ? value.toDouble() : double.tryParse('$value') ?? 0;
+    final number = value is num
+        ? value.toDouble()
+        : double.tryParse('$value') ?? 0;
     return fromCentavos ? number / 100 : number;
   }
 }

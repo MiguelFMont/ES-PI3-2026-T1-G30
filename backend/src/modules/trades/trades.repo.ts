@@ -195,7 +195,7 @@ export class TradesRepo {
   // Samuel Campovilla:
   // Normaliza startups/{startupId} para o fluxo de venda direta.
   // É usada apenas por directSell, depois que a existência da startup já foi confirmada.
-  // Aqui validamos os campos adicionais da Fase 3:
+  // Aqui validamos os campos adicionais usados na venda direta:
   // - descontoVendaDiretaBps, usado no cálculo do preço de recompra;
   // - totalTokens, quando existir, para impedir recompra acima do limite da startup.
   // Valida os campos extras usados exclusivamente na venda direta.
@@ -429,7 +429,7 @@ export class TradesRepo {
         createdAt: commonTimestamp,
       });
 
-      // Depois de registrar a compra, delegamos ao PriceService a parte da Fase 5.
+      // Depois de registrar a compra, delegamos ao PriceService a atualização de preço e histórico.
       // Essa chamada acontece na mesma Firestore Transaction para manter consistentes:
       // wallet, holding, startup, transaction e priceHistory.
       this.priceService.applyTradePriceUpdateToTransaction({
@@ -462,7 +462,7 @@ export class TradesRepo {
   }
 
   // Samuel Campovilla:
-  // Executa a Fase 3 inteira dentro de uma única Firestore Transaction.
+  // Centraliza a venda direta inteira dentro de uma única Firestore Transaction.
   // Este método é chamado somente por directSellService e centraliza todo o fluxo atômico:
   // 1) lê startup, wallet e holding do usuário;
   // 2) valida estado dos documentos;
@@ -589,7 +589,7 @@ export class TradesRepo {
       const commonTimestamp = FieldValue.serverTimestamp();
 
       // A escrita preserva explicitamente quantidadeBloqueada e precoMedioCentavos.
-      // A Fase 3 só reduz os tokens livres do usuário e credita o saldo correspondente.
+      // Esta operação só reduz os tokens livres do usuário e credita o saldo correspondente.
       transaction.update(walletRef, {
         saldoCentavos: saldoNovoCentavos,
         updatedAt: commonTimestamp,

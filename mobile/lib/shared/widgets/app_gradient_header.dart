@@ -61,12 +61,12 @@ class AppGradientHeader extends StatelessWidget {
   }
 
   Widget _textoTitulo() => Text(
-        titulo,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w800,
-          fontSize: 26,
-          letterSpacing: 0.1,
-        ),
-      );
+    titulo,
+    style: const TextStyle(
+      color: Colors.white,
+      fontWeight: FontWeight.w800,
+      fontSize: 26,
+      letterSpacing: 0.1,
+    ),
+  );
 }

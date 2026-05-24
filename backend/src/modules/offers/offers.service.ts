@@ -1,9 +1,11 @@
 // Autor: Samuel Campovilla
-// Este service concentra a regra de negócio das Fases 6 e 7.
+// Este service concentra a regra de negócio.
 // Os controllers chamam estas funções para validar entrada, calcular totais
 // e delegar a persistência atômica ao offers.repo.ts.
 
 import { AppError } from "../../shared/errors/app.error";
+import { Timestamp } from "firebase-admin/firestore";
+import { UsersRepo } from "../users/users.repo";
 import {
   AcceptOfferResult,
   CancelOfferResult,
@@ -13,6 +15,7 @@ import {
 } from "./offers.repo";
 
 const offersRepo = new OffersRepo();
+const usersRepo = new UsersRepo();
 
 interface CreateOfferInput {
   startupId: unknown;
@@ -57,6 +60,18 @@ interface AcceptOfferResponse {
   sellerTransactionId: string;
 }
 
+interface ActiveOfferResponse {
+  offerId: string;
+  startupId: string;
+  quantidade: number;
+  precoUnitarioCentavos: number;
+  valorTotalCentavos: number;
+  status: "ABERTA";
+  createdAt: string;
+  updatedAt: string;
+  vendedorNome?: string;
+}
+
 // Valida inteiros positivos usados no body dos endpoints e nos DTOs devolvidos.
 // É chamada pelos parsers de entrada e pelos normalizadores de resposta.
 function isPositiveInteger(value: unknown): value is number {
@@ -73,6 +88,114 @@ function isNonEmptyString(value: unknown): value is string {
 // É usada apenas antes de responder ao cliente.
 function isStatusOferta(value: unknown): value is StatusOferta {
   return value === "ABERTA" || value === "ACEITA" || value === "CANCELADA";
+}
+
+// Converte timestamps do Firestore para ISO antes de expor o payload ao app.
+function toIsoString(value: unknown): string {
+  if (!(value instanceof Timestamp)) {
+    throw new AppError(
+      "Oferta com timestamp inválido.",
+      500,
+      "INVALID_OFFER_STATE",
+    );
+  }
+
+  return value.toDate().toISOString();
+}
+
+// Reduz o nome completo para um rótulo mais seguro e curto para a UI do mercado.
+function toSellerDisplayName(value: unknown): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const sanitized = value.trim();
+  if (sanitized.length === 0) {
+    return undefined;
+  }
+
+  const parts = sanitized.split(/\s+/).filter(Boolean);
+  if (parts.length === 0) {
+    return undefined;
+  }
+
+  return parts[0];
+}
+
+// Normaliza a oferta aberta retornada pelo repositório para o contrato de listagem do app.
+function toActiveOfferResponse(
+  offer: Awaited<ReturnType<OffersRepo["listOffers"]>>[number],
+  vendedorNome?: string,
+): ActiveOfferResponse {
+  if (!isNonEmptyString(offer.id)) {
+    throw new AppError("Oferta sem identificador válido.", 500, "INTERNAL_ERROR");
+  }
+
+  if (!isNonEmptyString(offer.startupId)) {
+    throw new AppError("Oferta com startupId inválido.", 500, "INTERNAL_ERROR");
+  }
+
+  if (!isPositiveInteger(offer.quantidade)) {
+    throw new AppError("Oferta com quantidade inválida.", 500, "INTERNAL_ERROR");
+  }
+
+  if (!isPositiveInteger(offer.precoUnitarioCentavos)) {
+    throw new AppError(
+      "Oferta com precoUnitarioCentavos inválido.",
+      500,
+      "INTERNAL_ERROR",
+    );
+  }
+
+  if (!isPositiveInteger(offer.valorTotalCentavos)) {
+    throw new AppError(
+      "Oferta com valorTotalCentavos inválido.",
+      500,
+      "INTERNAL_ERROR",
+    );
+  }
+
+  if (offer.valorTotalCentavos !== offer.quantidade * offer.precoUnitarioCentavos) {
+    throw new AppError(
+      "Oferta com valorTotalCentavos inconsistente.",
+      500,
+      "INTERNAL_ERROR",
+    );
+  }
+
+  if (offer.status !== "ABERTA" || !isStatusOferta(offer.status)) {
+    throw new AppError("Oferta com status inválido.", 500, "INTERNAL_ERROR");
+  }
+
+  return {
+    offerId: offer.id,
+    startupId: offer.startupId,
+    quantidade: offer.quantidade,
+    precoUnitarioCentavos: offer.precoUnitarioCentavos,
+    valorTotalCentavos: offer.valorTotalCentavos,
+    status: offer.status,
+    createdAt: toIsoString(offer.createdAt),
+    updatedAt: toIsoString(offer.updatedAt),
+    ...(vendedorNome != null ? { vendedorNome } : {}),
+  };
+}
+
+async function getSellerDisplayNames(
+  offers: Awaited<ReturnType<OffersRepo["listOffers"]>>,
+): Promise<Map<string, string>> {
+  const sellerIds = [...new Set(offers.map((offer) => offer.vendedorId))];
+  const sellerEntries = await Promise.all(
+    sellerIds.map(async (sellerId) => {
+      const user = await usersRepo.findByUid(sellerId);
+      return [sellerId, toSellerDisplayName(user?.nomeCompleto)] as const;
+    }),
+  );
+
+  return new Map(
+    sellerEntries.filter(
+      (entry): entry is readonly [string, string] => typeof entry[1] === "string",
+    ),
+  );
 }
 
 // Garante que o uid foi preenchido pelo authMiddleware antes de entrar na regra de negócio.
@@ -393,4 +516,39 @@ export async function acceptOfferService(
   const result = await offersRepo.acceptOffer(authenticatedUid, offerId);
 
   return toAcceptOfferResponse(result);
+}
+
+// Lista as ofertas abertas do próprio vendedor autenticado.
+export async function listMyActiveOffersService(
+  uid: string | undefined,
+): Promise<{ items: ActiveOfferResponse[] }> {
+  const authenticatedUid = assertAuthenticated(uid);
+  const offers = await offersRepo.listOffers();
+
+  return {
+    items: offers
+      .filter(
+        (offer) =>
+          offer.status === "ABERTA" && offer.vendedorId === authenticatedUid,
+      )
+      .map((offer) => toActiveOfferResponse(offer)),
+  };
+}
+
+// Lista apenas ofertas abertas de terceiros para o mercado do balcão.
+export async function listMarketOffersService(
+  uid: string | undefined,
+): Promise<{ items: ActiveOfferResponse[] }> {
+  const authenticatedUid = assertAuthenticated(uid);
+  const offers = (await offersRepo.listOffers()).filter(
+    (offer) =>
+      offer.status === "ABERTA" && offer.vendedorId !== authenticatedUid,
+  );
+  const sellerDisplayNames = await getSellerDisplayNames(offers);
+
+  return {
+    items: offers.map((offer) =>
+      toActiveOfferResponse(offer, sellerDisplayNames.get(offer.vendedorId)),
+    ),
+  };
 }

@@ -14,7 +14,7 @@ import './config/firebase';
 
 const RESEND_API_KEY = defineSecret('RESEND_API_KEY');
 
-const app = express();
+export const app = express();
 
 app.use(cors(corsOptions));
 app.use(express.json());
@@ -28,11 +28,3 @@ export const api = onRequest(
     },
     app
 );
-
-if (require.main === module) {
-    const port = Number(process.env.PORT) || 3000;
-
-    app.listen(port, () => {
-        console.log(`Servidor rodando em http://localhost:${port}/v1`);
-    });
-}

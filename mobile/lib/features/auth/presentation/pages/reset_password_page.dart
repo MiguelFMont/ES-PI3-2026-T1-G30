@@ -8,7 +8,6 @@ import '../../../../shared/widgets/mescla_auth_layout.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../../../shared/widgets/campo_texto.dart';
 
-
 class ResetPasswordPage extends StatefulWidget {
   const ResetPasswordPage({super.key});
 
@@ -20,9 +19,9 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   // Controladores apenas para as senhas
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  
+
   final AuthRepository _authRepository = AuthRepository();
-  
+
   bool _isLoading = false;
   String? _email;
   String? _token;
@@ -35,7 +34,6 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
       _passwordController.text.contains(RegExp(r'[!@#\$%^&*(),.?":{}|<>]'));
   bool get _senhaValida =>
       _temMinimo && _temMaiuscula && _temNumero && _temEspecial;
- 
 
   @override
   void initState() {
@@ -46,10 +44,11 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    
+
     // Extrai o Map (Dicionário) que foi enviado pela TokenVerificationPage
-    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+
     if (args != null) {
       _email = args['email'];
       _token = args['token'];
@@ -62,18 +61,22 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
 
     // 1. Validações de segurança e integridade
     if (_email == null || _token == null) {
-      _showSnackBar('Erro de comunicação. Volte e tente novamente.', isError: true);
+      _showSnackBar(
+        'Erro de comunicação. Volte e tente novamente.',
+        isError: true,
+      );
       return;
     }
 
     if (!_senhaValida) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('A senha não atende todos os requisitos.'),
-        backgroundColor: Colors.red,
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('A senha não atende todos os requisitos.'),
+          backgroundColor: Colors.red,
+        ),
+      );
       return;
     }
-
 
     if (novaSenha != confirmaSenha) {
       _showSnackBar('As senhas não coincidem.', isError: true);
@@ -85,9 +88,9 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     try {
       // 2. Chama a API para efetivar a troca (o backend vai validar o token de novo por segurança)
       final mensagem = await _authRepository.redefinirSenha(
-        _email!, 
-        _token!, 
-        novaSenha
+        _email!,
+        _token!,
+        novaSenha,
       );
 
       _showSnackBar(mensagem, isError: false);
@@ -112,7 +115,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
         backgroundColor: isError ? Colors.red : Colors.green,
       ),
     );
-  } 
+  }
 
   @override
   void dispose() {
@@ -162,15 +165,14 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
           'Criar nova senha',
           style: TextStyle(
             color: AppColors.foreground,
-            fontSize: 20, 
-            fontWeight: FontWeight.bold
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
           ),
         ),
       ],
     );
   }
 
-  
   Widget _requisitos() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -178,7 +180,9 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
         Text(
           'Requisitos da senha:',
           style: TextStyle(
-              color: AppColors.mutedForeground.withOpacity(0.8), fontSize: 12),
+            color: AppColors.mutedForeground.withValues(alpha: 0.8),
+            fontSize: 12,
+          ),
         ),
         const SizedBox(height: 6),
         _itemRequisito('Mínimo 8 caracteres', _temMinimo),
@@ -195,13 +199,11 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
       child: Row(
         children: [
           Icon(
-            valido
-                ? Icons.check_circle_outline
-                : Icons.radio_button_unchecked,
+            valido ? Icons.check_circle_outline : Icons.radio_button_unchecked,
             size: 14,
             color: valido
                 ? Colors.green
-                : AppColors.mutedForeground.withOpacity(0.4),
+                : AppColors.mutedForeground.withValues(alpha: 0.4),
           ),
           const SizedBox(width: 6),
           Text(
@@ -210,7 +212,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
               fontSize: 12,
               color: valido
                   ? Colors.green
-                  : AppColors.mutedForeground.withOpacity(0.6),
+                  : AppColors.mutedForeground.withValues(alpha: 0.6),
             ),
           ),
         ],
@@ -218,13 +220,9 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     );
   }
 
-
   Widget _botaoConfirmar() {
     return _isLoading
         ? const CircularProgressIndicator(color: AppColors.primary)
-        : MesclaButton(
-            label: 'Redefinir Senha',
-            onPressed: _resetPassword,
-          );
+        : MesclaButton(label: 'Redefinir Senha', onPressed: _resetPassword);
   }
 }

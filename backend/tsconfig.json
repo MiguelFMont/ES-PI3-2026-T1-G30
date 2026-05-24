@@ -56,6 +56,10 @@
 
   },
 
+  "ts-node": {
+    "files": true
+  },
+
   // Arquivos que o TypeScript deve compilar
   "include": ["src/**/*"],
 

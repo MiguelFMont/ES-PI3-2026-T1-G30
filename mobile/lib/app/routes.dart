@@ -5,7 +5,7 @@ import '../features/auth/presentation/pages/cadastro_page.dart';
 import '../features/auth/presentation/pages/recover_password_page.dart';
 import '../features/auth/presentation/pages/reset_password_page.dart';
 import '../features/auth/presentation/pages/token_verification_page.dart';
-import '../features/perfil/presentation/pages/perfil_page.dart';
+import '../features/navigation/presentation/pages/main_navigation_shell.dart';
 import '../features/auth/presentation/pages/splash_page.dart';
 import '../features/auth/presentation/pages/mfa_challenge_page.dart';
 import '../features/startups/domain/startup_model.dart';
@@ -14,11 +14,10 @@ import '../features/startups/presentation/pages/startup_details_page.dart';
 import '../features/perfil/presentation/pages/informacoes_pessoais_page.dart';
 import '../features/perfil/presentation/pages/mfa_page.dart';
 import '../features/perfil/presentation/pages/senha_page.dart';
-import '../features/portfolio/presentation/screens/portfolio_screen.dart';
-import '../features/dashboard/presentation/pages/dashboard_page.dart';
 
 class AppRoutes {
   static const splash = '/';
+  static const main = '/main';
   static const login = '/login';
   static const register = '/register';
   static const home = '/home';
@@ -34,18 +33,20 @@ class AppRoutes {
   static const mfaChallenge = '/mfa-challenge';
   static const segurancaSenha = '/seguranca-senha';
   static const portfolio = '/portfolio';
+  static const balcao = '/balcao';
   static const dashboard = '/dashboard';
 
   static Map<String, Widget Function(BuildContext)> get routes => {
     splash: (_) => SplashPage(),
+    main: (_) => const MainNavigationShell(),
     welcome: (_) => WelcomePage(),
     register: (_) => CadastroPage(),
     login: (_) => LoginPage(),
-    home: (_) => PerfilPage(),
+    home: (_) => const MainNavigationShell(),
     forgotPassword: (_) => RecoverPasswordPage(),
     resetPassword: (_) => ResetPasswordPage(),
     tokenVerification: (_) => TokenVerificationPage(),
-    perfil: (_) => PerfilPage(),
+    perfil: (_) => const MainNavigationShell(initialIndex: 4),
     catalog: (_) => CatalogPage(),
     startupDetail: (context) {
       final startup = ModalRoute.of(context)?.settings.arguments;
@@ -58,7 +59,8 @@ class AppRoutes {
     mfa: (_) => MfaPage(),
     mfaChallenge: (_) => MfaChallengePage(),
     segurancaSenha: (_) => SenhaPage(),
-    portfolio: (_) => const PortfolioScreen(),
-    dashboard: (_) => const DashboardPage(),
+    portfolio: (_) => const MainNavigationShell(initialIndex: 1),
+    balcao: (_) => const MainNavigationShell(initialIndex: 3),
+    dashboard: (_) => const MainNavigationShell(),
   };
 }

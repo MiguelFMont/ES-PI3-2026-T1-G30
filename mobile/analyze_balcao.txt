@@ -1,0 +1,7 @@
+Analyzing lib...                                                
+
+   info - Use of 'return' in a 'finally' clause - lib\features\balcao\presentation\pages\balcao_page.dart:285:21 - control_flow_in_finally
+   info - Use of 'return' in a 'finally' clause - lib\features\balcao\presentation\pages\balcao_page.dart:318:21 - control_flow_in_finally
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\balcao\presentation\pages\balcao_page.dart:1375:7 - deprecated_member_use
+
+3 issues found. (ran in 2.6s)

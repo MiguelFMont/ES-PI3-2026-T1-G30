@@ -32,15 +32,18 @@ class _SenhaPageState extends State<SenhaPage> {
   bool get _temMinimo => _novaSenhaController.text.length >= 8;
   bool get _temMaiuscula =>
       _novaSenhaController.text.contains(RegExp(r'[A-Z]'));
-  bool get _temNumero =>
-      _novaSenhaController.text.contains(RegExp(r'[0-9]'));
+  bool get _temNumero => _novaSenhaController.text.contains(RegExp(r'[0-9]'));
   bool get _temEspecial =>
       _novaSenhaController.text.contains(RegExp(r'[!@#\$%^&*(),.?":{}|<>]'));
   bool get _senhasIguais =>
       _novaSenhaController.text == _confirmarSenhaController.text &&
       _novaSenhaController.text.isNotEmpty;
   bool get _formularioValido =>
-      _temMinimo && _temMaiuscula && _temNumero && _temEspecial && _senhasIguais;
+      _temMinimo &&
+      _temMaiuscula &&
+      _temNumero &&
+      _temEspecial &&
+      _senhasIguais;
 
   @override
   void initState() {
@@ -90,10 +93,12 @@ class _SenhaPageState extends State<SenhaPage> {
   }
 
   void _mostrarSnack(String msg, {required bool erro}) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg),
-      backgroundColor: erro ? Colors.red : Colors.green,
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: erro ? Colors.red : Colors.green,
+      ),
+    );
   }
 
   @override
@@ -167,7 +172,7 @@ class _SenhaPageState extends State<SenhaPage> {
                                 borderRadius: BorderRadius.circular(20),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.05),
+                                    color: Colors.black.withValues(alpha: 0.05),
                                     blurRadius: 10,
                                     offset: const Offset(0, 4),
                                   ),
@@ -181,7 +186,8 @@ class _SenhaPageState extends State<SenhaPage> {
                                     label: 'Senha Atual',
                                     ver: _verSenhaAtual,
                                     onToggle: () => setState(
-                                        () => _verSenhaAtual = !_verSenhaAtual),
+                                      () => _verSenhaAtual = !_verSenhaAtual,
+                                    ),
                                     icone: Icons.lock_outline,
                                   ),
                                   const SizedBox(height: 12),
@@ -191,7 +197,8 @@ class _SenhaPageState extends State<SenhaPage> {
                                     hint: 'Mínimo 8 caracteres',
                                     ver: _verNovaSenha,
                                     onToggle: () => setState(
-                                        () => _verNovaSenha = !_verNovaSenha),
+                                      () => _verNovaSenha = !_verNovaSenha,
+                                    ),
                                     icone: Icons.vpn_key_outlined,
                                   ),
                                   const SizedBox(height: 12),
@@ -201,7 +208,8 @@ class _SenhaPageState extends State<SenhaPage> {
                                     hint: 'Repita a nova senha',
                                     ver: _verConfirmar,
                                     onToggle: () => setState(
-                                        () => _verConfirmar = !_verConfirmar),
+                                      () => _verConfirmar = !_verConfirmar,
+                                    ),
                                     icone: Icons.lock_outline,
                                   ),
                                   const SizedBox(height: 20),
@@ -224,12 +232,13 @@ class _SenhaPageState extends State<SenhaPage> {
                                             style: ElevatedButton.styleFrom(
                                               backgroundColor:
                                                   AppColors.primary,
-                                              disabledBackgroundColor:
-                                                  AppColors.primary
-                                                      .withOpacity(0.35),
+                                              disabledBackgroundColor: AppColors
+                                                  .primary
+                                                  .withValues(alpha: 0.35),
                                               padding:
                                                   const EdgeInsets.symmetric(
-                                                      vertical: 16),
+                                                    vertical: 16,
+                                                  ),
                                               shape: RoundedRectangleBorder(
                                                 borderRadius:
                                                     BorderRadius.circular(12),
@@ -279,10 +288,14 @@ class _SenhaPageState extends State<SenhaPage> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: ativo ? Colors.green.withOpacity(0.08) : Colors.transparent,
+          color: ativo
+              ? Colors.green.withValues(alpha: 0.08)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: ativo ? Colors.green.withOpacity(0.3) : Colors.transparent,
+            color: ativo
+                ? Colors.green.withValues(alpha: 0.3)
+                : Colors.transparent,
             width: 1,
           ),
         ),
@@ -293,13 +306,15 @@ class _SenhaPageState extends State<SenhaPage> {
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: ativo
-                    ? Colors.green.withOpacity(0.1)
-                    : AppColors.primary.withOpacity(0.05),
+                    ? Colors.green.withValues(alpha: 0.1)
+                    : AppColors.primary.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 Icons.vpn_key_outlined,
-                color: ativo ? Colors.green : AppColors.primary.withOpacity(0.7),
+                color: ativo
+                    ? Colors.green
+                    : AppColors.primary.withValues(alpha: 0.7),
                 size: 24,
               ),
             ),
@@ -318,7 +333,9 @@ class _SenhaPageState extends State<SenhaPage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    ativo ? 'App Autenticador ativo' : 'Ative para mais segurança',
+                    ativo
+                        ? 'App Autenticador ativo'
+                        : 'Ative para mais segurança',
                     style: const TextStyle(
                       color: AppColors.mutedForeground,
                       fontSize: 13,
@@ -346,7 +363,7 @@ class _SenhaPageState extends State<SenhaPage> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -357,7 +374,7 @@ class _SenhaPageState extends State<SenhaPage> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.1),
+              color: Colors.green.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -416,21 +433,20 @@ class _SenhaPageState extends State<SenhaPage> {
         labelText: label,
         hintText: hint,
         labelStyle: const TextStyle(color: AppColors.mutedForeground),
-        hintStyle:
-            TextStyle(color: AppColors.mutedForeground.withOpacity(0.5)),
+        hintStyle: TextStyle(
+          color: AppColors.mutedForeground.withValues(alpha: 0.5),
+        ),
         prefixIcon: Icon(icone, color: AppColors.mutedForeground, size: 20),
         suffixIcon: IconButton(
           icon: Icon(
-            ver
-                ? Icons.visibility_off_outlined
-                : Icons.visibility_outlined,
+            ver ? Icons.visibility_off_outlined : Icons.visibility_outlined,
             color: AppColors.mutedForeground,
             size: 20,
           ),
           onPressed: onToggle,
         ),
         filled: true,
-        fillColor: AppColors.muted.withOpacity(0.1),
+        fillColor: AppColors.muted.withValues(alpha: 0.1),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
@@ -466,13 +482,11 @@ class _SenhaPageState extends State<SenhaPage> {
       child: Row(
         children: [
           Icon(
-            valido
-                ? Icons.check_circle_outline
-                : Icons.radio_button_unchecked,
+            valido ? Icons.check_circle_outline : Icons.radio_button_unchecked,
             size: 16,
             color: valido
                 ? Colors.green
-                : AppColors.mutedForeground.withOpacity(0.4),
+                : AppColors.mutedForeground.withValues(alpha: 0.4),
           ),
           const SizedBox(width: 8),
           Text(
@@ -481,7 +495,7 @@ class _SenhaPageState extends State<SenhaPage> {
               fontSize: 13,
               color: valido
                   ? Colors.green
-                  : AppColors.mutedForeground.withOpacity(0.6),
+                  : AppColors.mutedForeground.withValues(alpha: 0.6),
             ),
           ),
         ],

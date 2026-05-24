@@ -21,8 +21,10 @@ class MesclaInvestApp extends StatelessWidget {
           settings: settings,
           pageBuilder: (context, _, _) => builder(context),
           transitionsBuilder: (_, animation, _, child) {
-            var tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
-                .chain(CurveTween(curve: Curves.ease));
+            var tween = Tween(
+              begin: const Offset(1.0, 0.0),
+              end: Offset.zero,
+            ).chain(CurveTween(curve: Curves.ease));
             return SlideTransition(
               position: animation.drive(tween),
               child: child,

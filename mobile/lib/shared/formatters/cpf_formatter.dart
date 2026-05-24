@@ -7,11 +7,11 @@ class CpfFormatter extends TextInputFormatter {
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
-// \d: Representa qualquer dígito numérico (equivalente a [0-9]).
-// ^: Quando usado dentro de colchetes [] no início, ele funciona como uma negação.
-// Portanto, [^\d] significa "qualquer caractere que não seja um dígito".
-// '': É uma string vazia usada como substituta. Isso significa que todos
-// os caracteres "não dígitos" encontrados serão substituídos por nada (ou seja, deletados)
+    // \d: Representa qualquer dígito numérico (equivalente a [0-9]).
+    // ^: Quando usado dentro de colchetes [] no início, ele funciona como uma negação.
+    // Portanto, [^\d] significa "qualquer caractere que não seja um dígito".
+    // '': É uma string vazia usada como substituta. Isso significa que todos
+    // os caracteres "não dígitos" encontrados serão substituídos por nada (ou seja, deletados)
     final digits = newValue.text.replaceAll(RegExp(r'[^\d]'), '');
     final buffer = StringBuffer();
 

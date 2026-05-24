@@ -37,10 +37,7 @@ class WelcomePage extends StatelessWidget {
         const SizedBox(height: 8),
         const Text(
           'Invista no futuro das startups',
-          style: TextStyle(
-            color: Colors.white70,
-            fontSize: 14,
-          ),
+          style: TextStyle(color: Colors.white70, fontSize: 14),
         ),
       ],
     );
@@ -52,9 +49,7 @@ class WelcomePage extends StatelessWidget {
       padding: const EdgeInsets.all(32),
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(50),
-        ),
+        borderRadius: BorderRadius.only(topLeft: Radius.circular(50)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -123,10 +118,7 @@ class WelcomePage extends StatelessWidget {
       children: [
         const Text(
           'Já tem uma conta?',
-          style: TextStyle(
-            color: AppColors.mutedForeground,
-            fontSize: 14,
-          ),
+          style: TextStyle(color: AppColors.mutedForeground, fontSize: 14),
         ),
         TextButton(
           onPressed: () => Navigator.pushNamed(context, '/login'),

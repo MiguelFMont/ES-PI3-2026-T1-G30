@@ -36,6 +36,68 @@ class _MfaPageState extends State<MfaPage> {
     return contagem;
   }
 
+  Future<void> _desativarMfa() async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.card,
+        title: const Text(
+          'Desativar App Autenticador',
+          style: TextStyle(color: AppColors.foreground),
+        ),
+        content: const Text(
+          'Tem certeza que deseja desativar o App Autenticador? Sua conta ficará menos protegida.',
+          style: TextStyle(color: AppColors.mutedForeground),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              'Desativar',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      ),
+    );
+
+    try {
+      await _repo.disableMfa();
+      if (!mounted) return;
+      Navigator.pop(context); // fecha loading
+      setState(() => _mfaAppAtivo = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('App Autenticador desativado com sucesso.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // fecha loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceAll('Exception: ', '')),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   Future<void> _abrirModalSetupMfa() async {
     // Exibe loading enquanto busca QR do backend
     showDialog(
@@ -149,10 +211,9 @@ class _MfaPageState extends State<MfaPage> {
                               descricao:
                                   'Google Authenticator, Authy, 1Password. Gera códigos de 6 dígitos a cada 30s, mesmo offline. Mais seguro.',
                               valor: _mfaAppAtivo,
-                              // Se já ativo, trava o switch (null desabilita)
-                              onChanged: _mfaAppAtivo
-                                  ? null
-                                  : (_) => _abrirModalSetupMfa(),
+                              onChanged: (_) => _mfaAppAtivo
+                                  ? _desativarMfa()
+                                  : _abrirModalSetupMfa(),
                             ),
                             const SizedBox(height: 12),
                             _itemMetodo(
@@ -189,7 +250,7 @@ class _MfaPageState extends State<MfaPage> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -200,8 +261,8 @@ class _MfaPageState extends State<MfaPage> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: (isProtegida ? Colors.green : Colors.orange).withOpacity(
-                0.1,
+              color: (isProtegida ? Colors.green : Colors.orange).withValues(
+                alpha: 0.1,
               ),
               shape: BoxShape.circle,
             ),
@@ -239,9 +300,11 @@ class _MfaPageState extends State<MfaPage> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.1),
+                      color: Colors.green.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.green.withOpacity(0.3)),
+                      border: Border.all(
+                        color: Colors.green.withValues(alpha: 0.3),
+                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -272,9 +335,9 @@ class _MfaPageState extends State<MfaPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.card.withOpacity(0.5),
+        color: AppColors.card.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.muted.withOpacity(0.2)),
+        border: Border.all(color: AppColors.muted.withValues(alpha: 0.2)),
       ),
       child: const Text(
         'A autenticação de múltiplos fatores (MFA) adiciona uma camada extra de segurança à sua conta MesclaInvest. Recomendamos manter o App Autenticador ativo.',
@@ -298,10 +361,14 @@ class _MfaPageState extends State<MfaPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: valor ? Colors.green.withOpacity(0.08) : Colors.transparent,
+        color: valor
+            ? Colors.green.withValues(alpha: 0.08)
+            : Colors.transparent,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: valor ? Colors.green.withOpacity(0.3) : Colors.transparent,
+          color: valor
+              ? Colors.green.withValues(alpha: 0.3)
+              : Colors.transparent,
           width: 1,
         ),
       ),
@@ -312,13 +379,15 @@ class _MfaPageState extends State<MfaPage> {
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: valor
-                  ? Colors.green.withOpacity(0.1)
-                  : AppColors.primary.withOpacity(0.05),
+                  ? Colors.green.withValues(alpha: 0.1)
+                  : AppColors.primary.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
               icon,
-              color: valor ? Colors.green : AppColors.primary.withOpacity(0.7),
+              color: valor
+                  ? Colors.green
+                  : AppColors.primary.withValues(alpha: 0.7),
               size: 24,
             ),
           ),
@@ -345,7 +414,7 @@ class _MfaPageState extends State<MfaPage> {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.blue.withOpacity(0.1),
+                          color: Colors.blue.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
@@ -376,18 +445,22 @@ class _MfaPageState extends State<MfaPage> {
             value: valor,
             onChanged: onChanged,
             thumbColor: WidgetStateProperty.resolveWith<Color>((states) {
-              if (states.contains(WidgetState.disabled))
+              if (states.contains(WidgetState.disabled)) {
                 return AppColors.foreground;
-              if (states.contains(WidgetState.selected))
+              }
+              if (states.contains(WidgetState.selected)) {
                 return AppColors.foreground;
+              }
               return Colors.white;
             }),
             trackColor: WidgetStateProperty.resolveWith<Color>((states) {
-              if (states.contains(WidgetState.disabled))
-                return AppColors.foreground.withOpacity(0.3);
-              if (states.contains(WidgetState.selected))
-                return AppColors.foreground.withOpacity(0.5);
-              return Colors.grey.withOpacity(0.3);
+              if (states.contains(WidgetState.disabled)) {
+                return AppColors.foreground.withValues(alpha: 0.3);
+              }
+              if (states.contains(WidgetState.selected)) {
+                return AppColors.foreground.withValues(alpha: 0.5);
+              }
+              return Colors.grey.withValues(alpha: 0.3);
             }),
             trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
           ),
@@ -512,7 +585,7 @@ class _ModalSetupMfaState extends State<_ModalSetupMfa> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: AppColors.muted.withOpacity(0.15),
+                color: AppColors.muted.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -547,11 +620,11 @@ class _ModalSetupMfaState extends State<_ModalSetupMfa> {
                 counterText: '',
                 hintText: '000000',
                 hintStyle: TextStyle(
-                  color: AppColors.mutedForeground.withOpacity(0.4),
+                  color: AppColors.mutedForeground.withValues(alpha: 0.4),
                   letterSpacing: 8,
                 ),
                 filled: true,
-                fillColor: AppColors.muted.withOpacity(0.1),
+                fillColor: AppColors.muted.withValues(alpha: 0.1),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,

@@ -1,111 +1,21 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
-import '../../../perfil/presentation/pages/perfil_page.dart';
-import '../../../portfolio/presentation/screens/portfolio_screen.dart';
-import '../../../startups/presentation/pages/catalog_page.dart';
 
-class DashboardPage extends StatefulWidget {
+class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
-
-  @override
-  State<DashboardPage> createState() => _DashboardPageState();
-}
-
-class _DashboardPageState extends State<DashboardPage> {
-  int _indiceAtual = 0;
-
-  late final List<Widget> _telas = [
-    _DashboardHome(
-      onAbrirStartups: () => _alterarAba(1),
-      onAbrirBalcao: () => _alterarAba(2),
-      onAbrirCarteira: () => _alterarAba(3),
-      onAbrirPerfil: () => _alterarAba(4),
-    ),
-    const CatalogPage(),
-    const _BalcaoPlaceholder(),
-    const PortfolioScreen(),
-    const PerfilPage(),
-  ];
-
-  void _alterarAba(int indice) {
-    setState(() => _indiceAtual = indice);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: IndexedStack(
-        index: _indiceAtual,
-        children: _telas,
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _indiceAtual,
-        onTap: _alterarAba,
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: AppColors.card,
-        selectedItemColor: AppColors.primary,
-        unselectedItemColor: AppColors.mutedForeground,
-        selectedFontSize: 12,
-        unselectedFontSize: 12,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.grid_view_rounded),
-            label: 'Início',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.rocket_launch_rounded),
-            label: 'Startups',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.swap_horiz_rounded),
-            label: 'Balcão',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.work_outline_rounded),
-            label: 'Carteira',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline_rounded),
-            label: 'Perfil',
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DashboardHome extends StatelessWidget {
-  final VoidCallback onAbrirStartups;
-  final VoidCallback onAbrirBalcao;
-  final VoidCallback onAbrirCarteira;
-  final VoidCallback onAbrirPerfil;
-
-  const _DashboardHome({
-    required this.onAbrirStartups,
-    required this.onAbrirBalcao,
-    required this.onAbrirCarteira,
-    required this.onAbrirPerfil,
-  });
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(child: _DashboardHeader(onAbrirPerfil: onAbrirPerfil)),
+        slivers: const [
+          SliverToBoxAdapter(child: _DashboardHeader()),
           SliverToBoxAdapter(child: _PortfolioResumo()),
-          SliverToBoxAdapter(
-            child: _AcoesRapidas(
-              onAbrirStartups: onAbrirStartups,
-              onAbrirBalcao: onAbrirBalcao,
-              onAbrirCarteira: onAbrirCarteira,
-            ),
-          ),
-          const SliverToBoxAdapter(child: _SecaoOportunidades()),
-          const SliverToBoxAdapter(child: _SecaoAtividades()),
-          const SliverToBoxAdapter(child: SizedBox(height: 24)),
+          SliverToBoxAdapter(child: _AcoesRapidas()),
+          SliverToBoxAdapter(child: _SecaoOportunidades()),
+          SliverToBoxAdapter(child: _SecaoAtividades()),
+          SliverToBoxAdapter(child: SizedBox(height: 24)),
         ],
       ),
     );
@@ -113,9 +23,7 @@ class _DashboardHome extends StatelessWidget {
 }
 
 class _DashboardHeader extends StatelessWidget {
-  final VoidCallback onAbrirPerfil;
-
-  const _DashboardHeader({required this.onAbrirPerfil});
+  const _DashboardHeader();
 
   @override
   Widget build(BuildContext context) {
@@ -139,10 +47,7 @@ class _DashboardHeader extends StatelessWidget {
                   children: [
                     Text(
                       'Olá, João',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
-                      ),
+                      style: TextStyle(color: Colors.white70, fontSize: 14),
                     ),
                     SizedBox(height: 6),
                     Text(
@@ -157,7 +62,7 @@ class _DashboardHeader extends StatelessWidget {
                 ),
               ),
               InkWell(
-                onTap: onAbrirPerfil,
+                onTap: () => Navigator.pushNamed(context, '/perfil'),
                 borderRadius: BorderRadius.circular(18),
                 child: Container(
                   width: 44,
@@ -209,6 +114,8 @@ class _DashboardHeader extends StatelessWidget {
 }
 
 class _PortfolioResumo extends StatelessWidget {
+  const _PortfolioResumo();
+
   @override
   Widget build(BuildContext context) {
     return Transform.translate(
@@ -232,10 +139,7 @@ class _PortfolioResumo extends StatelessWidget {
           children: [
             const Text(
               'Valor total da carteira',
-              style: TextStyle(
-                color: AppColors.mutedForeground,
-                fontSize: 13,
-              ),
+              style: TextStyle(color: AppColors.mutedForeground, fontSize: 13),
             ),
             const SizedBox(height: 8),
             Row(
@@ -251,7 +155,10 @@ class _PortfolioResumo extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.success.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(20),
@@ -334,15 +241,7 @@ class _ResumoItem extends StatelessWidget {
 }
 
 class _AcoesRapidas extends StatelessWidget {
-  final VoidCallback onAbrirStartups;
-  final VoidCallback onAbrirBalcao;
-  final VoidCallback onAbrirCarteira;
-
-  const _AcoesRapidas({
-    required this.onAbrirStartups,
-    required this.onAbrirBalcao,
-    required this.onAbrirCarteira,
-  });
+  const _AcoesRapidas();
 
   @override
   Widget build(BuildContext context) {
@@ -355,7 +254,7 @@ class _AcoesRapidas extends StatelessWidget {
               icon: Icons.rocket_launch_rounded,
               label: 'Startups',
               color: AppColors.primary,
-              onTap: onAbrirStartups,
+              onTap: () => Navigator.pushNamed(context, '/catalog'),
             ),
           ),
           const SizedBox(width: 10),
@@ -364,7 +263,7 @@ class _AcoesRapidas extends StatelessWidget {
               icon: Icons.swap_horiz_rounded,
               label: 'Balcão',
               color: AppColors.accent,
-              onTap: onAbrirBalcao,
+              onTap: () => Navigator.pushNamed(context, '/balcao'),
             ),
           ),
           const SizedBox(width: 10),
@@ -373,7 +272,7 @@ class _AcoesRapidas extends StatelessWidget {
               icon: Icons.work_outline_rounded,
               label: 'Carteira',
               color: AppColors.chart4,
-              onTap: onAbrirCarteira,
+              onTap: () => Navigator.pushNamed(context, '/portfolio'),
             ),
           ),
         ],
@@ -559,10 +458,7 @@ class _SecaoAtividades extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: const [
-          _SecaoTitulo(
-            titulo: 'Atividade recente',
-            acao: 'Ver extrato',
-          ),
+          _SecaoTitulo(titulo: 'Atividade recente', acao: 'Ver extrato'),
           SizedBox(height: 14),
           _AtividadeCard(
             tipo: 'Compra',
@@ -626,7 +522,9 @@ class _AtividadeCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(
-              tipo == 'Compra' ? Icons.south_west_rounded : Icons.north_east_rounded,
+              tipo == 'Compra'
+                  ? Icons.south_west_rounded
+                  : Icons.north_east_rounded,
               color: cor,
               size: 20,
             ),
@@ -706,27 +604,6 @@ class _SecaoTitulo extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _BalcaoPlaceholder extends StatelessWidget {
-  const _BalcaoPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: AppColors.background,
-      body: Center(
-        child: Text(
-          'Balcão em desenvolvimento',
-          style: TextStyle(
-            color: AppColors.mutedForeground,
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ),
     );
   }
 }

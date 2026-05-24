@@ -5,7 +5,6 @@ import 'package:http/http.dart' as http;
 import '../../../../core/network/http_client.dart';
 
 class AuthDatasource {
-
   Future<Map<String, dynamic>> login(String email, String password) async {
     final response = await http.post(
       Uri.parse('${AppHttpClient.baseUrl}/auth/login'),
@@ -20,7 +19,11 @@ class AuthDatasource {
 
   // ───── MFA Challenge ─────
 
-  Future<Map<String, dynamic>> mfaChallenge(String uid, String tempToken, String code) async {
+  Future<Map<String, dynamic>> mfaChallenge(
+    String uid,
+    String tempToken,
+    String code,
+  ) async {
     final response = await http.post(
       Uri.parse('${AppHttpClient.baseUrl}/auth/mfa/challenge'),
       headers: {'Content-Type': 'application/json'},
@@ -45,7 +48,11 @@ class AuthDatasource {
     }
   }
 
-  Future<void> concluirCadastro(String email, String token, String senha) async {
+  Future<void> concluirCadastro(
+    String email,
+    String token,
+    String senha,
+  ) async {
     final response = await http.post(
       Uri.parse('${AppHttpClient.baseUrl}/auth/register/concluir'),
       headers: {'Content-Type': 'application/json'},
@@ -70,11 +77,19 @@ class AuthDatasource {
     throw Exception(data['message'] ?? 'Erro ao solicitar código.');
   }
 
-  Future<Map<String, dynamic>> redefinirSenha(String email, String token, String novaSenha) async {
+  Future<Map<String, dynamic>> redefinirSenha(
+    String email,
+    String token,
+    String novaSenha,
+  ) async {
     final response = await http.post(
       Uri.parse('${AppHttpClient.baseUrl}/auth/redefinir-senha'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'token': token, 'novaSenha': novaSenha}),
+      body: jsonEncode({
+        'email': email,
+        'token': token,
+        'novaSenha': novaSenha,
+      }),
     );
 
     final data = jsonDecode(response.body);

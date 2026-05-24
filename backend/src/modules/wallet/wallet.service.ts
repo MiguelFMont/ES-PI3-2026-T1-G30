@@ -144,7 +144,7 @@ interface WalletResponse {
 }
 
 // Contrato devolvido pelo POST /wallet/add-balance.
-// Retorna apenas o que a Fase 1 precisa expor depois da atualização.
+// Retorna apenas os campos públicos necessários depois da atualização.
 interface WalletBalanceResponse {
   uid: string;
   saldoCentavos: number;
@@ -271,7 +271,7 @@ function toWalletResponse(
 }
 
 // Normaliza a wallet atualizada depois do add-balance.
-// É chamada por addBalanceService para devolver apenas os campos esperados na Fase 1.
+// É chamada por addBalanceService para devolver apenas os campos públicos esperados após a atualização.
 function toWalletBalanceResponse(
   wallet: Awaited<ReturnType<WalletRepo["addBalance"]>>,
 ): WalletBalanceResponse {
@@ -511,5 +511,25 @@ export async function addBalanceService(
   }
 
   const wallet = await walletRepo.addBalance(authenticatedUid, valorCentavos);
+  return toWalletBalanceResponse(wallet);
+}
+
+// Regra de negócio do POST /wallet/withdraw.
+// Reaproveita o contrato valorCentavos e garante que o saldo nunca fique negativo.
+export async function withdrawService(
+  uid: string | undefined,
+  valorCentavos: unknown,
+): Promise<WalletBalanceResponse> {
+  const authenticatedUid = assertAuthenticated(uid);
+
+  if (!isPositiveInteger(valorCentavos)) {
+    throw new AppError(
+      "O valor deve ser um inteiro positivo em centavos.",
+      400,
+      "INVALID_AMOUNT",
+    );
+  }
+
+  const wallet = await walletRepo.withdraw(authenticatedUid, valorCentavos);
   return toWalletBalanceResponse(wallet);
 }

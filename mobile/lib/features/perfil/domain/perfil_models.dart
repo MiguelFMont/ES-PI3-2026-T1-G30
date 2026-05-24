@@ -12,7 +12,6 @@ class PerfilModel {
   final bool mfaAtivo;
   final String ultimaAlteracaoSenha;
 
-
   const PerfilModel({
     required this.nome,
     required this.email,
@@ -36,6 +35,52 @@ class PerfilModel {
       dataNascimento: json['dataNascimento'] as String? ?? '—',
       mfaAtivo: json['mfaEnabled'] as bool? ?? false,
       ultimaAlteracaoSenha: json['ultimaAlteracaoSenha'] as String? ?? '—',
+    );
+  }
+
+  PerfilModel copyWith({
+    String? nome,
+    String? email,
+    String? telefone,
+    double? saldo,
+    String? desde,
+    String? cpf,
+    String? dataNascimento,
+    bool? mfaAtivo,
+    String? ultimaAlteracaoSenha,
+  }) {
+    return PerfilModel(
+      nome: nome ?? this.nome,
+      email: email ?? this.email,
+      telefone: telefone ?? this.telefone,
+      saldo: saldo ?? this.saldo,
+      desde: desde ?? this.desde,
+      cpf: cpf ?? this.cpf,
+      dataNascimento: dataNascimento ?? this.dataNascimento,
+      mfaAtivo: mfaAtivo ?? this.mfaAtivo,
+      ultimaAlteracaoSenha: ultimaAlteracaoSenha ?? this.ultimaAlteracaoSenha,
+    );
+  }
+}
+
+class WalletBalanceModel {
+  final String uid;
+  final int saldoCentavos;
+  final String updatedAt;
+
+  const WalletBalanceModel({
+    required this.uid,
+    required this.saldoCentavos,
+    required this.updatedAt,
+  });
+
+  double get saldoReais => saldoCentavos / 100;
+
+  factory WalletBalanceModel.fromJson(Map<String, dynamic> json) {
+    return WalletBalanceModel(
+      uid: json['uid'] as String? ?? '',
+      saldoCentavos: (json['saldoCentavos'] as num? ?? 0).toInt(),
+      updatedAt: json['updatedAt'] as String? ?? '',
     );
   }
 }

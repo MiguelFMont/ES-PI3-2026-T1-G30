@@ -14,10 +14,7 @@ import 'package:google_fonts/google_fonts.dart';
 class PerformanceChart extends StatefulWidget {
   final List<double> pontos;
 
-  const PerformanceChart({
-    super.key,
-    required this.pontos,
-  });
+  const PerformanceChart({super.key, required this.pontos});
 
   @override
   State<PerformanceChart> createState() => _PerformanceChartState();
@@ -28,7 +25,7 @@ class _PerformanceChartState extends State<PerformanceChart> {
 
   final List<String> _filtros = const ['1D', '1W', '1M', '6M', 'YTD'];
 
-  // valores que vão ser exibidos no gráfico 
+  // valores que vão ser exibidos no gráfico
   List<double> get _valores {
     final pontos = widget.pontos;
     // se não tem pontos - linha plana
@@ -44,7 +41,7 @@ class _PerformanceChartState extends State<PerformanceChart> {
       '6M' => 180,
       _ => pontos.length,
     };
-    
+
     if (pontos.length <= limite) return pontos;
     // retorna apenas os últimos pontos, baseado no limite do filtro
     return pontos.sublist(pontos.length - limite);
@@ -78,14 +75,14 @@ class _PerformanceChartState extends State<PerformanceChart> {
     return 'R\$ ${valor.toStringAsFixed(0)}';
   }
 
-  // formata o valor do tooltip para exibir em reais 
+  // formata o valor do tooltip para exibir em reais
   Widget _bottomTitle(double value, TitleMeta meta) {
     final index = value.toInt();
     final lastIndex = _spots.length - 1;
     if (index != 0 && index != lastIndex && index != lastIndex ~/ 2) {
       return const SizedBox.shrink();
     }
-    
+
     final label = switch (index) {
       0 => '25/04',
       _ when index == lastIndex ~/ 2 => '07/05',
@@ -96,10 +93,7 @@ class _PerformanceChartState extends State<PerformanceChart> {
       padding: const EdgeInsets.only(top: 8),
       child: Text(
         label,
-        style: GoogleFonts.inter(
-          fontSize: 11,
-          color: const Color(0xFF78909C),
-        ),
+        style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF78909C)),
       ),
     );
   }
@@ -153,9 +147,7 @@ class _PerformanceChartState extends State<PerformanceChart> {
                 lineTouchData: LineTouchData(
                   touchTooltipData: LineTouchTooltipData(
                     getTooltipColor: (_) => Colors.white,
-                    tooltipBorder: const BorderSide(
-                      color: Color(0xFFECEFF1),
-                    ),
+                    tooltipBorder: const BorderSide(color: Color(0xFFECEFF1)),
                     tooltipRoundedRadius: 8,
                     getTooltipItems: (spots) => spots
                         .map(
@@ -175,10 +167,8 @@ class _PerformanceChartState extends State<PerformanceChart> {
                   show: true,
                   drawVerticalLine: false,
                   horizontalInterval: (_maxY - _minY) / 4,
-                  getDrawingHorizontalLine: (_) => const FlLine(
-                    color: Color(0xFFECEFF1),
-                    strokeWidth: 1,
-                  ),
+                  getDrawingHorizontalLine: (_) =>
+                      const FlLine(color: Color(0xFFECEFF1), strokeWidth: 1),
                 ),
                 borderData: FlBorderData(show: false),
                 titlesData: FlTitlesData(

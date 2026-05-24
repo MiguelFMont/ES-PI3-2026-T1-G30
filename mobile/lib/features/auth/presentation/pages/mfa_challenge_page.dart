@@ -1,6 +1,7 @@
 // Autor: Miguel Fernandes Monteiro — RA: 25014808
 
 import 'package:flutter/material.dart';
+import 'package:mesclainvest/app/routes.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/mescla_auth_layout.dart';
@@ -46,7 +47,7 @@ class _MfaChallengePageState extends State<MfaChallengePage> {
       await _repository.mfaChallenge(uid, tempToken, code);
 
       if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/home');
+      Navigator.pushReplacementNamed(context, AppRoutes.main);
     } catch (e) {
       setState(() {
         _erro = e.toString().replaceAll('Exception: ', '');
@@ -101,11 +102,11 @@ class _MfaChallengePageState extends State<MfaChallengePage> {
                   counterText: '',
                   hintText: '000000',
                   hintStyle: TextStyle(
-                    color: AppColors.mutedForeground.withOpacity(0.4),
+                    color: AppColors.mutedForeground.withValues(alpha: 0.4),
                     letterSpacing: 10,
                   ),
                   filled: true,
-                  fillColor: AppColors.muted.withOpacity(0.1),
+                  fillColor: AppColors.muted.withValues(alpha: 0.1),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,

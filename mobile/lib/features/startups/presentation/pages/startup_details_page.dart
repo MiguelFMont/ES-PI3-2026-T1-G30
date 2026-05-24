@@ -7,10 +7,7 @@ import '../../domain/startup_model.dart';
 class StartupDetailsPage extends StatefulWidget {
   final Startup startup;
 
-  const StartupDetailsPage({
-    super.key,
-    required this.startup,
-  });
+  const StartupDetailsPage({super.key, required this.startup});
 
   @override
   State<StartupDetailsPage> createState() => _StartupDetailsPageState();
@@ -86,9 +83,7 @@ class _StartupDetailsPageState extends State<StartupDetailsPage> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Deseja confirmar o investimento nesta startup?',
-                  ),
+                  const Text('Deseja confirmar o investimento nesta startup?'),
                   const SizedBox(height: 16),
                   Text(
                     'Saldo disponível: ${saldoUsuario.toStringAsFixed(0)} tokens',
@@ -120,7 +115,12 @@ class _StartupDetailsPageState extends State<StartupDetailsPage> {
                     ),
                     TextButton(
                       onPressed: () {
-                        print('TODO: Redirecionar para compra de tokens');
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(this.context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Compra de tokens em breve.'),
+                          ),
+                        );
                       },
                       child: const Text('Comprar mais tokens'),
                     ),
@@ -151,10 +151,7 @@ class _StartupDetailsPageState extends State<StartupDetailsPage> {
 
     setState(() => _isInvesting = true);
 
-    final success = await _service.investirStartup(
-      _startup.id,
-      valorAInvestir,
-    );
+    final success = await _service.investirStartup(_startup.id, valorAInvestir);
 
     if (!mounted) return;
 
@@ -177,10 +174,7 @@ class _StartupDetailsPageState extends State<StartupDetailsPage> {
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        title: Text(
-          _startup.nome,
-          overflow: TextOverflow.ellipsis,
-        ),
+        title: Text(_startup.nome, overflow: TextOverflow.ellipsis),
       ),
       body: _buildBody(),
     );
@@ -214,9 +208,7 @@ class StartupDetailsArgumentErrorPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      body: Center(
-        child: Text('Nenhuma startup selecionada.'),
-      ),
+      body: Center(child: Text('Nenhuma startup selecionada.')),
     );
   }
 }
@@ -315,10 +307,7 @@ class _DetailsErrorState extends StatelessWidget {
   final String message;
   final VoidCallback onRetry;
 
-  const _DetailsErrorState({
-    required this.message,
-    required this.onRetry,
-  });
+  const _DetailsErrorState({required this.message, required this.onRetry});
 
   @override
   Widget build(BuildContext context) {
@@ -420,10 +409,7 @@ class _StartupLogo extends StatelessWidget {
   final String url;
   final double size;
 
-  const _StartupLogo({
-    required this.url,
-    required this.size,
-  });
+  const _StartupLogo({required this.url, required this.size});
 
   @override
   Widget build(BuildContext context) {
@@ -491,10 +477,7 @@ class _InfoSection extends StatelessWidget {
   final String title;
   final Widget child;
 
-  const _InfoSection({
-    required this.title,
-    required this.child,
-  });
+  const _InfoSection({required this.title, required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -574,10 +557,7 @@ class _PeopleSection extends StatelessWidget {
   final String title;
   final List<Socio> people;
 
-  const _PeopleSection({
-    required this.title,
-    required this.people,
-  });
+  const _PeopleSection({required this.title, required this.people});
 
   @override
   Widget build(BuildContext context) {
@@ -601,10 +581,7 @@ class _MembersSection extends StatelessWidget {
   final String title;
   final List<Membro> members;
 
-  const _MembersSection({
-    required this.title,
-    required this.members,
-  });
+  const _MembersSection({required this.title, required this.members});
 
   @override
   Widget build(BuildContext context) {

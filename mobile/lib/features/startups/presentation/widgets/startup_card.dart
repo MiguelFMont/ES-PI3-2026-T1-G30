@@ -7,11 +7,7 @@ class StartupCard extends StatelessWidget {
   final Startup startup;
   final VoidCallback onTap;
 
-  const StartupCard({
-    super.key,
-    required this.startup,
-    required this.onTap,
-  });
+  const StartupCard({super.key, required this.startup, required this.onTap});
 
   Color _estagioColor(String estagio) {
     switch (estagio) {
@@ -61,7 +57,9 @@ class StartupCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final stageColor = _estagioColor(startup.estagio);
     final isPositive = (startup.variacaoPreco ?? 0) >= 0;
-    final variacaoColor = isPositive ? AppColors.success : AppColors.destructive;
+    final variacaoColor = isPositive
+        ? AppColors.success
+        : AppColors.destructive;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),

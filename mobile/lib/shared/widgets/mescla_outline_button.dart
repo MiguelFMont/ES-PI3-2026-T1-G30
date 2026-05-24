@@ -1,4 +1,3 @@
-
 // Autor: Miguel Fernandes Monteiro - RA: 25014808
 
 import 'package:flutter/material.dart';
@@ -25,7 +24,7 @@ class MesclaOutlineButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: AppColors.destructive.withOpacity(0.06),
+            color: AppColors.destructive.withValues(alpha: 0.06),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -34,11 +33,11 @@ class MesclaOutlineButton extends StatelessWidget {
       child: OutlinedButton(
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
-          backgroundColor: AppColors.destructive.withOpacity(0.07),
+          backgroundColor: AppColors.destructive.withValues(alpha: 0.07),
           foregroundColor: AppColors.destructive,
           elevation: 0,
           side: BorderSide(
-            color: AppColors.destructive.withOpacity(0.30),
+            color: AppColors.destructive.withValues(alpha: 0.30),
             width: 1.2,
           ),
           shape: RoundedRectangleBorder(

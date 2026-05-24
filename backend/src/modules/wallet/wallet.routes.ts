@@ -17,6 +17,7 @@ import {
   getTransactionsController,
   getDadosDashboardController,
   addBalanceController,
+  withdrawController,
   getWalletController,
   listHoldingsController,
 } from './wallet.controller';
@@ -40,6 +41,10 @@ router.get('/holdings', listHoldingsController);
 // Chama addBalanceController, que valida req.body.valorCentavos no service
 // e agora registra ADICIONAR_SALDO no histórico de forma atômica.
 router.post('/add-balance', addBalanceController);
+
+// Debita saldo fictício em centavos da carteira do usuário autenticado.
+// Chama withdrawController, que valida req.body.valorCentavos e saldo suficiente.
+router.post('/withdraw', withdrawController);
 
 // Samuel Campovilla:
 // O histórico da carteira expõe apenas o contrato atual /transactions.

@@ -7,6 +7,8 @@ import {
   acceptOfferService,
   cancelOfferService,
   createOfferService,
+  listMarketOffersService,
+  listMyActiveOffersService,
 } from "./offers.service";
 
 // Extrai o uid autenticado preenchido pelo authMiddleware.
@@ -29,6 +31,36 @@ export async function createOfferController(
       precoUnitarioCentavos: req.body?.precoUnitarioCentavos,
     });
 
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+// Controller do GET /offers/my-active.
+// Lista apenas as ofertas abertas do usuário autenticado.
+export async function listMyActiveOffersController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const result = await listMyActiveOffersService(getUid(req));
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+// Controller do GET /offers/market.
+// Lista apenas as ofertas abertas de terceiros para o usuário autenticado.
+export async function listMarketOffersController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const result = await listMarketOffersService(getUid(req));
     res.status(200).json(result);
   } catch (error) {
     next(error);

@@ -49,6 +49,7 @@ export interface HoldingRecord {
 // Service e repository reutilizam esta lista para manter validação e persistência consistentes.
 export const VALID_TRANSACTION_TYPES = [
   "ADICIONAR_SALDO",
+  "SACAR_SALDO",
   "COMPRA_DIRETA",
   "VENDA_DIRETA",
   "COMPRA_BALCAO",
@@ -277,7 +278,7 @@ export class WalletRepo extends FirestoreBaseRepo {
   }
 
   // Busca a carteira do usuário sem criar nada.
-  // Este método está disponível para cenários de leitura pura, embora a Fase 1 use getOrCreateWallet.
+  // Este método está disponível para cenários de leitura pura, embora o fluxo principal use getOrCreateWallet.
   async getWallet(uid: string): Promise<WalletRecord | null> {
     const walletDoc = await this.getWalletRef(uid).get();
 
@@ -370,7 +371,7 @@ export class WalletRepo extends FirestoreBaseRepo {
         );
       }
 
-      // A Fase 1 atualiza apenas saldoCentavos e updatedAt.
+      // Esta operação atualiza apenas saldoCentavos e updatedAt.
       transaction.update(walletRef, {
         saldoCentavos,
         updatedAt: now,
@@ -381,6 +382,67 @@ export class WalletRepo extends FirestoreBaseRepo {
       transaction.set(transactionRef, {
         userId: uid,
         tipo: "ADICIONAR_SALDO",
+        valorTotalCentavos: valorCentavos,
+        saldoAnteriorCentavos,
+        saldoNovoCentavos: saldoCentavos,
+        createdAt,
+      });
+
+      return {
+        ...currentWallet,
+        saldoCentavos,
+        updatedAt: now,
+      };
+    });
+  }
+
+  // Debita valorCentavos do saldo atual da carteira dentro de uma transação.
+  // Garante saldo suficiente e registra a movimentação SACAR_SALDO no histórico.
+  async withdraw(uid: string, valorCentavos: number): Promise<WalletRecord> {
+    return this.db.runTransaction<WalletRecord>(async (transaction) => {
+      const walletRef = this.getWalletRef(uid);
+      const transactionRef = this.getTransactionsRef().doc();
+      const walletDoc = await transaction.get(walletRef);
+      const now = Timestamp.now();
+      const createdAt = FieldValue.serverTimestamp();
+
+      if (!walletDoc.exists) {
+        throw new AppError(
+          "Saldo insuficiente para realizar o saque.",
+          409,
+          "INSUFFICIENT_BALANCE",
+        );
+      }
+
+      const currentWallet = this.toWalletRecord(uid, walletDoc.data());
+      const saldoAnteriorCentavos = currentWallet.saldoCentavos;
+
+      if (saldoAnteriorCentavos < valorCentavos) {
+        throw new AppError(
+          "Saldo insuficiente para realizar o saque.",
+          409,
+          "INSUFFICIENT_BALANCE",
+        );
+      }
+
+      const saldoCentavos = saldoAnteriorCentavos - valorCentavos;
+
+      if (!this.isNonNegativeInteger(saldoCentavos)) {
+        throw new AppError(
+          "Carteira com saldo inválido.",
+          500,
+          "INVALID_WALLET_STATE",
+        );
+      }
+
+      transaction.update(walletRef, {
+        saldoCentavos,
+        updatedAt: now,
+      });
+
+      transaction.set(transactionRef, {
+        userId: uid,
+        tipo: "SACAR_SALDO",
         valorTotalCentavos: valorCentavos,
         saldoAnteriorCentavos,
         saldoNovoCentavos: saldoCentavos,

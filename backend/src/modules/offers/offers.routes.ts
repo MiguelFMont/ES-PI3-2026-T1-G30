@@ -8,16 +8,24 @@ import {
   acceptOfferController,
   cancelOfferController,
   createOfferController,
+  listMarketOffersController,
+  listMyActiveOffersController,
 } from "./offers.controller";
 
 const router = Router();
 
-// Todas as rotas do balcão nesta fase exigem autenticação.
+// Todas as rotas do balcão exigem autenticação.
 // O middleware injeta req.user para que os controllers sempre operem no uid autenticado.
 router.use(authMiddleware);
 
 // Criar oferta não vende tokens; apenas move tokens livres para quantidadeBloqueada.
 router.post("/", createOfferController);
+
+// Lista as ofertas abertas do usuário autenticado.
+router.get("/my-active", listMyActiveOffersController);
+
+// Lista as ofertas abertas de terceiros disponíveis no mercado.
+router.get("/market", listMarketOffersController);
 
 // O aceite transfere saldo e tokens em uma única negociação de balcão entre dois usuários.
 router.post("/:offerId/accept", acceptOfferController);

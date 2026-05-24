@@ -30,7 +30,11 @@ class AuthRepository {
     }
   }
 
-  Future<void> concluirCadastro(String email, String token, String senha) async {
+  Future<void> concluirCadastro(
+    String email,
+    String token,
+    String senha,
+  ) async {
     try {
       await _datasource.concluirCadastro(email, token, senha);
     } catch (e) {
@@ -47,7 +51,11 @@ class AuthRepository {
       if (user.mfaRequired) return user;
 
       if (user.idToken != null && user.refreshToken != null) {
-        await SessionManager.salvarSessao(user.idToken!, user.refreshToken!, user.id);
+        await SessionManager.salvarSessao(
+          user.idToken!,
+          user.refreshToken!,
+          user.id,
+        );
       }
 
       return user;
@@ -82,7 +90,11 @@ class AuthRepository {
     }
   }
 
-  Future<String> redefinirSenha(String email, String token, String novaSenha) async {
+  Future<String> redefinirSenha(
+    String email,
+    String token,
+    String novaSenha,
+  ) async {
     try {
       final data = await _datasource.redefinirSenha(email, token, novaSenha);
       return data['message'] ?? 'Senha alterada com sucesso.';

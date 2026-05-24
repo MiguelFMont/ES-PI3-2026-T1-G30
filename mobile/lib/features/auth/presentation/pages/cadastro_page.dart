@@ -8,14 +8,14 @@ import '../../../../shared/widgets/mescla_auth_layout.dart';
 import '../../../../shared/formatters/cpf_formatter.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/mescla_button.dart';
- 
+
 class CadastroPage extends StatefulWidget {
   const CadastroPage({super.key});
- 
+
   @override
   State<CadastroPage> createState() => _CadastroPageState();
 }
- 
+
 class _CadastroPageState extends State<CadastroPage> {
   final _nomeController = TextEditingController();
   final _emailController = TextEditingController();
@@ -24,12 +24,12 @@ class _CadastroPageState extends State<CadastroPage> {
   final _senhaController = TextEditingController();
 
   DateTime? _dataNascimento;
- 
+
   final _repository = AuthRepository();
   final _pageController = PageController();
   int _etapaAtual = 0;
   bool _isLoading = false;
- 
+
   // ── Requisitos da senha ────────────────────────────────────────────────────
   bool get _temMinimo => _senhaController.text.length >= 8;
   bool get _temMaiuscula => _senhaController.text.contains(RegExp(r'[A-Z]'));
@@ -38,13 +38,13 @@ class _CadastroPageState extends State<CadastroPage> {
       _senhaController.text.contains(RegExp(r'[!@#\$%^&*(),.?":{}|<>]'));
   bool get _senhaValida =>
       _temMinimo && _temMaiuscula && _temNumero && _temEspecial;
- 
+
   @override
   void initState() {
     super.initState();
     _senhaController.addListener(() => setState(() {}));
   }
- 
+
   @override
   void dispose() {
     _pageController.dispose();
@@ -79,60 +79,63 @@ class _CadastroPageState extends State<CadastroPage> {
   }
 
   Future<void> _cadastrar() async {
-  // 1. Validação simples antes de chamar a API
-  if (!_emailController.text.contains('@')) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Digite um e-mail válido.'), backgroundColor: Colors.red)
-    );
-    return;
-  }
-   if (!_senhaValida) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('A senha não atende todos os requisitos.'),
-        backgroundColor: Colors.red,
-      ));
+    // 1. Validação simples antes de chamar a API
+    if (!_emailController.text.contains('@')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Digite um e-mail válido.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    if (!_senhaValida) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('A senha não atende todos os requisitos.'),
+          backgroundColor: Colors.red,
+        ),
+      );
       return;
     }
 
-  setState(() => _isLoading = true);
+    setState(() => _isLoading = true);
 
-  try {
-    await _repository.iniciarCadastro(
-      _dataNascimento!.toIso8601String(),
-      _nomeController.text,
-      _emailController.text,
-      _cpfController.text,
-      _telefoneController.text,
-      _senhaController.text,
-    );
+    try {
+      await _repository.iniciarCadastro(
+        _dataNascimento!.toIso8601String(),
+        _nomeController.text,
+        _emailController.text,
+        _cpfController.text,
+        _telefoneController.text,
+        _senhaController.text,
+      );
 
-    if (!mounted) return;
-    
-    Navigator.pushNamed(
-      context, 
-      '/token-verification',
-      arguments: {
-        'email': _emailController.text,
-        'senha': _senhaController.text,
-        'fluxo': 'cadastro' // <-- A "flag" que avisa a tela do token o que fazer depois
-      }
-    );
+      if (!mounted) return;
 
-  } catch (e) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(e.toString()), backgroundColor: Colors.red)
-    );
-  } finally {
-    setState(() => _isLoading = false);
+      Navigator.pushNamed(
+        context,
+        '/token-verification',
+        arguments: {
+          'email': _emailController.text,
+          'senha': _senhaController.text,
+          'fluxo':
+              'cadastro', // <-- A "flag" que avisa a tela do token o que fazer depois
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
-}
 
   @override
   Widget build(BuildContext context) {
-
-    return 
-    MesclaAuthLayout(
+    return MesclaAuthLayout(
       children: [
         Expanded(
           child: Padding(
@@ -224,9 +227,7 @@ class _CadastroPageState extends State<CadastroPage> {
         ),
         // ── Requisitos em tempo real ───────────────────────────────────────
         const SizedBox(height: 16),
-        Padding(padding: const EdgeInsets.only(left: 20),
-         child: _requisitos(),
-        ),
+        Padding(padding: const EdgeInsets.only(left: 20), child: _requisitos()),
 
         const SizedBox(height: 20),
         _isLoading
@@ -252,7 +253,9 @@ class _CadastroPageState extends State<CadastroPage> {
         Text(
           'Requisitos da senha:',
           style: TextStyle(
-              color: AppColors.mutedForeground.withOpacity(0.8), fontSize: 12),
+            color: AppColors.mutedForeground.withValues(alpha: 0.8),
+            fontSize: 12,
+          ),
         ),
         const SizedBox(height: 6),
         _itemRequisito('Mínimo 8 caracteres', _temMinimo),
@@ -269,13 +272,11 @@ class _CadastroPageState extends State<CadastroPage> {
       child: Row(
         children: [
           Icon(
-            valido
-                ? Icons.check_circle_outline
-                : Icons.radio_button_unchecked,
+            valido ? Icons.check_circle_outline : Icons.radio_button_unchecked,
             size: 14,
             color: valido
                 ? Colors.green
-                : AppColors.mutedForeground.withOpacity(0.4),
+                : AppColors.mutedForeground.withValues(alpha: 0.4),
           ),
           const SizedBox(width: 6),
           Text(
@@ -284,14 +285,13 @@ class _CadastroPageState extends State<CadastroPage> {
               fontSize: 12,
               color: valido
                   ? Colors.green
-                  : AppColors.mutedForeground.withOpacity(0.6),
+                  : AppColors.mutedForeground.withValues(alpha: 0.6),
             ),
           ),
         ],
       ),
     );
   }
-
 
   Widget _mensagemEtapa(int index) {
     final mensagens = [

@@ -48,15 +48,13 @@ class WalletModel {
   static double _toDouble(dynamic value) {
     if (value is num) return value.toDouble();
     if (value is String) {
-      return double.tryParse(
-            value.replaceAll('%', '').replaceAll(',', '.'),
-          ) ??
+      return double.tryParse(value.replaceAll('%', '').replaceAll(',', '.')) ??
           0.0;
     }
     return 0.0;
   }
 
-  // extrai os pontos do gráfico do dashboard 
+  // extrai os pontos do gráfico do dashboard
   static List<double> _pontosFromDashboard(Map<String, dynamic> dashboardMap) {
     final pontos = dashboardMap['pontosGrafico'];
     if (pontos is! List) return const [];
@@ -72,7 +70,7 @@ class WalletModel {
         .toList();
   }
 
-  // método factory que cria um walletmoedl a partir do dados do dashboard, participações e operações 
+  // método factory que cria um walletmoedl a partir do dados do dashboard, participações e operações
   factory WalletModel.fromDashboard(
     String uid,
     Map<String, dynamic> dashboardMap,
@@ -81,8 +79,12 @@ class WalletModel {
   ) {
     return WalletModel(
       uid: uid,
-      saldoCentavos: (_toDouble(dashboardMap['saldoDisponivel']) * 100).toInt().toDouble(),
-      valorTotalCarteiraDashboard: _toDouble(dashboardMap['valorTotalCarteira']),
+      saldoCentavos: (_toDouble(dashboardMap['saldoDisponivel']) * 100)
+          .toInt()
+          .toDouble(),
+      valorTotalCarteiraDashboard: _toDouble(
+        dashboardMap['valorTotalCarteira'],
+      ),
       totalInvestidoDashboard: _toDouble(dashboardMap['totalInvestido']),
       lucroTotalDashboard: _toDouble(dashboardMap['lucro']),
       retornoPercentDashboard: _toDouble(dashboardMap['retorno']),
