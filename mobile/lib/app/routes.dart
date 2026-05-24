@@ -15,6 +15,7 @@ import '../features/perfil/presentation/pages/informacoes_pessoais_page.dart';
 import '../features/perfil/presentation/pages/mfa_page.dart';
 import '../features/perfil/presentation/pages/senha_page.dart';
 import '../features/portfolio/presentation/screens/portfolio_screen.dart';
+import '../features/dashboard/presentation/pages/dashboard_page.dart';
 
 class AppRoutes {
   static const splash = '/';
@@ -33,6 +34,7 @@ class AppRoutes {
   static const mfaChallenge = '/mfa-challenge';
   static const segurancaSenha = '/seguranca-senha';
   static const portfolio = '/portfolio';
+  static const dashboard = '/dashboard';
 
   static Map<String, Widget Function(BuildContext)> get routes => {
     splash: (_) => SplashPage(),
@@ -57,5 +59,6 @@ class AppRoutes {
     mfaChallenge: (_) => MfaChallengePage(),
     segurancaSenha: (_) => SenhaPage(),
     portfolio: (_) => const PortfolioScreen(),
+    dashboard: (_) => const DashboardPage(),
   };
 }
