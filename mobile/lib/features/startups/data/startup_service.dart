@@ -1,21 +1,24 @@
+import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show Platform;
+import 'dart:io';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
+import 'package:mesclainvest/core/network/http_client.dart';
 
 import '../domain/startup_model.dart';
 import 'startup_mock.dart';
 
 class StartupService {
-  static String get _baseUrl {
-    if (kIsWeb) {
-      return 'http://localhost:3000/v1';
-    } else if (Platform.isAndroid) {
-      return 'http://10.0.2.2:3000/v1';
-    } else {
-      return 'http://127.0.0.1:3000/v1';
-    }
+  static const Duration _requestTimeout = Duration(seconds: 10);
+
+  Uri _buildUri(String path, [Map<String, String>? queryParameters]) {
+    final baseUri = Uri.parse(AppHttpClient.baseUrl);
+    final normalizedPath = path.startsWith('/') ? path : '/$path';
+
+    return baseUri.replace(
+      path: '${baseUri.path}$normalizedPath',
+      queryParameters: queryParameters,
+    );
   }
 
   Future<List<Startup>> listarStartups({String? estagio}) async {
@@ -25,26 +28,49 @@ class StartupService {
       return mockStartups.where((s) => s.estagio == estagio).toList();
     }
 
-    final url = estagio != null && estagio.isNotEmpty
-        ? Uri.parse('$_baseUrl/startups?estagio=$estagio')
-        : Uri.parse('$_baseUrl/startups');
+    final url = _buildUri(
+      '/startups',
+      estagio != null && estagio.isNotEmpty ? {'estagio': estagio} : null,
+    );
 
     try {
-      final response = await http.get(url);
+      final response = await http.get(url).timeout(_requestTimeout);
 
       if (response.statusCode == 200) {
-        final body = jsonDecode(response.body);
-        final List<dynamic> data = body['data'];
-        return data.map((json) => Startup.fromJson(json)).toList();
-      } else {
-        throw Exception('Erro ao buscar startups: ${response.statusCode}');
+        final body = _decodeJsonObject(response.body);
+        final data = body['data'];
+
+        if (data is! List) {
+          throw StartupApiException(
+            'O servidor retornou um catálogo inválido.',
+          );
+        }
+
+        return data.map((item) => Startup.fromJson(_asJsonMap(item))).toList();
       }
+
+      throw StartupApiException(
+        _resolveListErrorMessage(response),
+        response.statusCode,
+      );
+    } on TimeoutException {
+      throw StartupApiException(
+        'O catálogo demorou para responder. Tente novamente.',
+      );
+    } on SocketException {
+      throw StartupApiException(
+        'Não foi possível conectar ao catálogo. Verifique a URL da API e tente novamente.',
+      );
+    } on FormatException {
+      throw StartupApiException(
+        'O servidor retornou dados inválidos para o catálogo.',
+      );
     } catch (e) {
       if (e is StartupApiException) {
         rethrow;
       }
       throw StartupApiException(
-        'Erro de conexao com o servidor. Verifique sua internet.',
+        'Não foi possível carregar o catálogo agora. Tente novamente em instantes.',
       );
     }
   }
@@ -58,28 +84,42 @@ class StartupService {
       );
     }
 
-    final url = Uri.parse('$_baseUrl/startups/$startupId');
+    final url = _buildUri('/startups/$startupId');
 
     try {
-      final response = await http.get(url);
+      final response = await http.get(url).timeout(_requestTimeout);
 
       if (response.statusCode == 200) {
-        final body = jsonDecode(response.body);
-        return Startup.fromJson(body['data']);
-      } else if (response.statusCode == 404) {
-        throw StartupApiException('Startup nao encontrada.', 404);
-      } else {
-        throw StartupApiException(
-          'Erro ao buscar startup: ${response.statusCode}',
-          response.statusCode,
-        );
+        final body = _decodeJsonObject(response.body);
+        return Startup.fromJson(_asJsonMap(body['data']));
       }
+
+      if (response.statusCode == 404) {
+        throw StartupApiException('Startup nao encontrada.', 404);
+      }
+      throw StartupApiException(
+        _extractErrorMessage(response.body) ??
+            'Erro ao buscar startup: ${response.statusCode}',
+        response.statusCode,
+      );
+    } on TimeoutException {
+      throw StartupApiException(
+        'Os detalhes da startup demoraram para responder. Tente novamente.',
+      );
+    } on SocketException {
+      throw StartupApiException(
+        'Não foi possível conectar ao servidor de startups.',
+      );
+    } on FormatException {
+      throw StartupApiException(
+        'O servidor retornou dados inválidos para esta startup.',
+      );
     } catch (e) {
       if (e is StartupApiException) {
         rethrow;
       }
       throw StartupApiException(
-        'Erro de conexao com o servidor. Verifique sua internet.',
+        'Não foi possível carregar os detalhes da startup agora.',
       );
     }
   }
@@ -91,6 +131,46 @@ class StartupService {
 
     await Future.delayed(const Duration(seconds: 2));
     return true;
+  }
+
+  Map<String, dynamic> _decodeJsonObject(String body) {
+    final decoded = jsonDecode(body);
+    return _asJsonMap(decoded);
+  }
+
+  Map<String, dynamic> _asJsonMap(dynamic value) {
+    if (value is Map<String, dynamic>) {
+      return value;
+    }
+    if (value is Map) {
+      return value.map((key, item) => MapEntry(key.toString(), item));
+    }
+    throw const FormatException('JSON object expected.');
+  }
+
+  String _resolveListErrorMessage(http.Response response) {
+    if (response.statusCode >= 500) {
+      return 'O catálogo está indisponível no momento. Tente novamente mais tarde.';
+    }
+
+    return _extractErrorMessage(response.body) ??
+        'Erro ao buscar startups: ${response.statusCode}';
+  }
+
+  String? _extractErrorMessage(String body) {
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map) {
+        final error = decoded['error'];
+        if (error is String && error.trim().isNotEmpty) {
+          return error.trim();
+        }
+      }
+    } on FormatException {
+      return null;
+    }
+
+    return null;
   }
 }
 

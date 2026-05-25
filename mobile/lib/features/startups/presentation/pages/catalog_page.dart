@@ -33,14 +33,28 @@ class _CatalogPageState extends State<CatalogPage> {
     'Em Expansão',
   ];
 
-  static const List<String> _sectorOptions = [
-    'Sustentabilidade',
-    'Saúde',
-    'Educação',
-    'Fintech',
-    'Agritech',
-    'Mobilidade',
-  ];
+  // Alguns ambientes ainda não publicam "setor" no payload.
+  // Quando isso acontecer, a UI oculta esse filtro em vez de exibir chips inertes.
+  List<String> get _availableSectorOptions {
+    final sectors = _startups
+        .map((startup) => startup.setor.trim())
+        .where((sector) => sector.isNotEmpty)
+        .toSet()
+        .toList();
+
+    sectors.sort();
+    return sectors;
+  }
+
+  // O ambiente remoto atual possui documentos duplicados da mesma startup.
+  // A tela colapsa esses itens por assinatura funcional até o banco ser limpo.
+  String _catalogKey(Startup startup) {
+    return [
+      startup.nome.trim().toLowerCase(),
+      startup.descricao.trim().toLowerCase(),
+      startup.estagio.trim().toLowerCase(),
+    ].join('|');
+  }
 
   @override
   void initState() {
@@ -64,16 +78,30 @@ class _CatalogPageState extends State<CatalogPage> {
 
     try {
       final startups = await _service.listarStartups(estagio: _selectedStage);
-      final seen = <String>{};
+      final uniqueStartupsByKey = <String, Startup>{};
+      for (final startup in startups) {
+        uniqueStartupsByKey.putIfAbsent(_catalogKey(startup), () => startup);
+      }
+      final uniqueStartups = uniqueStartupsByKey.values.toList();
+      final availableSectors = uniqueStartups
+          .map((startup) => startup.setor.trim())
+          .where((sector) => sector.isNotEmpty)
+          .toSet();
 
+      if (!mounted) return;
       setState(() {
-        _startups = startups.where((s) => seen.add(s.id)).toList();
+        _startups = uniqueStartups;
+        _selectedSectors.removeWhere(
+          (sector) => !availableSectors.contains(sector),
+        );
         _state = CatalogState.success;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
-        _errorMessage =
-            'Não foi possível carregar as startups.\nVerifique sua conexão e tente novamente.';
+        _errorMessage = e is StartupApiException
+            ? e.message
+            : 'Não foi possível carregar as startups agora.';
         _state = CatalogState.error;
       });
     }
@@ -88,7 +116,7 @@ class _CatalogPageState extends State<CatalogPage> {
           .where(
             (s) =>
                 s.nome.toLowerCase().contains(query) ||
-                s.setor.toLowerCase().contains(query),
+                (s.setor.isNotEmpty && s.setor.toLowerCase().contains(query)),
           )
           .toList();
     }
@@ -121,7 +149,7 @@ class _CatalogPageState extends State<CatalogPage> {
         selectedSectors: Set.of(_selectedSectors),
         sortBy: _sortBy,
         stageOptions: _stageOptions,
-        sectorOptions: _sectorOptions,
+        sectorOptions: _availableSectorOptions,
         onApply: (stage, sectors, sortBy) {
           final stageChanged = stage != _selectedStage;
 
@@ -246,9 +274,11 @@ class _CatalogPageState extends State<CatalogPage> {
             child: TextField(
               controller: _searchController,
               style: const TextStyle(fontSize: 13, color: Color(0xFF1E293B)),
-              decoration: const InputDecoration(
-                hintText: 'Buscar startups ou setores...',
-                hintStyle: TextStyle(
+              decoration: InputDecoration(
+                hintText: _availableSectorOptions.isEmpty
+                    ? 'Buscar startups...'
+                    : 'Buscar startups ou setores...',
+                hintStyle: const TextStyle(
                   fontSize: 13,
                   color: AppColors.mutedForeground,
                 ),
@@ -282,9 +312,12 @@ class _CatalogPageState extends State<CatalogPage> {
 
   Widget _buildResultCount() {
     final filtered = _filteredStartups;
-    final label = _state == CatalogState.loading
-        ? 'Carregando...'
-        : '${filtered.length} startup${filtered.length != 1 ? 's' : ''} encontrada${filtered.length != 1 ? 's' : ''}';
+    final label = switch (_state) {
+      CatalogState.loading => 'Carregando...',
+      CatalogState.error => 'Catálogo indisponível',
+      CatalogState.success =>
+        '${filtered.length} startup${filtered.length != 1 ? 's' : ''} encontrada${filtered.length != 1 ? 's' : ''}',
+    };
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
@@ -432,6 +465,8 @@ class _FilterSheetState extends State<_FilterSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final hasSectorFilters = widget.sectorOptions.isNotEmpty;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
       child: Column(
@@ -494,27 +529,29 @@ class _FilterSheetState extends State<_FilterSheet> {
             }).toList(),
           ),
           const SizedBox(height: 20),
-          _buildSectionLabel('Setor'),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: widget.sectorOptions.map((sector) {
-              final selected = _sectors.contains(sector);
-              return _FilterChip(
-                label: sector,
-                selected: selected,
-                onTap: () => setState(() {
-                  if (selected) {
-                    _sectors.remove(sector);
-                  } else {
-                    _sectors.add(sector);
-                  }
-                }),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 20),
+          if (hasSectorFilters) ...[
+            _buildSectionLabel('Setor'),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: widget.sectorOptions.map((sector) {
+                final selected = _sectors.contains(sector);
+                return _FilterChip(
+                  label: sector,
+                  selected: selected,
+                  onTap: () => setState(() {
+                    if (selected) {
+                      _sectors.remove(sector);
+                    } else {
+                      _sectors.add(sector);
+                    }
+                  }),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 20),
+          ],
           _buildSectionLabel('Ordenar por'),
           const SizedBox(height: 10),
           _buildSortOption('recentes', 'Mais recentes'),
