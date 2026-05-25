@@ -34,17 +34,25 @@ class AppRoutes {
   static const segurancaSenha = '/seguranca-senha';
   static const portfolio = '/portfolio';
 
+  static int _resolveMainShellIndex(BuildContext context, int fallback) {
+    final arguments = ModalRoute.of(context)?.settings.arguments;
+    return arguments is int ? arguments : fallback;
+  }
+
   static Map<String, Widget Function(BuildContext)> get routes => {
     splash: (_) => SplashPage(),
-    main: (_) => const MainNavigationShell(),
+    main: (context) =>
+        MainNavigationShell(initialIndex: _resolveMainShellIndex(context, 0)),
     welcome: (_) => WelcomePage(),
     register: (_) => CadastroPage(),
     login: (_) => LoginPage(),
-    home: (_) => const MainNavigationShell(),
+    home: (context) =>
+        MainNavigationShell(initialIndex: _resolveMainShellIndex(context, 0)),
     forgotPassword: (_) => RecoverPasswordPage(),
     resetPassword: (_) => ResetPasswordPage(),
     tokenVerification: (_) => TokenVerificationPage(),
-    perfil: (_) => const MainNavigationShell(initialIndex: 4),
+    perfil: (context) =>
+        MainNavigationShell(initialIndex: _resolveMainShellIndex(context, 4)),
     catalog: (_) => CatalogPage(),
     startupDetail: (context) {
       final startup = ModalRoute.of(context)?.settings.arguments;
@@ -57,6 +65,7 @@ class AppRoutes {
     mfa: (_) => MfaPage(),
     mfaChallenge: (_) => MfaChallengePage(),
     segurancaSenha: (_) => SenhaPage(),
-    portfolio: (_) => const MainNavigationShell(initialIndex: 1),
+    portfolio: (context) =>
+        MainNavigationShell(initialIndex: _resolveMainShellIndex(context, 1)),
   };
 }

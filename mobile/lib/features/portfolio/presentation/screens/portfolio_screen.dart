@@ -88,6 +88,16 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
   String? _nomeStartup(String? startupId) => _startupPorId(startupId)?.nome;
 
   void _mostrarEmBreve(String recurso) {
+    if (recurso == 'Catálogo') {
+      Navigator.pushReplacementNamed(context, '/main', arguments: 2);
+      return;
+    }
+
+    if (recurso == 'Balcão') {
+      Navigator.pushReplacementNamed(context, '/main', arguments: 3);
+      return;
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('$recurso em breve'),
@@ -146,97 +156,82 @@ class _PortfolioContent extends StatelessWidget {
         const _PortfolioHeader(),
         Expanded(
           child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Transform.translate(
-                  offset: const Offset(0, -30),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: SaldoCard(
-                      saldo: wallet.saldo,
-                      valorTotalCarteira: wallet.valorTotalCarteira,
-                      totalInvestido: wallet.totalInvestido,
-                      lucroTotal: wallet.lucroTotal,
-                      retornoPercent: wallet.retornoPercent,
-                      onNegociar: () => onAcaoIndisponivel('Balcão'),
+                SaldoCard(
+                  saldo: wallet.saldo,
+                  valorTotalCarteira: wallet.valorTotalCarteira,
+                  totalInvestido: wallet.totalInvestido,
+                  lucroTotal: wallet.lucroTotal,
+                  retornoPercent: wallet.retornoPercent,
+                  onNegociar: () => onAcaoIndisponivel('Balcão'),
+                ),
+                const SizedBox(height: 18),
+                _SecaoTitulo(
+                  titulo:
+                      'Minhas Participações (${wallet.participacoes.length})',
+                  acao: 'Ver performance',
+                  onAcao: () => onAcaoIndisponivel('Performance'),
+                ),
+                const SizedBox(height: 12),
+                if (wallet.participacoes.isEmpty)
+                  const _EmptyState('Nenhuma participação encontrada')
+                else
+                  ...wallet.participacoes.map(
+                    (participacao) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: ParticipacaoCard(
+                        participacao: participacao,
+                        startup: startupPorId(participacao.startupId),
+                        onTap: () => onAcaoIndisponivel('Detalhe da startup'),
+                      ),
                     ),
                   ),
+                const SizedBox(height: 10),
+                PerformanceChart(pontos: pontosGrafico),
+                const SizedBox(height: 24),
+                _SecaoTitulo(
+                  titulo: 'Últimas Operações',
+                  icone: Icons.receipt_long_outlined,
+                  acao: 'Ver extrato completo',
+                  onAcao: () => onAcaoIndisponivel('Extrato'),
                 ),
-                Transform.translate(
-                  offset: const Offset(0, -24),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _SecaoTitulo(
-                          titulo:
-                              'Minhas Participações (${wallet.participacoes.length})',
-                          acao: 'Ver performance',
-                          onAcao: () => onAcaoIndisponivel('Performance'),
+                const SizedBox(height: 12),
+                if (wallet.operacoes.isEmpty)
+                  const _EmptyState('Nenhuma operação encontrada')
+                else
+                  ...wallet.operacoes
+                      .take(3)
+                      .map(
+                        (operacao) => OperacaoTile(
+                          operacao: operacao,
+                          nomeStartup: nomeStartup(operacao.startupId),
                         ),
-                        const SizedBox(height: 12),
-                        if (wallet.participacoes.isEmpty)
-                          const _EmptyState('Nenhuma participação encontrada')
-                        else
-                          ...wallet.participacoes.map(
-                            (participacao) => Padding(
-                              padding: const EdgeInsets.only(bottom: 12),
-                              child: ParticipacaoCard(
-                                participacao: participacao,
-                                startup: startupPorId(participacao.startupId),
-                                onTap: () =>
-                                    onAcaoIndisponivel('Detalhe da startup'),
-                              ),
-                            ),
-                          ),
-                        const SizedBox(height: 10),
-                        PerformanceChart(pontos: pontosGrafico),
-                        const SizedBox(height: 24),
-                        _SecaoTitulo(
-                          titulo: 'Últimas Operações',
-                          icone: Icons.receipt_long_outlined,
-                          acao: 'Ver extrato completo',
-                          onAcao: () => onAcaoIndisponivel('Extrato'),
-                        ),
-                        const SizedBox(height: 12),
-                        if (wallet.operacoes.isEmpty)
-                          const _EmptyState('Nenhuma operação encontrada')
-                        else
-                          ...wallet.operacoes
-                              .take(3)
-                              .map(
-                                (operacao) => OperacaoTile(
-                                  operacao: operacao,
-                                  nomeStartup: nomeStartup(operacao.startupId),
-                                ),
-                              ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _BotaoPortfolio(
-                                label: 'Explorar Mais',
-                                icon: Icons.trending_up,
-                                outlined: true,
-                                onTap: () => onAcaoIndisponivel('Catálogo'),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _BotaoPortfolio(
-                                label: 'Ir ao Balcão',
-                                icon: Icons.swap_horiz,
-                                onTap: () => onAcaoIndisponivel('Balcão'),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 32),
-                      ],
+                      ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _BotaoPortfolio(
+                        label: 'Explorar Mais',
+                        icon: Icons.trending_up,
+                        outlined: true,
+                        onTap: () => onAcaoIndisponivel('Catálogo'),
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _BotaoPortfolio(
+                        label: 'Ir ao Balcão',
+                        icon: Icons.swap_horiz,
+                        onTap: () => onAcaoIndisponivel('Balcão'),
+                      ),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 32),
               ],
             ),
           ),
@@ -254,7 +249,7 @@ class _PortfolioHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.only(top: 56, left: 24, right: 24, bottom: 48),
+      padding: const EdgeInsets.only(top: 56, left: 24, right: 24, bottom: 24),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [Color(0xFFE91E63), Color(0xFFC2185B)],
