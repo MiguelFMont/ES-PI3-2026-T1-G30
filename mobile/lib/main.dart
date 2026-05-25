@@ -6,17 +6,9 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
-    // O app depende do .env logo no bootstrap. Se essa carga falhar no Web,
-    // a inicialização inteira morre antes do runApp e o Chrome fica em branco.
     await dotenv.load(fileName: '.env');
-
-    // O projeto atual usa a API/backend para o fluxo principal e não possui
-    // a configuração Web do Firebase versionada. Por isso, evitamos iniciar
-    // o Firebase aqui no bootstrap até existir um firebase_options.dart real.
     runApp(const MesclaInvestApp());
   } catch (error, stackTrace) {
-    // Reporta o erro para o pipeline padrão do Flutter e renderiza uma tela
-    // explícita de falha em vez de deixar o navegador em branco.
     FlutterError.reportError(
       FlutterErrorDetails(
         exception: error,
@@ -48,8 +40,6 @@ class _BootstrapErrorApp extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Tela de fallback para expor o motivo do bootstrap ter falhado
-                  // quando o app nem chegou a montar a primeira rota.
                   const Text(
                     'Falha ao iniciar o app',
                     style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700),

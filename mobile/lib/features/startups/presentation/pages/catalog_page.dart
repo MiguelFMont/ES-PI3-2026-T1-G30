@@ -188,16 +188,18 @@ class _CatalogPageState extends State<CatalogPage> {
     return ClipRect(
       child: Stack(
         children: [
-          Positioned.fill(child: Container(color: const Color(0xFFAD1457))),
-          Positioned(
-            top: -55,
-            right: -45,
+          Positioned.fill(
             child: Container(
-              width: 210,
-              height: 210,
-              decoration: BoxDecoration(
-                color: const Color(0xFFE91E8C).withValues(alpha: 0.22),
-                shape: BoxShape.circle,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  stops: [0.45, 0.45],
+                  colors: [
+                    AppColors.primary,
+                    Color(0xFFC2185B),
+                  ],
+                ),
               ),
             ),
           ),

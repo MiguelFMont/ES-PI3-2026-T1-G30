@@ -33,6 +33,8 @@ class AppRoutes {
   static const mfaChallenge = '/mfa-challenge';
   static const segurancaSenha = '/seguranca-senha';
   static const portfolio = '/portfolio';
+  static const balcao = '/balcao';
+  static const dashboard = '/dashboard';
 
   static int _resolveMainShellIndex(BuildContext context, int fallback) {
     final arguments = ModalRoute.of(context)?.settings.arguments;
@@ -67,5 +69,9 @@ class AppRoutes {
     segurancaSenha: (_) => SenhaPage(),
     portfolio: (context) =>
         MainNavigationShell(initialIndex: _resolveMainShellIndex(context, 1)),
+    balcao: (context) =>
+        MainNavigationShell(initialIndex: _resolveMainShellIndex(context, 3)),
+    dashboard: (context) =>
+        MainNavigationShell(initialIndex: _resolveMainShellIndex(context, 0)),
   };
 }
