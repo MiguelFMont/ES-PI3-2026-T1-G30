@@ -1,3 +1,7 @@
+// MOCK UI: esta tela entrega apenas layout + navegação.
+// Todos os valores marcados com `// MOCK` abaixo devem ser substituídos
+// por dados reais quando a integração com back-end for feita.
+
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
@@ -45,6 +49,7 @@ class _DashboardHeader extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // MOCK: nome do investidor logado
                     Text(
                       'Olá, João',
                       style: TextStyle(color: Colors.white70, fontSize: 14),
@@ -96,6 +101,7 @@ class _DashboardHeader extends StatelessWidget {
                     style: TextStyle(color: Colors.white70, fontSize: 13),
                   ),
                 ),
+                // MOCK: saldo disponível em carteira
                 Text(
                   'R\$ 50.000,00',
                   style: TextStyle(
@@ -142,6 +148,7 @@ class _PortfolioResumo extends StatelessWidget {
               style: TextStyle(color: AppColors.mutedForeground, fontSize: 13),
             ),
             const SizedBox(height: 8),
+            // MOCK: valor total + variação percentual da carteira
             Row(
               children: [
                 const Expanded(
@@ -177,6 +184,7 @@ class _PortfolioResumo extends StatelessWidget {
             const SizedBox(height: 16),
             const Divider(height: 1),
             const SizedBox(height: 14),
+            // MOCK: breakdown de investido vs. lucro acumulado
             const Row(
               children: [
                 Expanded(
@@ -344,6 +352,7 @@ class _SecaoOportunidades extends StatelessWidget {
             acao: 'Ver todas',
           ),
           const SizedBox(height: 14),
+          // MOCK: lista horizontal de oportunidades em destaque
           SizedBox(
             height: 132,
             child: ListView(
@@ -460,6 +469,7 @@ class _SecaoAtividades extends StatelessWidget {
         children: const [
           _SecaoTitulo(titulo: 'Atividade recente', acao: 'Ver extrato'),
           SizedBox(height: 14),
+          // MOCK: histórico de movimentações (compra/venda de tokens)
           _AtividadeCard(
             tipo: 'Compra',
             startup: 'HealthAI',
