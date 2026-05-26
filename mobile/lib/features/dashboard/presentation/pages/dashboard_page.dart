@@ -1,44 +1,135 @@
-// MOCK UI: esta tela entrega apenas layout + navegação.
-// Todos os valores marcados com `// MOCK` abaixo devem ser substituídos
-// por dados reais quando a integração com back-end for feita.
-
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../shared/formatters/reais_formatter.dart';
+import '../../data/datasources/dashboard_datasource.dart';
+import '../../data/models/dashboard_models.dart';
 
-class DashboardPage extends StatelessWidget {
+class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: CustomScrollView(
-        slivers: const [
-          SliverToBoxAdapter(child: _DashboardHeader()),
-          SliverToBoxAdapter(child: _PortfolioResumo()),
-          SliverToBoxAdapter(child: _AcoesRapidas()),
-          SliverToBoxAdapter(child: _SecaoOportunidades()),
-          SliverToBoxAdapter(child: _SecaoAtividades()),
-          SliverToBoxAdapter(child: SizedBox(height: 24)),
-        ],
-      ),
-    );
-  }
+  State<DashboardPage> createState() => _DashboardPageState();
 }
 
-class _DashboardHeader extends StatelessWidget {
-  const _DashboardHeader();
+class _DashboardPageState extends State<DashboardPage> {
+  final DashboardDatasource _datasource = DashboardDatasource();
+
+  bool _isLoading = true;
+  DashboardSummaryModel? _summary;
+  List<HoldingModel>? _holdings;
+  List<TransactionModel>? _transactions;
+
+  String _periodoSelecionado = '1M';
+
+  @override
+  void initState() {
+    super.initState();
+    _carregarDados();
+  }
+
+  Future<void> _carregarDados() async {
+    try {
+      final results = await Future.wait([
+        _datasource.getSummary(),
+        _datasource.getHoldings(),
+        _datasource.getTransactions(),
+      ]);
+
+      if (!mounted) return;
+
+      setState(() {
+        _summary = results[0] as DashboardSummaryModel;
+        _holdings = results[1] as List<HoldingModel>;
+        _transactions = results[2] as List<TransactionModel>;
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('Erro ao carregar dashboard: $e');
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    return SafeArea(child: _buildDashboardContent());
+  }
+
+  void _navegacaoSegura(
+    BuildContext context,
+    String rotaOficial,
+    String tituloFallback,
+  ) {
+    try {
+      Navigator.pushNamed(context, rotaOficial).catchError((Object _) {
+        if (!mounted) return null;
+        _mostrarFallback(context, tituloFallback);
+        return null;
+      });
+    } catch (_) {
+      _mostrarFallback(context, tituloFallback);
+    }
+  }
+
+  void _mostrarFallback(BuildContext context, String titulo) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          appBar: AppBar(title: Text(titulo)),
+          body: Center(
+            child: Text('A tela de $titulo será implementada em breve.'),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDashboardContent() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final summary = _summary;
+    if (summary == null) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Text(
+            'Não foi possível carregar o painel.\nTente novamente mais tarde.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: AppColors.mutedForeground),
+          ),
+        ),
+      );
+    }
+
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(child: _buildHeader(summary)),
+        SliverToBoxAdapter(child: _buildHeroCard(summary)),
+        SliverToBoxAdapter(child: _buildAcoesRapidas()),
+        SliverToBoxAdapter(child: _buildGraficoEvolucao(summary.pontosGrafico)),
+        SliverToBoxAdapter(child: _buildStartupsDestaque()),
+        SliverToBoxAdapter(child: _buildMinhasPosicoes(_holdings ?? const [])),
+        SliverToBoxAdapter(
+          child: _buildAtividadeRecente(_transactions ?? const []),
+        ),
+        const SliverToBoxAdapter(child: SizedBox(height: 24)),
+      ],
+    );
+  }
+
+  Widget _buildHeader(DashboardSummaryModel summary) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
       decoration: const BoxDecoration(
         color: AppColors.primary,
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(32),
-        ),
+        borderRadius: BorderRadius.only(bottomLeft: Radius.circular(32)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -49,7 +140,6 @@ class _DashboardHeader extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // MOCK: nome do investidor logado
                     Text(
                       'Olá, João',
                       style: TextStyle(color: Colors.white70, fontSize: 14),
@@ -91,20 +181,22 @@ class _DashboardHeader extends StatelessWidget {
               color: Colors.white.withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: const Row(
+            child: Row(
               children: [
-                Icon(Icons.account_balance_wallet_outlined, color: Colors.white),
-                SizedBox(width: 12),
-                Expanded(
+                const Icon(
+                  Icons.account_balance_wallet_outlined,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
                   child: Text(
                     'Saldo disponível',
                     style: TextStyle(color: Colors.white70, fontSize: 13),
                   ),
                 ),
-                // MOCK: saldo disponível em carteira
                 Text(
-                  'R\$ 50.000,00',
-                  style: TextStyle(
+                  _formatBRL(summary.saldoDisponivel),
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 15,
                     fontWeight: FontWeight.w800,
@@ -117,13 +209,15 @@ class _DashboardHeader extends StatelessWidget {
       ),
     );
   }
-}
 
-class _PortfolioResumo extends StatelessWidget {
-  const _PortfolioResumo();
+  Widget _buildHeroCard(DashboardSummaryModel summary) {
+    final retornoCor = summary.retorno >= 0
+        ? AppColors.success
+        : AppColors.destructive;
+    final lucroCor = summary.lucro >= 0
+        ? AppColors.success
+        : AppColors.destructive;
 
-  @override
-  Widget build(BuildContext context) {
     return Transform.translate(
       offset: const Offset(0, -18),
       child: Container(
@@ -148,13 +242,12 @@ class _PortfolioResumo extends StatelessWidget {
               style: TextStyle(color: AppColors.mutedForeground, fontSize: 13),
             ),
             const SizedBox(height: 8),
-            // MOCK: valor total + variação percentual da carteira
             Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'R\$ 41.105,00',
-                    style: TextStyle(
+                    _formatBRL(summary.valorTotalCarteira),
+                    style: const TextStyle(
                       color: AppColors.foreground,
                       fontSize: 28,
                       fontWeight: FontWeight.w800,
@@ -167,13 +260,13 @@ class _PortfolioResumo extends StatelessWidget {
                     vertical: 5,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.success.withValues(alpha: 0.12),
+                    color: retornoCor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Text(
-                    '+10,45%',
+                  child: Text(
+                    _formatPercent(summary.retorno),
                     style: TextStyle(
-                      color: AppColors.success,
+                      color: retornoCor,
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                     ),
@@ -184,27 +277,281 @@ class _PortfolioResumo extends StatelessWidget {
             const SizedBox(height: 16),
             const Divider(height: 1),
             const SizedBox(height: 14),
-            // MOCK: breakdown de investido vs. lucro acumulado
-            const Row(
+            Row(
               children: [
                 Expanded(
                   child: _ResumoItem(
                     label: 'Investido',
-                    valor: 'R\$ 37.218,00',
+                    valor: _formatBRL(summary.totalInvestido),
                     cor: AppColors.foreground,
                   ),
                 ),
                 Expanded(
                   child: _ResumoItem(
                     label: 'Lucro',
-                    valor: '+R\$ 3.887,50',
-                    cor: AppColors.success,
+                    valor: _formatSignedBRL(summary.lucro),
+                    cor: lucroCor,
                   ),
                 ),
               ],
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildAcoesRapidas() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 2, 20, 24),
+      child: Row(
+        children: [
+          Expanded(
+            child: _AcaoRapida(
+              icon: Icons.rocket_launch_rounded,
+              label: 'Startups',
+              color: AppColors.primary,
+              onTap: () => Navigator.pushNamed(context, '/catalog'),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: _AcaoRapida(
+              icon: Icons.swap_horiz_rounded,
+              label: 'Balcão',
+              color: AppColors.accent,
+              onTap: () => Navigator.pushNamed(context, '/balcao'),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: _AcaoRapida(
+              icon: Icons.work_outline_rounded,
+              label: 'Carteira',
+              color: AppColors.chart4,
+              onTap: () => Navigator.pushNamed(context, '/portfolio'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGraficoEvolucao(List<DashboardChartPointModel> pontos) {
+    final temDados = _summary != null && pontos.isNotEmpty;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: const [
+                Icon(
+                  Icons.calendar_month_outlined,
+                  color: AppColors.primary,
+                  size: 18,
+                ),
+                SizedBox(width: 8),
+                Text(
+                  'Evolução da Carteira',
+                  style: TextStyle(
+                    color: AppColors.foreground,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            SizedBox(
+              height: 180,
+              child: temDados
+                  ? _EvolucaoLineChart(pontos: pontos)
+                  : const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.show_chart_rounded,
+                            color: AppColors.mutedForeground,
+                            size: 32,
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'Sem dados de evolução ainda',
+                            style: TextStyle(
+                              color: AppColors.mutedForeground,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+            ),
+            const SizedBox(height: 14),
+            _buildPeriodoSelector(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPeriodoSelector() {
+    const periodos = ['1D', '1W', '1M', '6M', 'YTD'];
+
+    return Row(
+      children: periodos.map((periodo) {
+        final selecionado = periodo == _periodoSelecionado;
+        return Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 3),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(999),
+              onTap: () => setState(() => _periodoSelecionado = periodo),
+              child: Container(
+                height: 32,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: selecionado ? AppColors.primary : AppColors.muted,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  periodo,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: selecionado
+                        ? Colors.white
+                        : AppColors.mutedForeground,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildStartupsDestaque() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SecaoTitulo(
+            titulo: 'Startups em destaque',
+            acao: 'Ver todas',
+            onAcaoTap: () =>
+                _navegacaoSegura(context, '/catalog', 'Catálogo de Startups'),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 132,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: const [
+                _OportunidadeCard(
+                  nome: 'AgriTech Pro',
+                  setor: 'Agritech',
+                  variacao: '+8,2%',
+                  cor: AppColors.success,
+                ),
+                _OportunidadeCard(
+                  nome: 'HealthAI',
+                  setor: 'Saúde',
+                  variacao: '+6,4%',
+                  cor: AppColors.chart5,
+                ),
+                _OportunidadeCard(
+                  nome: 'EducaNext',
+                  setor: 'Educação',
+                  variacao: '+5,1%',
+                  cor: AppColors.chart4,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMinhasPosicoes(List<HoldingModel> holdings) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SecaoTitulo(
+            titulo: 'Minhas posições',
+            acao: 'Ver carteira',
+            onAcaoTap: () =>
+                _navegacaoSegura(context, '/portfolio', 'Carteira'),
+          ),
+          const SizedBox(height: 14),
+          if (holdings.isEmpty)
+            _EstadoVazio(
+              icone: Icons.work_outline_rounded,
+              mensagem: 'Você ainda não possui posições.',
+            )
+          else
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: holdings.length,
+              itemBuilder: (_, i) => _PosicaoCard(holding: holdings[i]),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAtividadeRecente(List<TransactionModel> transactions) {
+    final transacoesExibidas = transactions.take(5).toList();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SecaoTitulo(
+            titulo: 'Atividade recente',
+            acao: 'Ver extrato',
+            onAcaoTap: () =>
+                _navegacaoSegura(context, '/extrato', 'Extrato da Carteira'),
+          ),
+          const SizedBox(height: 14),
+          if (transacoesExibidas.isEmpty)
+            _EstadoVazio(
+              icone: Icons.receipt_long_outlined,
+              mensagem: 'Sem movimentações por enquanto.',
+            )
+          else
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: transacoesExibidas.length,
+              itemBuilder: (_, i) =>
+                  _AtividadeCard(transaction: transacoesExibidas[i]),
+            ),
+        ],
       ),
     );
   }
@@ -244,47 +591,6 @@ class _ResumoItem extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _AcoesRapidas extends StatelessWidget {
-  const _AcoesRapidas();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 2, 20, 24),
-      child: Row(
-        children: [
-          Expanded(
-            child: _AcaoRapida(
-              icon: Icons.rocket_launch_rounded,
-              label: 'Startups',
-              color: AppColors.primary,
-              onTap: () => Navigator.pushNamed(context, '/catalog'),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: _AcaoRapida(
-              icon: Icons.swap_horiz_rounded,
-              label: 'Balcão',
-              color: AppColors.accent,
-              onTap: () => Navigator.pushNamed(context, '/balcao'),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: _AcaoRapida(
-              icon: Icons.work_outline_rounded,
-              label: 'Carteira',
-              color: AppColors.chart4,
-              onTap: () => Navigator.pushNamed(context, '/portfolio'),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -334,54 +640,6 @@ class _AcaoRapida extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _SecaoOportunidades extends StatelessWidget {
-  const _SecaoOportunidades();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const _SecaoTitulo(
-            titulo: 'Oportunidades em destaque',
-            acao: 'Ver todas',
-          ),
-          const SizedBox(height: 14),
-          // MOCK: lista horizontal de oportunidades em destaque
-          SizedBox(
-            height: 132,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: const [
-                _OportunidadeCard(
-                  nome: 'AgriTech Pro',
-                  setor: 'Agritech',
-                  variacao: '+8,2%',
-                  cor: AppColors.success,
-                ),
-                _OportunidadeCard(
-                  nome: 'HealthAI',
-                  setor: 'Saúde',
-                  variacao: '+6,4%',
-                  cor: AppColors.chart5,
-                ),
-                _OportunidadeCard(
-                  nome: 'EducaNext',
-                  setor: 'Educação',
-                  variacao: '+5,1%',
-                  cor: AppColors.chart4,
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -459,39 +717,83 @@ class _OportunidadeCard extends StatelessWidget {
   }
 }
 
-class _SecaoAtividades extends StatelessWidget {
-  const _SecaoAtividades();
+class _PosicaoCard extends StatelessWidget {
+  final HoldingModel holding;
+
+  const _PosicaoCard({required this.holding});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          _SecaoTitulo(titulo: 'Atividade recente', acao: 'Ver extrato'),
-          SizedBox(height: 14),
-          // MOCK: histórico de movimentações (compra/venda de tokens)
-          _AtividadeCard(
-            tipo: 'Compra',
-            startup: 'HealthAI',
-            detalhes: '80 tokens · 02 de mar.',
-            valor: '-R\$ 11.052,00',
-            cor: AppColors.destructive,
+    final cor = holding.percentualRetorno >= 0
+        ? AppColors.success
+        : AppColors.destructive;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.muted),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: cor.withValues(alpha: 0.12),
+            child: Icon(Icons.business_rounded, color: cor, size: 20),
           ),
-          _AtividadeCard(
-            tipo: 'Venda',
-            startup: 'AgriTech Pro',
-            detalhes: '50 tokens · 25 de fev.',
-            valor: '+R\$ 4.230,00',
-            cor: AppColors.success,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  holding.nomeStartup.isEmpty ? '—' : holding.nomeStartup,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.foreground,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  holding.setor.isEmpty
+                      ? 'Setor não informado'
+                      : holding.setor,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.mutedForeground,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
           ),
-          _AtividadeCard(
-            tipo: 'Compra',
-            startup: 'EducaNext',
-            detalhes: '35 tokens · 20 de fev.',
-            valor: '-R\$ 2.870,00',
-            cor: AppColors.destructive,
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                _formatBRL(holding.valorInvestido),
+                style: const TextStyle(
+                  color: AppColors.foreground,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                _formatPercent(holding.percentualRetorno),
+                style: TextStyle(
+                  color: cor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -500,22 +802,28 @@ class _SecaoAtividades extends StatelessWidget {
 }
 
 class _AtividadeCard extends StatelessWidget {
-  final String tipo;
-  final String startup;
-  final String detalhes;
-  final String valor;
-  final Color cor;
+  final TransactionModel transaction;
 
-  const _AtividadeCard({
-    required this.tipo,
-    required this.startup,
-    required this.detalhes,
-    required this.valor,
-    required this.cor,
-  });
+  const _AtividadeCard({required this.transaction});
 
   @override
   Widget build(BuildContext context) {
+    final tipoUpper = transaction.tipo.toUpperCase();
+    final isCompra = tipoUpper.startsWith('COMPRA');
+    final tipoExibido = isCompra
+        ? 'Compra'
+        : tipoUpper.startsWith('VENDA')
+            ? 'Venda'
+            : transaction.tipo;
+    final cor = isCompra ? AppColors.destructive : AppColors.success;
+    final subtitle = [
+      if (transaction.detalhes.isNotEmpty) transaction.detalhes,
+      if (transaction.data.isNotEmpty) transaction.data,
+    ].join(' · ');
+    final valorExibido = isCompra
+        ? -transaction.valor.abs()
+        : transaction.valor.abs();
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
@@ -534,7 +842,7 @@ class _AtividadeCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(
-              tipo == 'Compra'
+              isCompra
                   ? Icons.south_west_rounded
                   : Icons.north_east_rounded,
               color: cor,
@@ -547,7 +855,9 @@ class _AtividadeCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  startup,
+                  transaction.nomeStartup.isEmpty
+                      ? '—'
+                      : transaction.nomeStartup,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -558,7 +868,9 @@ class _AtividadeCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  '$tipo · $detalhes',
+                  subtitle.isEmpty
+                      ? tipoExibido
+                      : '$tipoExibido · $subtitle',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -571,7 +883,7 @@ class _AtividadeCard extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Text(
-            valor,
+            _formatSignedBRL(valorExibido),
             style: TextStyle(
               color: cor,
               fontSize: 13,
@@ -587,14 +899,33 @@ class _AtividadeCard extends StatelessWidget {
 class _SecaoTitulo extends StatelessWidget {
   final String titulo;
   final String acao;
+  final VoidCallback? onAcaoTap;
 
   const _SecaoTitulo({
     required this.titulo,
     required this.acao,
+    this.onAcaoTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    const acaoStyle = TextStyle(
+      color: AppColors.primary,
+      fontSize: 13,
+      fontWeight: FontWeight.w700,
+    );
+
+    final acaoWidget = onAcaoTap == null
+        ? Text(acao, style: acaoStyle)
+        : InkWell(
+            onTap: onAcaoTap,
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              child: Text(acao, style: acaoStyle),
+            ),
+          );
+
     return Row(
       children: [
         Expanded(
@@ -607,15 +938,242 @@ class _SecaoTitulo extends StatelessWidget {
             ),
           ),
         ),
-        Text(
-          acao,
-          style: const TextStyle(
-            color: AppColors.primary,
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
+        acaoWidget,
       ],
     );
   }
+}
+
+class _EstadoVazio extends StatelessWidget {
+  final IconData icone;
+  final String mensagem;
+
+  const _EstadoVazio({required this.icone, required this.mensagem});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.muted),
+      ),
+      child: Row(
+        children: [
+          Icon(icone, color: AppColors.mutedForeground),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              mensagem,
+              style: const TextStyle(color: AppColors.mutedForeground),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EvolucaoLineChart extends StatelessWidget {
+  final List<DashboardChartPointModel> pontos;
+
+  const _EvolucaoLineChart({required this.pontos});
+
+  @override
+  Widget build(BuildContext context) {
+    final datas = pontos.map((p) => _parseData(p.data)).toList(growable: false);
+
+    final spots = <FlSpot>[
+      for (var i = 0; i < pontos.length; i++)
+        FlSpot(i.toDouble(), pontos[i].valor),
+    ];
+
+    final valores = pontos.map((p) => p.valor).toList();
+    final minValor = valores.reduce((a, b) => a < b ? a : b);
+    final maxValor = valores.reduce((a, b) => a > b ? a : b);
+    final folga = (maxValor - minValor).abs() * 0.15;
+    final minY = (minValor - folga).clamp(0, double.infinity).toDouble();
+    final maxY = maxValor + (folga == 0 ? maxValor * 0.15 + 1 : folga);
+    final intervalY = (maxY - minY) / 4;
+
+    final ultimoIndice = (pontos.length - 1).clamp(0, pontos.length);
+    final intervalX = pontos.length <= 4
+        ? 1.0
+        : (ultimoIndice / 3).ceilToDouble();
+
+    return LineChart(
+      LineChartData(
+        minX: 0,
+        maxX: ultimoIndice.toDouble().clamp(1, double.infinity),
+        minY: minY,
+        maxY: maxY,
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          horizontalInterval: intervalY > 0 ? intervalY : null,
+          getDrawingHorizontalLine: (_) => FlLine(
+            color: AppColors.muted.withValues(alpha: 0.7),
+            strokeWidth: 1,
+            dashArray: const [4, 4],
+          ),
+        ),
+        borderData: FlBorderData(show: false),
+        titlesData: FlTitlesData(
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 52,
+              interval: intervalY > 0 ? intervalY : null,
+              getTitlesWidget: (value, _) => Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: Text(
+                  _formatarValorEixoCompacto(value),
+                  style: const TextStyle(
+                    color: AppColors.mutedForeground,
+                    fontSize: 10,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 32,
+              interval: intervalX,
+              getTitlesWidget: (value, _) {
+                final i = value.toInt();
+                if (i < 0 || i >= datas.length) return const SizedBox.shrink();
+                final dt = datas[i];
+                if (dt == null) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    DateFormat('dd/MM').format(dt),
+                    style: const TextStyle(
+                      color: AppColors.mutedForeground,
+                      fontSize: 11,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+        lineTouchData: LineTouchData(
+          touchTooltipData: LineTouchTooltipData(
+            getTooltipColor: (_) => AppColors.foreground,
+            tooltipRoundedRadius: 8,
+            tooltipPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 8,
+            ),
+            getTooltipItems: (touched) => touched.map((spot) {
+              final i = spot.x.toInt().clamp(0, pontos.length - 1);
+              final dt = datas[i];
+              final dataLegivel = dt == null
+                  ? '—'
+                  : DateFormat('dd/MM/yyyy').format(dt);
+              return LineTooltipItem(
+                '${formatarReais(spot.y)}\nData: $dataLegivel',
+                const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  height: 1.35,
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        lineBarsData: [
+          LineChartBarData(
+            spots: spots,
+            isCurved: true,
+            curveSmoothness: 0.25,
+            color: AppColors.primary,
+            barWidth: 2,
+            isStrokeCapRound: true,
+            dotData: const FlDotData(show: false),
+            belowBarData: BarAreaData(
+              show: true,
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  AppColors.primary.withValues(alpha: 0.2),
+                  AppColors.primary.withValues(alpha: 0.0),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static String _formatarValorEixoCompacto(double valor) {
+    final abs = valor.abs();
+    if (abs >= 1_000_000) {
+      return 'R\$ ${(valor / 1_000_000).toStringAsFixed(1)}M';
+    }
+    if (abs >= 1_000) {
+      return 'R\$ ${(valor / 1_000).toStringAsFixed(0)}k';
+    }
+    return 'R\$ ${valor.toStringAsFixed(0)}';
+  }
+
+  static final RegExp _firestoreSecondsRegex = RegExp(r'_seconds["\s:]+(\d+)');
+
+  static DateTime? _parseData(String raw) {
+    if (raw.isEmpty) return null;
+
+    final iso = DateTime.tryParse(raw);
+    if (iso != null) return iso;
+
+    final match = _firestoreSecondsRegex.firstMatch(raw);
+    if (match != null) {
+      final segundos = int.tryParse(match.group(1)!);
+      if (segundos != null) {
+        return DateTime.fromMillisecondsSinceEpoch(segundos * 1000);
+      }
+    }
+
+    final ms = int.tryParse(raw);
+    if (ms != null) return DateTime.fromMillisecondsSinceEpoch(ms);
+
+    return null;
+  }
+}
+
+String _formatBRL(double valor) {
+  final negative = valor < 0;
+  final abs = valor.abs().toStringAsFixed(2);
+  final parts = abs.split('.');
+  final intPart = parts[0];
+  final decPart = parts[1];
+  final buffer = StringBuffer();
+  for (int i = 0; i < intPart.length; i++) {
+    if (i > 0 && (intPart.length - i) % 3 == 0) buffer.write('.');
+    buffer.write(intPart[i]);
+  }
+  return '${negative ? '-' : ''}R\$ $buffer,$decPart';
+}
+
+String _formatSignedBRL(double valor) {
+  if (valor >= 0) return '+${_formatBRL(valor)}';
+  return _formatBRL(valor);
+}
+
+String _formatPercent(double valor) {
+  final sign = valor >= 0 ? '+' : '';
+  final formatted = valor.toStringAsFixed(2).replaceAll('.', ',');
+  return '$sign$formatted%';
 }

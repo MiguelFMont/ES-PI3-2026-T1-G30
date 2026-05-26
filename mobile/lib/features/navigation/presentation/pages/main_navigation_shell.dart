@@ -26,11 +26,11 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
     PerfilPage(),
   ];
 
-  static const List<BottomNavigationBarItem> _items = [
+  static final List<BottomNavigationBarItem> _items = [
     BottomNavigationBarItem(
-      icon: Icon(Icons.home_outlined),
-      activeIcon: Icon(Icons.home_rounded),
-      label: 'Início',
+      icon: Icon(Icons.grid_view_outlined, color: Colors.grey[600]),
+      activeIcon: const Icon(Icons.grid_view_rounded, color: AppColors.primary),
+      label: 'Dashboard',
     ),
     BottomNavigationBarItem(
       icon: Icon(Icons.pie_chart_outline_rounded),
