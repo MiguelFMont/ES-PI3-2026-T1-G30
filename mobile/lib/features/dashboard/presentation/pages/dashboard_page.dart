@@ -2,7 +2,13 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../app/routes.dart';
+import '../../../../core/storage/session_manager.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../features/perfil/data/datasource/perfil_datasource.dart';
+import '../../../../features/perfil/domain/perfil_models.dart';
+import '../../../../features/startups/data/startup_service.dart';
+import '../../../../features/startups/domain/startup_model.dart';
 import '../../../../shared/formatters/reais_formatter.dart';
 import '../../data/datasources/dashboard_datasource.dart';
 import '../../data/models/dashboard_models.dart';
@@ -16,11 +22,15 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   final DashboardDatasource _datasource = DashboardDatasource();
+  final PerfilDatasource _perfilDatasource = PerfilDatasource();
+  final StartupService _startupService = StartupService();
 
   bool _isLoading = true;
   DashboardSummaryModel? _summary;
   List<HoldingModel>? _holdings;
   List<TransactionModel>? _transactions;
+  List<Startup>? _startupsDestaque;
+  String _primeiroNome = '';
 
   String _periodoSelecionado = '1M';
 
@@ -32,25 +42,99 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Future<void> _carregarDados() async {
     try {
-      final results = await Future.wait([
-        _datasource.getSummary(),
-        _datasource.getHoldings(),
-        _datasource.getTransactions(),
-      ]);
+      final summaryFuture = _datasource.getSummary();
+      final holdingsFuture = _datasource.getHoldings();
+      final transactionsFuture = _datasource.getTransactions();
+      final perfilFuture = _opcional(
+        _perfilDatasource.buscarPerfil().then(PerfilModel.fromJson),
+      );
+      final startupsFuture = _opcional(_startupService.listarStartups());
+
+      final summary = await summaryFuture;
+      final holdings = await holdingsFuture;
+      final transactions = await transactionsFuture;
+      final perfil = await perfilFuture;
+      final startups = await startupsFuture;
 
       if (!mounted) return;
 
       setState(() {
-        _summary = results[0] as DashboardSummaryModel;
-        _holdings = results[1] as List<HoldingModel>;
-        _transactions = results[2] as List<TransactionModel>;
+        _summary = summary;
+        _holdings = holdings;
+        _transactions = transactions;
+        _primeiroNome = _primeiroNomeDe(perfil?.nome);
+        _startupsDestaque = _selecionarDestaques(startups);
         _isLoading = false;
       });
     } catch (e) {
       debugPrint('Erro ao carregar dashboard: $e');
+      if (e.toString().toLowerCase().contains('sessao expirada') ||
+          e.toString().toLowerCase().contains('sessão expirada')) {
+        await SessionManager.fazerLogout();
+        if (!mounted) return;
+        Navigator.of(
+          context,
+        ).pushNamedAndRemoveUntil(AppRoutes.login, (_) => false);
+        return;
+      }
       if (!mounted) return;
       setState(() => _isLoading = false);
     }
+  }
+
+  Future<T?> _opcional<T>(Future<T> future) =>
+      future.then<T?>((v) => v, onError: (_) => null);
+
+  String _primeiroNomeDe(String? nomeCompleto) {
+    final partes = (nomeCompleto ?? '').trim().split(RegExp(r'\s+'));
+    return partes.first;
+  }
+
+  List<DashboardChartPointModel> _filtrarPontosPorPeriodo(
+    List<DashboardChartPointModel> pontos,
+    String periodo,
+  ) {
+    if (pontos.isEmpty) return pontos;
+
+    final agora = DateTime.now();
+    DateTime inicio;
+    switch (periodo) {
+      case '1D':
+        inicio = agora.subtract(const Duration(days: 1));
+        break;
+      case '1W':
+        inicio = agora.subtract(const Duration(days: 7));
+        break;
+      case '1M':
+        inicio = agora.subtract(const Duration(days: 30));
+        break;
+      case '6M':
+        inicio = agora.subtract(const Duration(days: 180));
+        break;
+      case 'YTD':
+        inicio = DateTime(agora.year);
+        break;
+      default:
+        return pontos;
+    }
+
+    final filtrados = pontos.where((p) {
+      final data = DateTime.tryParse(p.data);
+      if (data == null) return true;
+      return !data.isBefore(inicio);
+    }).toList();
+
+    return filtrados.isEmpty ? pontos : filtrados;
+  }
+
+  List<Startup> _selecionarDestaques(List<Startup>? startups) {
+    if (startups == null || startups.isEmpty) return const [];
+    final ordenadas = [...startups]..sort((a, b) {
+      final varA = a.variacaoPreco ?? 0;
+      final varB = b.variacaoPreco ?? 0;
+      return varB.compareTo(varA);
+    });
+    return ordenadas.take(3).toList();
   }
 
   @override
@@ -58,34 +142,8 @@ class _DashboardPageState extends State<DashboardPage> {
     return SafeArea(child: _buildDashboardContent());
   }
 
-  void _navegacaoSegura(
-    BuildContext context,
-    String rotaOficial,
-    String tituloFallback,
-  ) {
-    try {
-      Navigator.pushNamed(context, rotaOficial).catchError((Object _) {
-        if (!mounted) return null;
-        _mostrarFallback(context, tituloFallback);
-        return null;
-      });
-    } catch (_) {
-      _mostrarFallback(context, tituloFallback);
-    }
-  }
-
-  void _mostrarFallback(BuildContext context, String titulo) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => Scaffold(
-          appBar: AppBar(title: Text(titulo)),
-          body: Center(
-            child: Text('A tela de $titulo será implementada em breve.'),
-          ),
-        ),
-      ),
-    );
+  void _abrirExtrato() {
+    Navigator.pushNamed(context, AppRoutes.portfolio);
   }
 
   Widget _buildDashboardContent() {
@@ -136,16 +194,19 @@ class _DashboardPageState extends State<DashboardPage> {
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Olá, João',
-                      style: TextStyle(color: Colors.white70, fontSize: 14),
+                      _primeiroNome.isEmpty ? 'Olá!' : 'Olá, $_primeiroNome',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                      ),
                     ),
-                    SizedBox(height: 6),
-                    Text(
+                    const SizedBox(height: 6),
+                    const Text(
                       'Painel do Investidor',
                       style: TextStyle(
                         color: Colors.white,
@@ -164,7 +225,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   borderRadius: BorderRadius.circular(18),
                 ),
                 child: InkWell(
-                  onTap: () => Navigator.pushNamed(context, '/perfil'),
+                  onTap: () => Navigator.pushNamed(context, AppRoutes.perfil),
                   borderRadius: BorderRadius.circular(18),
                   child: const Icon(
                     Icons.person_outline_rounded,
@@ -311,7 +372,7 @@ class _DashboardPageState extends State<DashboardPage> {
               icon: Icons.rocket_launch_rounded,
               label: 'Startups',
               color: AppColors.primary,
-              onTap: () => Navigator.pushNamed(context, '/catalog'),
+              onTap: () => Navigator.pushNamed(context, AppRoutes.catalog),
             ),
           ),
           const SizedBox(width: 10),
@@ -320,7 +381,7 @@ class _DashboardPageState extends State<DashboardPage> {
               icon: Icons.swap_horiz_rounded,
               label: 'Balcão',
               color: AppColors.accent,
-              onTap: () => Navigator.pushNamed(context, '/balcao'),
+              onTap: () => Navigator.pushNamed(context, AppRoutes.balcao),
             ),
           ),
           const SizedBox(width: 10),
@@ -329,7 +390,7 @@ class _DashboardPageState extends State<DashboardPage> {
               icon: Icons.work_outline_rounded,
               label: 'Carteira',
               color: AppColors.chart4,
-              onTap: () => Navigator.pushNamed(context, '/portfolio'),
+              onTap: () => Navigator.pushNamed(context, AppRoutes.portfolio),
             ),
           ),
         ],
@@ -338,7 +399,11 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildGraficoEvolucao(List<DashboardChartPointModel> pontos) {
-    final temDados = _summary != null && pontos.isNotEmpty;
+    final pontosFiltrados = _filtrarPontosPorPeriodo(
+      pontos,
+      _periodoSelecionado,
+    );
+    final temDados = _summary != null && pontosFiltrados.isNotEmpty;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
@@ -382,7 +447,7 @@ class _DashboardPageState extends State<DashboardPage> {
             SizedBox(
               height: 180,
               child: temDados
-                  ? _EvolucaoLineChart(pontos: pontos)
+                  ? _EvolucaoLineChart(pontos: pontosFiltrados)
                   : const Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -450,6 +515,9 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildStartupsDestaque() {
+    final startups = _startupsDestaque ?? const <Startup>[];
+    const cores = [AppColors.success, AppColors.chart5, AppColors.chart4];
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
       child: Column(
@@ -459,35 +527,31 @@ class _DashboardPageState extends State<DashboardPage> {
             titulo: 'Startups em destaque',
             acao: 'Ver todas',
             onAcaoTap: () =>
-                _navegacaoSegura(context, '/catalog', 'Catálogo de Startups'),
+                Navigator.pushNamed(context, AppRoutes.catalog),
           ),
           const SizedBox(height: 14),
-          SizedBox(
-            height: 132,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: const [
-                _OportunidadeCard(
-                  nome: 'AgriTech Pro',
-                  setor: 'Agritech',
-                  variacao: '+8,2%',
-                  cor: AppColors.success,
-                ),
-                _OportunidadeCard(
-                  nome: 'HealthAI',
-                  setor: 'Saúde',
-                  variacao: '+6,4%',
-                  cor: AppColors.chart5,
-                ),
-                _OportunidadeCard(
-                  nome: 'EducaNext',
-                  setor: 'Educação',
-                  variacao: '+5,1%',
-                  cor: AppColors.chart4,
-                ),
-              ],
+          if (startups.isEmpty)
+            const _EstadoVazio(
+              icone: Icons.rocket_launch_outlined,
+              mensagem: 'Sem startups em destaque por enquanto.',
+            )
+          else
+            SizedBox(
+              height: 132,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: startups.length,
+                itemBuilder: (_, i) {
+                  final startup = startups[i];
+                  return _OportunidadeCard(
+                    nome: startup.nome,
+                    setor: startup.setor,
+                    variacao: _formatPercent(startup.variacaoPreco ?? 0),
+                    cor: cores[i % cores.length],
+                  );
+                },
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -503,7 +567,7 @@ class _DashboardPageState extends State<DashboardPage> {
             titulo: 'Minhas posições',
             acao: 'Ver carteira',
             onAcaoTap: () =>
-                _navegacaoSegura(context, '/portfolio', 'Carteira'),
+                Navigator.pushNamed(context, AppRoutes.portfolio),
           ),
           const SizedBox(height: 14),
           if (holdings.isEmpty)
@@ -534,8 +598,7 @@ class _DashboardPageState extends State<DashboardPage> {
           _SecaoTitulo(
             titulo: 'Atividade recente',
             acao: 'Ver extrato',
-            onAcaoTap: () =>
-                _navegacaoSegura(context, '/extrato', 'Extrato da Carteira'),
+            onAcaoTap: _abrirExtrato,
           ),
           const SizedBox(height: 14),
           if (transacoesExibidas.isEmpty)
@@ -748,7 +811,7 @@ class _PosicaoCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  holding.nomeStartup.isEmpty ? '—' : holding.nomeStartup,
+                  holding.nomeStartup.isEmpty ? 'â€”' : holding.nomeStartup,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -819,7 +882,7 @@ class _AtividadeCard extends StatelessWidget {
     final subtitle = [
       if (transaction.detalhes.isNotEmpty) transaction.detalhes,
       if (transaction.data.isNotEmpty) transaction.data,
-    ].join(' · ');
+    ].join(' Â· ');
     final valorExibido = isCompra
         ? -transaction.valor.abs()
         : transaction.valor.abs();
@@ -856,7 +919,7 @@ class _AtividadeCard extends StatelessWidget {
               children: [
                 Text(
                   transaction.nomeStartup.isEmpty
-                      ? '—'
+                      ? 'â€”'
                       : transaction.nomeStartup,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -870,7 +933,7 @@ class _AtividadeCard extends StatelessWidget {
                 Text(
                   subtitle.isEmpty
                       ? tipoExibido
-                      : '$tipoExibido · $subtitle',
+                      : '$tipoExibido Â· $subtitle',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -1079,7 +1142,7 @@ class _EvolucaoLineChart extends StatelessWidget {
               final i = spot.x.toInt().clamp(0, pontos.length - 1);
               final dt = datas[i];
               final dataLegivel = dt == null
-                  ? '—'
+                  ? 'â€”'
                   : DateFormat('dd/MM/yyyy').format(dt);
               return LineTooltipItem(
                 '${formatarReais(spot.y)}\nData: $dataLegivel',

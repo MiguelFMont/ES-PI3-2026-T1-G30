@@ -7,30 +7,8 @@ import '../../../../core/storage/session_manager.dart';
 import '../models/dashboard_models.dart';
 
 class DashboardDatasource {
-  Future<Map<String, String>> _getHeaders() async {
-    final token = await SessionManager.getToken();
-
-    if (token == null || token.isEmpty) {
-      throw Exception('Sessao expirada. Faca login novamente.');
-    }
-
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer $token',
-    };
-  }
-
   Future<DashboardSummaryModel> getSummary() async {
-    final response = await http.get(
-      Uri.parse('${AppHttpClient.baseUrl}/wallet/dashboard'),
-      headers: await _getHeaders(),
-    );
-
-    if (response.statusCode != 200) {
-      throw Exception('Erro ao buscar resumo do dashboard.');
-    }
-
-    final body = _decodeResponse(response.body);
+    final body = await _get('/wallet/dashboard', 'Erro ao buscar resumo do dashboard.');
     final dashboard = body['dashboard'];
 
     if (dashboard is! Map<String, dynamic>) {
@@ -41,56 +19,49 @@ class DashboardDatasource {
   }
 
   Future<List<HoldingModel>> getHoldings() async {
-    final response = await http.get(
-      Uri.parse('${AppHttpClient.baseUrl}/wallet/holdings'),
-      headers: await _getHeaders(),
-    );
-
-    if (response.statusCode != 200) {
-      throw Exception('Erro ao buscar posicoes investidas.');
-    }
-
-    final body = _decodeResponse(response.body);
-    final items = body['items'];
-
-    if (items is! List) return const [];
-
-    return items
-        .whereType<Map>()
-        .map((item) => HoldingModel.fromJson(Map<String, dynamic>.from(item)))
-        .toList();
+    final body = await _get('/wallet/holdings', 'Erro ao buscar posicoes investidas.');
+    return _parseItems(body, HoldingModel.fromJson);
   }
 
   Future<List<TransactionModel>> getTransactions() async {
+    final body = await _get('/wallet/transactions', 'Erro ao buscar transacoes do dashboard.');
+    return _parseItems(body, TransactionModel.fromJson);
+  }
+
+  Future<Map<String, dynamic>> _get(String path, String errorMessage) async {
+    final token = await SessionManager.getToken();
+    if (token == null || token.isEmpty) {
+      throw Exception('Sessao expirada. Faca login novamente.');
+    }
+
     final response = await http.get(
-      Uri.parse('${AppHttpClient.baseUrl}/wallet/transactions'),
-      headers: await _getHeaders(),
+      Uri.parse('${AppHttpClient.baseUrl}$path'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
     );
 
     if (response.statusCode != 200) {
-      throw Exception('Erro ao buscar transacoes do dashboard.');
+      throw Exception(errorMessage);
     }
 
-    final body = _decodeResponse(response.body);
-    final items = body['items'];
-
-    if (items is! List) return const [];
-
-    return items
-        .whereType<Map>()
-        .map(
-          (item) => TransactionModel.fromJson(Map<String, dynamic>.from(item)),
-        )
-        .toList();
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw Exception('Resposta invalida do servidor.');
+    }
+    return decoded;
   }
 
-  Map<String, dynamic> _decodeResponse(String body) {
-    final decoded = jsonDecode(body);
-
-    if (decoded is Map<String, dynamic>) {
-      return decoded;
-    }
-
-    throw Exception('Resposta invalida do servidor.');
+  List<T> _parseItems<T>(
+    Map<String, dynamic> body,
+    T Function(Map<String, dynamic>) fromJson,
+  ) {
+    final items = body['items'];
+    if (items is! List) return const [];
+    return items
+        .whereType<Map>()
+        .map((item) => fromJson(Map<String, dynamic>.from(item)))
+        .toList();
   }
 }
