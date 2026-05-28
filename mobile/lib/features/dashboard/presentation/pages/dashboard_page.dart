@@ -67,7 +67,6 @@ class _DashboardPageState extends State<DashboardPage> {
         _isLoading = false;
       });
     } catch (e) {
-      debugPrint('Erro ao carregar dashboard: $e');
       if (e.toString().toLowerCase().contains('sessao expirada') ||
           e.toString().toLowerCase().contains('sessão expirada')) {
         await SessionManager.fazerLogout();
@@ -143,7 +142,7 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   void _abrirExtrato() {
-    Navigator.pushNamed(context, AppRoutes.portfolio);
+    Navigator.pushNamed(context, AppRoutes.extrato);
   }
 
   Widget _buildDashboardContent() {
@@ -548,6 +547,9 @@ class _DashboardPageState extends State<DashboardPage> {
                     setor: startup.setor,
                     variacao: _formatPercent(startup.variacaoPreco ?? 0),
                     cor: cores[i % cores.length],
+                    corVariacao: (startup.variacaoPreco ?? 0) >= 0
+                        ? AppColors.success
+                        : AppColors.destructive,
                   );
                 },
               ),
@@ -713,12 +715,14 @@ class _OportunidadeCard extends StatelessWidget {
   final String setor;
   final String variacao;
   final Color cor;
+  final Color corVariacao;
 
   const _OportunidadeCard({
     required this.nome,
     required this.setor,
     required this.variacao,
     required this.cor,
+    required this.corVariacao,
   });
 
   @override
@@ -766,8 +770,8 @@ class _OportunidadeCard extends StatelessWidget {
               ),
               Text(
                 variacao,
-                style: const TextStyle(
-                  color: AppColors.success,
+                style: TextStyle(
+                  color: corVariacao,
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
                 ),
@@ -811,7 +815,7 @@ class _PosicaoCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  holding.nomeStartup.isEmpty ? 'â€”' : holding.nomeStartup,
+                  holding.nomeStartup.isEmpty ? '—' : holding.nomeStartup,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -879,10 +883,14 @@ class _AtividadeCard extends StatelessWidget {
             ? 'Venda'
             : transaction.tipo;
     final cor = isCompra ? AppColors.destructive : AppColors.success;
+    final dtParsed = transaction.data.isNotEmpty ? DateTime.tryParse(transaction.data) : null;
+    final dataFormatada = (dtParsed != null && dtParsed.millisecondsSinceEpoch != 0)
+        ? DateFormat('dd/MM/yyyy').format(dtParsed)
+        : '';
     final subtitle = [
       if (transaction.detalhes.isNotEmpty) transaction.detalhes,
-      if (transaction.data.isNotEmpty) transaction.data,
-    ].join(' Â· ');
+      if (dataFormatada.isNotEmpty) dataFormatada,
+    ].join(' · ');
     final valorExibido = isCompra
         ? -transaction.valor.abs()
         : transaction.valor.abs();
@@ -919,7 +927,7 @@ class _AtividadeCard extends StatelessWidget {
               children: [
                 Text(
                   transaction.nomeStartup.isEmpty
-                      ? 'â€”'
+                      ? '—'
                       : transaction.nomeStartup,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -933,7 +941,7 @@ class _AtividadeCard extends StatelessWidget {
                 Text(
                   subtitle.isEmpty
                       ? tipoExibido
-                      : '$tipoExibido Â· $subtitle',
+                      : '$tipoExibido · $subtitle',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -1142,7 +1150,7 @@ class _EvolucaoLineChart extends StatelessWidget {
               final i = spot.x.toInt().clamp(0, pontos.length - 1);
               final dt = datas[i];
               final dataLegivel = dt == null
-                  ? 'â€”'
+                  ? '—'
                   : DateFormat('dd/MM/yyyy').format(dt);
               return LineTooltipItem(
                 '${formatarReais(spot.y)}\nData: $dataLegivel',
@@ -1193,26 +1201,9 @@ class _EvolucaoLineChart extends StatelessWidget {
     return 'R\$ ${valor.toStringAsFixed(0)}';
   }
 
-  static final RegExp _firestoreSecondsRegex = RegExp(r'_seconds["\s:]+(\d+)');
-
   static DateTime? _parseData(String raw) {
     if (raw.isEmpty) return null;
-
-    final iso = DateTime.tryParse(raw);
-    if (iso != null) return iso;
-
-    final match = _firestoreSecondsRegex.firstMatch(raw);
-    if (match != null) {
-      final segundos = int.tryParse(match.group(1)!);
-      if (segundos != null) {
-        return DateTime.fromMillisecondsSinceEpoch(segundos * 1000);
-      }
-    }
-
-    final ms = int.tryParse(raw);
-    if (ms != null) return DateTime.fromMillisecondsSinceEpoch(ms);
-
-    return null;
+    return DateTime.tryParse(raw);
   }
 }
 

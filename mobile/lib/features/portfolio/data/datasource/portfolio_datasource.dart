@@ -89,20 +89,22 @@ class PortfolioDatasource {
 
   // pega o histórico de operações do usuário
   // usa o token JWT para identificar o usuário
-  Future<List<OperacaoModel>> getOperacoes() async {
+  Future<List<OperacaoModel>> getTransactions() async {
     final url = Uri.parse('$_baseUrl/wallet/transactions');
     final response = await http.get(url, headers: _headers);
     if (response.statusCode != 200) {
       throw Exception('Erro ao buscar histórico de operações');
     }
     final Map<String, dynamic> body = jsonDecode(response.body);
-    final List items = body['items'] as List;
+    final items = body['items'] as List<dynamic>? ?? const [];
     // percorre a lista e converte cada item em operacao model
     return items.map((item) {
-      final map = item as Map<String, dynamic>;
-      return OperacaoModel.fromMap(map['id'], map);
+      final map = Map<String, dynamic>.from(item as Map);
+      return OperacaoModel.fromJson(map);
     }).toList();
   }
+
+  Future<List<OperacaoModel>> getOperacoes() => getTransactions();
 
   // pega lista de startups disponíveis para investimento
   Future<List<StartupModel>> getStartups() async {
