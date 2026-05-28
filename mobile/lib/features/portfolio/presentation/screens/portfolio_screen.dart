@@ -278,7 +278,7 @@ class _PortfolioHeader extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'O que eu tenho · Visão consolidada',
+            'O que eu tenho',
             style: GoogleFonts.inter(
               fontSize: 13,
               color: Colors.white.withValues(alpha: 0.82),

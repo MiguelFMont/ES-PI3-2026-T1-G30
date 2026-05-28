@@ -37,7 +37,7 @@ class ParticipacaoModel {
       startupId: map['startupId'] ?? '',
       quantidade: (map['quantidade'] ?? 0).toInt(),
       quantidadeBloqueada: (map['quantidadeBloqueada'] ?? 0).toInt(),
-      precoMedioCentavos: (map['precoMedioCentavos'] ?? 0).toInt(),
+      precoMedioCentavos: (map['precoMedioCentavos'] ?? 0).toDouble(),
       createdAt: DateTime.parse(map['createdAt']),
       updatedAt: DateTime.parse(map['updatedAt']),
     );

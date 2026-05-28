@@ -98,6 +98,13 @@ class _PerformanceChartState extends State<PerformanceChart> {
     );
   }
 
+  // calcula o intervalo entre as linhas horizontais 
+  double get _intervalo {
+    final diff = _maxY - _minY;
+    if (diff == 0) return 1;
+    return diff / 4;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -166,7 +173,7 @@ class _PerformanceChartState extends State<PerformanceChart> {
                 gridData: FlGridData(
                   show: true,
                   drawVerticalLine: false,
-                  horizontalInterval: (_maxY - _minY) / 4,
+                  horizontalInterval: _intervalo,
                   getDrawingHorizontalLine: (_) =>
                       const FlLine(color: Color(0xFFECEFF1), strokeWidth: 1),
                 ),
@@ -182,7 +189,7 @@ class _PerformanceChartState extends State<PerformanceChart> {
                     sideTitles: SideTitles(
                       showTitles: true,
                       reservedSize: 48,
-                      interval: (_maxY - _minY) / 4,
+                      interval: _intervalo,
                       getTitlesWidget: (value, meta) => Text(
                         _formatarEixo(value),
                         style: GoogleFonts.inter(
