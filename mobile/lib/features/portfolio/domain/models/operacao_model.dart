@@ -49,6 +49,8 @@ class OperacaoModel {
   // verifica se é uma operação de compra ou venda
   bool get isCompra => tipo == 'COMPRA_DIRETA' || tipo == 'COMPRA_BALCAO';
   bool get isVenda => tipo == 'VENDA_DIRETA' || tipo == 'VENDA_BALCAO';
+  bool get isSaque => tipo == 'SACAR_SALDO';
+  bool get isDeposito => tipo == 'ADICIONAR_SALDO';
 
   // método factory - converte um map (JSON do Firestore) em OperacaoModel
   // ele cria uma instancia da classe (objeto dart) a partir dos dados do Firestore

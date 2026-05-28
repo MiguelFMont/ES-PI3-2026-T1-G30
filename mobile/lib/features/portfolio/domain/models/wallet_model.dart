@@ -56,18 +56,32 @@ class WalletModel {
 
   // extrai os pontos do gráfico do dashboard
   static List<double> _pontosFromDashboard(Map<String, dynamic> dashboardMap) {
+    // final que pega os pontos do gráfico 
     final pontos = dashboardMap['pontosGrafico'];
+    // se não forem uma lista, retorna uma lista vazia
     if (pontos is! List) return const [];
 
-    return pontos
-        .map((ponto) {
-          if (ponto is num) return ponto.toDouble();
-          if (ponto is Map<String, dynamic>) return _toDouble(ponto['valor']);
-          if (ponto is Map) return _toDouble(ponto['valor']);
-          return 0.0;
-        })
-        .where((valor) => valor > 0)
-        .toList();
+    // variável que guarda o saldo acumulado 
+    double saldoAcumulado = 0;
+    // lista que guarda os pontos do gráfico do saldo acumulado
+    final List<double> resultado = [];
+
+    // percorre os pontos do gráfico
+    // eles podem ser números ou maps com a chave 'valor'
+    for (final ponto in pontos) {
+      double valor = 0;
+      if (ponto is num) {
+        valor = ponto.toDouble();
+      } else if (ponto is Map) {
+        valor = _toDouble(ponto['valor']);
+      }
+      // soma esse valor
+      saldoAcumulado += valor;
+      // adiciona na lista de resultado 
+      resultado.add(saldoAcumulado);
+    }
+    // retorna os pontos do gráfico 
+    return resultado.where((v) => v > 0).toList();
   }
 
   // método factory que cria um walletmoedl a partir do dados do dashboard, participações e operações

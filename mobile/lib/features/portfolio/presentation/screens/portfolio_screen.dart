@@ -36,7 +36,15 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
   @override
   void initState() {
     super.initState();
-    _carregarDados();
+  }
+
+  // garante que os dados estejam carregados quando a tela for exibida 
+  @override 
+  void didUpdateWidget(covariant PortfolioScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if(_wallet == null && !_isLoading){
+      _carregarDados();
+    }
   }
 
   // carrega os dados da carteira (saldo, participações e operações) e os nomes das startups
