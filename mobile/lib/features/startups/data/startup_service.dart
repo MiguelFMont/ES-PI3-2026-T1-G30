@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:mesclainvest/core/network/http_client.dart';
+import 'package:mesclainvest/core/storage/session_manager.dart';
 
 import '../domain/startup_model.dart';
 import 'startup_mock.dart';
@@ -124,13 +125,68 @@ class StartupService {
     }
   }
 
-  Future<bool> investirStartup(String startupId, double valorAInvestir) async {
-    if (startupId.trim().isEmpty || valorAInvestir.isNaN) {
+  Future<bool> investirStartup(String startupId, int quantidade) async {
+    final normalizedStartupId = startupId.trim();
+    if (normalizedStartupId.isEmpty || quantidade <= 0) {
       return false;
     }
 
-    await Future.delayed(const Duration(seconds: 2));
-    return true;
+    if (kUseMock) {
+      await Future.delayed(const Duration(seconds: 2));
+      return true;
+    }
+
+    final url = _buildUri('/trades/direct-buy');
+
+    try {
+      final response = await http
+          .post(
+            url,
+            headers: await _authenticatedHeaders(),
+            body: jsonEncode({
+              'startupId': normalizedStartupId,
+              'quantidade': quantidade,
+            }),
+          )
+          .timeout(_requestTimeout);
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return true;
+      }
+
+      throw StartupApiException(
+        _extractErrorMessage(response.body) ??
+            _resolveInvestmentErrorMessage(response.statusCode),
+        response.statusCode,
+      );
+    } on TimeoutException {
+      throw StartupApiException(
+        'A compra demorou para responder. Tente novamente.',
+      );
+    } on SocketException {
+      throw StartupApiException(
+        'Não foi possível conectar ao servidor para concluir a compra.',
+      );
+    } catch (e) {
+      if (e is StartupApiException) {
+        rethrow;
+      }
+      throw StartupApiException(
+        'Não foi possível concluir o investimento agora.',
+      );
+    }
+  }
+
+  Future<Map<String, String>> _authenticatedHeaders() async {
+    final token = await SessionManager.getToken();
+    if (token == null || token.isEmpty) {
+      throw StartupApiException('Sessão expirada. Faça login novamente.', 401);
+    }
+
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
   }
 
   Map<String, dynamic> _decodeJsonObject(String body) {
@@ -157,6 +213,16 @@ class StartupService {
         'Erro ao buscar startups: ${response.statusCode}';
   }
 
+  String _resolveInvestmentErrorMessage(int statusCode) {
+    return switch (statusCode) {
+      401 => 'Sessão expirada. Faça login novamente.',
+      404 => 'Startup não encontrada.',
+      409 => 'Não foi possível concluir a compra com os dados atuais.',
+      >= 500 => 'O serviço de investimentos está indisponível no momento.',
+      _ => 'Erro ao investir na startup: $statusCode',
+    };
+  }
+
   String? _extractErrorMessage(String body) {
     try {
       final decoded = jsonDecode(body);
@@ -164,6 +230,16 @@ class StartupService {
         final error = decoded['error'];
         if (error is String && error.trim().isNotEmpty) {
           return error.trim();
+        }
+        if (error is Map) {
+          final message = error['message'];
+          if (message is String && message.trim().isNotEmpty) {
+            return message.trim();
+          }
+        }
+        final message = decoded['message'];
+        if (message is String && message.trim().isNotEmpty) {
+          return message.trim();
         }
       }
     } on FormatException {
