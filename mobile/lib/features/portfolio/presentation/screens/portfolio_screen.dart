@@ -36,6 +36,7 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
   @override
   void initState() {
     super.initState();
+    _carregarDados();
   }
 
   // garante que os dados estejam carregados quando a tela for exibida 
