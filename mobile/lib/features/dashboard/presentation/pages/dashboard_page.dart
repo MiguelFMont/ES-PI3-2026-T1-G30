@@ -30,6 +30,7 @@ class _DashboardPageState extends State<DashboardPage> {
   List<HoldingModel>? _holdings;
   List<TransactionModel>? _transactions;
   List<Startup>? _startupsDestaque;
+  List<Startup> _todasStartups = const [];
   String _primeiroNome = '';
 
   String _periodoSelecionado = '1M';
@@ -63,6 +64,7 @@ class _DashboardPageState extends State<DashboardPage> {
         _holdings = holdings;
         _transactions = transactions;
         _primeiroNome = _primeiroNomeDe(perfil?.nome);
+        _todasStartups = startups ?? const [];
         _startupsDestaque = _selecionarDestaques(startups);
         _isLoading = false;
       });
@@ -164,105 +166,98 @@ class _DashboardPageState extends State<DashboardPage> {
       );
     }
 
-    return CustomScrollView(
-      slivers: [
-        SliverToBoxAdapter(child: _buildHeader(summary)),
-        SliverToBoxAdapter(child: _buildHeroCard(summary)),
-        SliverToBoxAdapter(child: _buildAcoesRapidas()),
-        SliverToBoxAdapter(child: _buildGraficoEvolucao(summary.pontosGrafico)),
-        SliverToBoxAdapter(child: _buildStartupsDestaque()),
-        SliverToBoxAdapter(child: _buildMinhasPosicoes(_holdings ?? const [])),
-        SliverToBoxAdapter(
-          child: _buildAtividadeRecente(_transactions ?? const []),
-        ),
-        const SliverToBoxAdapter(child: SizedBox(height: 24)),
-      ],
+    return RefreshIndicator(
+      color: AppColors.primary,
+      onRefresh: _carregarDados,
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverToBoxAdapter(child: _buildTopSection(summary)),
+          SliverToBoxAdapter(child: _buildAcoesRapidas()),
+          SliverToBoxAdapter(
+            child: _buildGraficoEvolucao(summary.pontosGrafico),
+          ),
+          SliverToBoxAdapter(
+            child: _buildMinhasPosicoes(_holdings ?? const [], _todasStartups),
+          ),
+          SliverToBoxAdapter(child: _buildStartupsDestaque()),
+          SliverToBoxAdapter(
+            child: _buildAtividadeRecente(_transactions ?? const []),
+          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 24)),
+        ],
+      ),
     );
   }
 
-  Widget _buildHeader(DashboardSummaryModel summary) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
-      decoration: const BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.only(bottomLeft: Radius.circular(32)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildTopSection(DashboardSummaryModel summary) {
+    final greeting = _primeiroNome.isEmpty ? 'Olá!' : 'Olá, $_primeiroNome 👋';
+
+    return SizedBox(
+      height: 338,
+      child: Stack(
+        clipBehavior: Clip.none,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _primeiroNome.isEmpty ? 'Olá!' : 'Olá, $_primeiroNome',
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      'Painel do Investidor',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 26,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Ink(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.16),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: InkWell(
-                  onTap: () => Navigator.pushNamed(context, AppRoutes.perfil),
-                  borderRadius: BorderRadius.circular(18),
-                  child: const Icon(
-                    Icons.person_outline_rounded,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 26),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(16),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 226,
+            child: CustomPaint(
+              painter: const _DashboardHeaderPainter(),
+              child: const SizedBox.expand(),
             ),
+          ),
+          Positioned(
+            top: 32,
+            left: 27,
+            right: 22,
             child: Row(
               children: [
-                const Icon(
-                  Icons.account_balance_wallet_outlined,
-                  color: Colors.white,
-                ),
-                const SizedBox(width: 12),
-                const Expanded(
-                  child: Text(
-                    'Saldo disponível',
-                    style: TextStyle(color: Colors.white70, fontSize: 13),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        greeting,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      const Text(
+                        'Painel do Investidor',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 21,
+                          fontWeight: FontWeight.w800,
+                          height: 1.05,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                Text(
-                  _formatBRL(summary.saldoDisponivel),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
+                const SizedBox(width: 10),
+                _SaldoPill(valor: summary.saldoDisponivel),
               ],
+            ),
+          ),
+          Positioned(
+            top: 102,
+            left: 27,
+            right: 22,
+            child: _ResumoCarteiraCard(
+              summary: summary,
+              pontos: _filtrarPontosPorPeriodo(
+                summary.pontosGrafico,
+                '1M',
+              ),
             ),
           ),
         ],
@@ -270,100 +265,9 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildHeroCard(DashboardSummaryModel summary) {
-    final retornoCor = summary.retorno >= 0
-        ? AppColors.success
-        : AppColors.destructive;
-    final lucroCor = summary.lucro >= 0
-        ? AppColors.success
-        : AppColors.destructive;
-
-    return Transform.translate(
-      offset: const Offset(0, -18),
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 20),
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: AppColors.card,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 14,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Valor total da carteira',
-              style: TextStyle(color: AppColors.mutedForeground, fontSize: 13),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    _formatBRL(summary.valorTotalCarteira),
-                    style: const TextStyle(
-                      color: AppColors.foreground,
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: retornoCor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    _formatPercent(summary.retorno),
-                    style: TextStyle(
-                      color: retornoCor,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            const Divider(height: 1),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: _ResumoItem(
-                    label: 'Investido',
-                    valor: _formatBRL(summary.totalInvestido),
-                    cor: AppColors.foreground,
-                  ),
-                ),
-                Expanded(
-                  child: _ResumoItem(
-                    label: 'Lucro',
-                    valor: _formatSignedBRL(summary.lucro),
-                    cor: lucroCor,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildAcoesRapidas() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 2, 20, 24),
+      padding: const EdgeInsets.fromLTRB(27, 22, 22, 22),
       child: Row(
         children: [
           Expanded(
@@ -374,7 +278,7 @@ class _DashboardPageState extends State<DashboardPage> {
               onTap: () => Navigator.pushNamed(context, AppRoutes.catalog),
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           Expanded(
             child: _AcaoRapida(
               icon: Icons.swap_horiz_rounded,
@@ -383,13 +287,22 @@ class _DashboardPageState extends State<DashboardPage> {
               onTap: () => Navigator.pushNamed(context, AppRoutes.balcao),
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           Expanded(
             child: _AcaoRapida(
-              icon: Icons.work_outline_rounded,
+              icon: Icons.business_center_outlined,
               label: 'Carteira',
               color: AppColors.chart4,
               onTap: () => Navigator.pushNamed(context, AppRoutes.portfolio),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _AcaoRapida(
+              icon: Icons.receipt_long_outlined,
+              label: 'Extrato',
+              color: AppColors.chart3,
+              onTap: _abrirExtrato,
             ),
           ),
         ],
@@ -405,46 +318,45 @@ class _DashboardPageState extends State<DashboardPage> {
     final temDados = _summary != null && pontosFiltrados.isNotEmpty;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      padding: const EdgeInsets.fromLTRB(27, 0, 22, 24),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+        padding: const EdgeInsets.fromLTRB(14, 17, 14, 14),
         decoration: BoxDecoration(
           color: AppColors.card,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: const [
+            const Row(
+              children: [
                 Icon(
-                  Icons.calendar_month_outlined,
+                  Icons.calendar_today_outlined,
                   color: AppColors.primary,
-                  size: 18,
+                  size: 15,
                 ),
                 SizedBox(width: 8),
                 Text(
                   'Evolução da Carteira',
                   style: TextStyle(
-                    color: AppColors.foreground,
+                    color: Color(0xFF17233C),
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
-                    letterSpacing: -0.2,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 23),
             SizedBox(
-              height: 180,
+              height: 198,
               child: temDados
                   ? _EvolucaoLineChart(pontos: pontosFiltrados)
                   : const Center(
@@ -468,7 +380,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       ),
                     ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 10),
             _buildPeriodoSelector(),
           ],
         ),
@@ -518,7 +430,7 @@ class _DashboardPageState extends State<DashboardPage> {
     const cores = [AppColors.success, AppColors.chart5, AppColors.chart4];
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      padding: const EdgeInsets.fromLTRB(27, 0, 22, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -559,14 +471,14 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildMinhasPosicoes(List<HoldingModel> holdings) {
+  Widget _buildMinhasPosicoes(List<HoldingModel> holdings, List<Startup> startups) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      padding: const EdgeInsets.fromLTRB(27, 0, 22, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _SecaoTitulo(
-            titulo: 'Minhas posições',
+            titulo: 'Minhas Posições Primárias',
             acao: 'Ver carteira',
             onAcaoTap: () =>
                 Navigator.pushNamed(context, AppRoutes.portfolio),
@@ -582,7 +494,7 @@ class _DashboardPageState extends State<DashboardPage> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: holdings.length,
-              itemBuilder: (_, i) => _PosicaoCard(holding: holdings[i]),
+              itemBuilder: (_, i) => _PosicaoCard(holding: holdings[i], startups: startups),
             ),
         ],
       ),
@@ -593,7 +505,7 @@ class _DashboardPageState extends State<DashboardPage> {
     final transacoesExibidas = transactions.take(5).toList();
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.fromLTRB(27, 0, 22, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -616,6 +528,316 @@ class _DashboardPageState extends State<DashboardPage> {
               itemBuilder: (_, i) =>
                   _AtividadeCard(transaction: transacoesExibidas[i]),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DashboardHeaderPainter extends CustomPainter {
+  const _DashboardHeaderPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final basePaint = Paint()..color = AppColors.primary;
+    canvas.drawRect(Offset.zero & size, basePaint);
+
+    final accentPaint = Paint()..color = const Color(0xFFC22A7B);
+    final accentPath = Path()
+      ..moveTo(size.width * 0.49, 0)
+      ..lineTo(size.width, 0)
+      ..lineTo(size.width, size.height)
+      ..lineTo(size.width * 0.34, size.height)
+      ..close();
+    canvas.drawPath(accentPath, accentPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _SaldoPill extends StatelessWidget {
+  final double valor;
+
+  const _SaldoPill({required this.valor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 88,
+      height: 48,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Saldo disponível',
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              _formatBRLInteiro(valor),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ResumoCarteiraCard extends StatelessWidget {
+  final DashboardSummaryModel summary;
+  final List<DashboardChartPointModel> pontos;
+
+  const _ResumoCarteiraCard({required this.summary, required this.pontos});
+
+  @override
+  Widget build(BuildContext context) {
+    final retornoCor = summary.retorno >= 0
+        ? AppColors.success
+        : AppColors.destructive;
+    final lucroCor = summary.lucro >= 0
+        ? AppColors.success
+        : AppColors.destructive;
+
+    return Container(
+      height: 235,
+      padding: const EdgeInsets.fromLTRB(18, 17, 18, 14),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Valor Total da Carteira',
+                      style: TextStyle(
+                        color: AppColors.mutedForeground,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    _MoneyHighlight(value: summary.valorTotalCarteira),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              _RetornoBadge(valor: summary.retorno, color: retornoCor),
+            ],
+          ),
+          const SizedBox(height: 17),
+          const Divider(height: 1, color: AppColors.muted),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _ResumoItem(
+                  label: 'Investido',
+                  valor: _formatBRLInteiro(summary.totalInvestido),
+                  cor: AppColors.foreground,
+                ),
+              ),
+              Expanded(
+                child: _ResumoItem(
+                  label: 'Lucro',
+                  valor: _formatSignedBRL(summary.lucro),
+                  cor: lucroCor,
+                ),
+              ),
+            ],
+          ),
+          const Spacer(),
+          SizedBox(
+            height: 40,
+            child: _MiniLineChart(
+              pontos: pontos,
+              fallbackValue: summary.valorTotalCarteira,
+              color: lucroCor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RetornoBadge extends StatelessWidget {
+  final double valor;
+  final Color color;
+
+  const _RetornoBadge({required this.valor, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    final icon = valor >= 0
+        ? Icons.arrow_upward_rounded
+        : Icons.arrow_downward_rounded;
+
+    return Container(
+      height: 29,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.13),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 14),
+          const SizedBox(width: 4),
+          Text(
+            _formatPercent(valor),
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MoneyHighlight extends StatelessWidget {
+  final double value;
+
+  const _MoneyHighlight({required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    final parts = _moneyParts(value);
+
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.centerLeft,
+      child: RichText(
+        text: TextSpan(
+          children: [
+            TextSpan(
+              text: parts.prefix,
+              style: const TextStyle(
+                color: AppColors.mutedForeground,
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            TextSpan(
+              text: parts.integer,
+              style: const TextStyle(
+                color: Color(0xFF152033),
+                fontSize: 32,
+                fontWeight: FontWeight.w900,
+                height: 1,
+              ),
+            ),
+            TextSpan(
+              text: ',${parts.decimals}',
+              style: const TextStyle(
+                color: Color(0xFFB3BBC7),
+                fontSize: 19,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MiniLineChart extends StatelessWidget {
+  final List<DashboardChartPointModel> pontos;
+  final double fallbackValue;
+  final Color color;
+
+  const _MiniLineChart({
+    required this.pontos,
+    required this.fallbackValue,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final values = pontos.isEmpty
+        ? [fallbackValue, fallbackValue]
+        : pontos.map((p) => p.valor).toList(growable: false);
+    final normalizedValues = values.length == 1
+        ? [values.first, values.first]
+        : values;
+    final minValor = normalizedValues.reduce((a, b) => a < b ? a : b);
+    final maxValor = normalizedValues.reduce((a, b) => a > b ? a : b);
+    final diff = (maxValor - minValor).abs();
+    final padding = diff == 0 ? (maxValor.abs() * 0.05 + 1) : diff * 0.22;
+    final minY = (minValor - padding).clamp(0, double.infinity).toDouble();
+    final maxY = maxValor + padding;
+    final spots = <FlSpot>[
+      for (var i = 0; i < normalizedValues.length; i++)
+        FlSpot(i.toDouble(), normalizedValues[i]),
+    ];
+
+    return LineChart(
+      LineChartData(
+        minX: 0,
+        maxX: (normalizedValues.length - 1).toDouble(),
+        minY: minY,
+        maxY: maxY,
+        gridData: const FlGridData(show: false),
+        titlesData: const FlTitlesData(show: false),
+        borderData: FlBorderData(show: false),
+        lineTouchData: const LineTouchData(enabled: false),
+        lineBarsData: [
+          LineChartBarData(
+            spots: spots,
+            isCurved: true,
+            curveSmoothness: 0.25,
+            color: color,
+            barWidth: 2,
+            isStrokeCapRound: true,
+            dotData: const FlDotData(show: false),
+            belowBarData: BarAreaData(
+              show: true,
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  color.withValues(alpha: 0.14),
+                  color.withValues(alpha: 0),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -679,27 +901,41 @@ class _AcaoRapida extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.muted),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 7),
+          ),
+        ],
       ),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(14),
         child: Container(
-          height: 84,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
+          height: 72,
+          padding: const EdgeInsets.symmetric(horizontal: 6),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: color, size: 24),
-              const SizedBox(height: 8),
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color, size: 16),
+              ),
+              const SizedBox(height: 7),
               Text(
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   color: AppColors.foreground,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ],
@@ -786,14 +1022,16 @@ class _OportunidadeCard extends StatelessWidget {
 
 class _PosicaoCard extends StatelessWidget {
   final HoldingModel holding;
+  final List<Startup> startups;
 
-  const _PosicaoCard({required this.holding});
+  const _PosicaoCard({required this.holding, required this.startups});
 
   @override
   Widget build(BuildContext context) {
     final cor = holding.percentualRetorno >= 0
         ? AppColors.success
         : AppColors.destructive;
+    final nome = _resolverNomeStartup(holding.nomeStartup, startups);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -815,7 +1053,7 @@ class _PosicaoCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  holding.nomeStartup.isEmpty ? '—' : holding.nomeStartup,
+                  nome.isEmpty ? '—' : nome,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -1207,6 +1445,35 @@ class _EvolucaoLineChart extends StatelessWidget {
   }
 }
 
+String _formatBRLInteiro(double valor) {
+  final negative = valor < 0;
+  final intPart = valor.abs().toInt().toString();
+  final buffer = StringBuffer();
+  for (int i = 0; i < intPart.length; i++) {
+    if (i > 0 && (intPart.length - i) % 3 == 0) buffer.write('.');
+    buffer.write(intPart[i]);
+  }
+  return '${negative ? '-' : ''}R\$ $buffer';
+}
+
+({String prefix, String integer, String decimals}) _moneyParts(double valor) {
+  final negative = valor < 0;
+  final abs = valor.abs().toStringAsFixed(2);
+  final dotIdx = abs.indexOf('.');
+  final intStr = abs.substring(0, dotIdx);
+  final decStr = abs.substring(dotIdx + 1);
+  final buffer = StringBuffer();
+  for (int i = 0; i < intStr.length; i++) {
+    if (i > 0 && (intStr.length - i) % 3 == 0) buffer.write('.');
+    buffer.write(intStr[i]);
+  }
+  return (
+    prefix: '${negative ? '-' : ''}R\$ ',
+    integer: buffer.toString(),
+    decimals: decStr,
+  );
+}
+
 String _formatBRL(double valor) {
   final negative = valor < 0;
   final abs = valor.abs().toStringAsFixed(2);
@@ -1230,4 +1497,12 @@ String _formatPercent(double valor) {
   final sign = valor >= 0 ? '+' : '';
   final formatted = valor.toStringAsFixed(2).replaceAll('.', ',');
   return '$sign$formatted%';
+}
+
+String _resolverNomeStartup(String raw, List<Startup> catalog) {
+  if (raw.isEmpty) return '';
+  for (final s in catalog) {
+    if (s.id == raw) return s.nome;
+  }
+  return raw;
 }

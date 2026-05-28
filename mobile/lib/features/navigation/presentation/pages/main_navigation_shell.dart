@@ -4,7 +4,7 @@ import 'package:mesclainvest/features/balcao/presentation/pages/balcao_page.dart
 import 'package:mesclainvest/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:mesclainvest/features/perfil/presentation/pages/perfil_page.dart';
 import 'package:mesclainvest/features/portfolio/presentation/screens/portfolio_screen.dart';
-import 'package:mesclainvest/features/startups/presentation/pages/startups_page.dart';
+import 'package:mesclainvest/features/startups/presentation/pages/catalog_page.dart';
 
 class MainNavigationShell extends StatefulWidget {
   const MainNavigationShell({super.key, this.initialIndex = 0});
@@ -21,16 +21,16 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
   static const List<Widget> _pages = [
     DashboardPage(),
     PortfolioScreen(),
-    StartupsPage(),
+    CatalogPage(),
     BalcaoPage(),
     PerfilPage(),
   ];
 
   static const List<BottomNavigationBarItem> _items = [
     BottomNavigationBarItem(
-      icon: Icon(Icons.home_outlined),
-      activeIcon: Icon(Icons.home_rounded),
-      label: 'Início',
+      icon: Icon(Icons.space_dashboard_outlined),
+      activeIcon: Icon(Icons.space_dashboard_rounded),
+      label: 'Dashboard',
     ),
     BottomNavigationBarItem(
       icon: Icon(Icons.pie_chart_outline_rounded),
