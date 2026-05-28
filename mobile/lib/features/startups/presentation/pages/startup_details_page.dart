@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mesclainvest/core/theme/app_colors.dart';
+import 'package:mesclainvest/features/dashboard/data/datasources/dashboard_datasource.dart';
+import 'package:mesclainvest/shared/widgets/index.dart';
 
 import '../../data/startup_service.dart';
 import '../../domain/startup_model.dart';
@@ -15,6 +17,7 @@ class StartupDetailsPage extends StatefulWidget {
 
 class _StartupDetailsPageState extends State<StartupDetailsPage> {
   final StartupService _service = StartupService();
+  final DashboardDatasource _dashboardDatasource = DashboardDatasource();
 
   late Startup _startup;
   bool _isLoading = true;
@@ -54,27 +57,64 @@ class _StartupDetailsPageState extends State<StartupDetailsPage> {
   }
 
   Future<void> _showInvestConfirmation() async {
-    const saldoUsuario = 5000.0;
-    const investimentoMinimo = 500.0;
-    const valorRecomendado = 1000.0;
+    const quantidadeMinima = 1;
+    final precoToken = _startup.precoToken;
 
-    final valorController = TextEditingController(
-      text: valorRecomendado.toStringAsFixed(0),
-    );
-
-    double valorDigitado() {
-      final normalized = valorController.text.replaceAll(',', '.');
-      return double.tryParse(normalized) ?? 0;
+    if (precoToken <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Preço do token indisponível para esta startup.'),
+        ),
+      );
+      return;
     }
 
-    final valorAInvestir = await showDialog<double>(
+    setState(() => _isInvesting = true);
+
+    double saldoDisponivel;
+    try {
+      final summary = await _dashboardDatasource.getSummary();
+      saldoDisponivel = summary.saldoDisponivel;
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isInvesting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Não foi possível buscar o saldo da carteira.'),
+        ),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() => _isInvesting = false);
+
+    var quantidadeRecomendada = (saldoDisponivel / precoToken).floor();
+    if (quantidadeRecomendada < quantidadeMinima) {
+      quantidadeRecomendada = quantidadeMinima;
+    }
+    if (quantidadeRecomendada > 1000) {
+      quantidadeRecomendada = 1000;
+    }
+
+    final quantidadeController = TextEditingController(
+      text: quantidadeRecomendada.toString(),
+    );
+
+    int quantidadeDigitada() {
+      final normalized = quantidadeController.text.trim();
+      return int.tryParse(normalized) ?? 0;
+    }
+
+    final quantidadeAInvestir = await showDialog<int>(
       context: context,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            final valor = valorDigitado();
-            final saldoInsuficiente = valor > saldoUsuario;
-            final abaixoDoMinimo = valor < investimentoMinimo;
+            final quantidade = quantidadeDigitada();
+            final valorTotal = quantidade * precoToken;
+            final saldoInsuficiente = valorTotal > saldoDisponivel;
+            final abaixoDoMinimo = quantidade < quantidadeMinima;
             final podeConfirmar = !saldoInsuficiente && !abaixoDoMinimo;
 
             return AlertDialog(
@@ -86,27 +126,33 @@ class _StartupDetailsPageState extends State<StartupDetailsPage> {
                   const Text('Deseja confirmar o investimento nesta startup?'),
                   const SizedBox(height: 16),
                   Text(
-                    'Saldo disponível: ${saldoUsuario.toStringAsFixed(0)} tokens',
+                    'Saldo disponível: ${_formatCurrencyFull(saldoDisponivel)}',
                   ),
                   Text(
-                    'Investimento mínimo: ${investimentoMinimo.toStringAsFixed(0)} tokens',
+                    'Preço por token: ${_formatCurrencyFull(precoToken)}',
                   ),
-                  Text(
-                    'Valor recomendado: ${valorRecomendado.toStringAsFixed(0)} tokens',
-                  ),
+                  Text('Quantidade mínima: $quantidadeMinima token'),
+                  Text('Valor estimado: ${_formatCurrencyFull(valorTotal)}'),
                   const SizedBox(height: 16),
                   TextField(
-                    controller: valorController,
+                    controller: quantidadeController,
                     keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
+                      decimal: false,
                     ),
                     decoration: const InputDecoration(
-                      labelText: 'Valor a investir',
+                      labelText: 'Quantidade de tokens',
                       suffixText: 'tokens',
                       border: OutlineInputBorder(),
                     ),
                     onChanged: (_) => setDialogState(() {}),
                   ),
+                  if (abaixoDoMinimo) ...[
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Informe ao menos 1 token.',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  ],
                   if (saldoInsuficiente) ...[
                     const SizedBox(height: 8),
                     const Text(
@@ -134,7 +180,7 @@ class _StartupDetailsPageState extends State<StartupDetailsPage> {
                 ),
                 ElevatedButton(
                   onPressed: podeConfirmar
-                      ? () => Navigator.pop(context, valor)
+                      ? () => Navigator.pop(context, quantidade)
                       : null,
                   child: const Text('Confirmar'),
                 ),
@@ -145,25 +191,41 @@ class _StartupDetailsPageState extends State<StartupDetailsPage> {
       },
     );
 
-    valorController.dispose();
+    quantidadeController.dispose();
 
-    if (valorAInvestir == null || !mounted) return;
+    if (quantidadeAInvestir == null || !mounted) return;
 
     setState(() => _isInvesting = true);
 
-    final success = await _service.investirStartup(_startup.id, valorAInvestir);
-
-    if (!mounted) return;
-
-    setState(() => _isInvesting = false);
-
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Investimento realizado com sucesso!'),
-          backgroundColor: Colors.green,
-        ),
+    try {
+      final success = await _service.investirStartup(
+        _startup.id,
+        quantidadeAInvestir,
       );
+
+      if (!mounted) return;
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Investimento realizado com sucesso!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        await _fetchStartupDetails();
+      }
+    } catch (e) {
+      if (!mounted) return;
+      final message = e is StartupApiException
+          ? e.message
+          : 'Não foi possível concluir o investimento.';
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    } finally {
+      if (mounted) {
+        setState(() => _isInvesting = false);
+      }
     }
   }
 
@@ -284,20 +346,26 @@ class _DetailsContent extends StatelessWidget {
           _UpdatesSection(updates: startup.atualizacoes),
         ],
         const SizedBox(height: 16),
-        SizedBox(
-          width: double.infinity,
-          height: 48,
-          child: ElevatedButton(
-            onPressed: isInvesting ? null : onInvestPressed,
-            child: isInvesting
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Investir'),
+        if (isInvesting)
+          const SizedBox(
+            height: 60,
+            child: Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+          )
+        else
+          MesclaButton(
+            label: 'Investir',
+            onPressed: onInvestPressed,
+            width: double.infinity,
           ),
-        ),
       ],
     );
   }
@@ -684,6 +752,24 @@ class _SimpleListTile extends StatelessWidget {
       ),
     );
   }
+}
+
+String _formatCurrencyFull(double value) {
+  final fixed = value.abs().toStringAsFixed(2);
+  final parts = fixed.split('.');
+  final integer = parts.first;
+  final decimals = parts.last;
+  final buffer = StringBuffer();
+
+  for (var i = 0; i < integer.length; i++) {
+    if (i > 0 && (integer.length - i) % 3 == 0) {
+      buffer.write('.');
+    }
+    buffer.write(integer[i]);
+  }
+
+  final sign = value < 0 ? '-' : '';
+  return '${sign}R\$ ${buffer.toString()},$decimals';
 }
 
 String _formatCurrency(double value) {
