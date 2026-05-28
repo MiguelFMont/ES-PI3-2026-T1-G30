@@ -1,4 +1,3 @@
-//representa um socio da startup
 class Socio {
   final String nome;
   final String foto;
@@ -6,7 +5,6 @@ class Socio {
 
   Socio({required this.nome, required this.foto, required this.participacao});
 
-  //converte o json da api para o objeto dart
   factory Socio.fromJson(Map<String, dynamic> json) {
     return Socio(
       nome: _stringFromJson(json['nome']),
@@ -16,7 +14,6 @@ class Socio {
   }
 }
 
-// representa um membro do conselho ou mentor
 class Membro {
   final String nome;
   final String foto;
@@ -40,7 +37,6 @@ class Membro {
   }
 }
 
-// representa um video da startup
 class Video {
   final String titulo;
   final String url;
@@ -57,7 +53,6 @@ class Video {
   }
 }
 
-// representa uma atualização da startup
 class Atualizacao {
   final String titulo;
   final String descricao;
@@ -78,7 +73,6 @@ class Atualizacao {
   }
 }
 
-// representa uma startup completa
 class Startup {
   final String id;
   final String nome;
@@ -139,7 +133,6 @@ class Startup {
       resumoExecutivo: _stringFromJson(
         json['resumoExecutivo'] ?? json['resumoExecutive'],
       ),
-      // Converte cada item da lista JSON para o objeto correspondente
       socios: _listFromJson(
         json['socios'],
       ).map((s) => Socio.fromJson(_mapFromJson(s))).toList(),
