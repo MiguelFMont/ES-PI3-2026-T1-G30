@@ -129,11 +129,12 @@ class _DashboardPageState extends State<DashboardPage> {
 
   List<Startup> _selecionarDestaques(List<Startup>? startups) {
     if (startups == null || startups.isEmpty) return const [];
-    final ordenadas = [...startups]..sort((a, b) {
-      final varA = a.variacaoPreco ?? 0;
-      final varB = b.variacaoPreco ?? 0;
-      return varB.compareTo(varA);
-    });
+    final ordenadas = [...startups]
+      ..sort((a, b) {
+        final varA = a.variacaoPreco ?? 0;
+        final varB = b.variacaoPreco ?? 0;
+        return varB.compareTo(varA);
+      });
     return ordenadas.take(3).toList();
   }
 
@@ -526,8 +527,7 @@ class _DashboardPageState extends State<DashboardPage> {
           _SecaoTitulo(
             titulo: 'Startups em destaque',
             acao: 'Ver todas',
-            onAcaoTap: () =>
-                Navigator.pushNamed(context, AppRoutes.catalog),
+            onAcaoTap: () => Navigator.pushNamed(context, AppRoutes.catalog),
           ),
           const SizedBox(height: 14),
           if (startups.isEmpty)
@@ -566,8 +566,7 @@ class _DashboardPageState extends State<DashboardPage> {
           _SecaoTitulo(
             titulo: 'Minhas posições',
             acao: 'Ver carteira',
-            onAcaoTap: () =>
-                Navigator.pushNamed(context, AppRoutes.portfolio),
+            onAcaoTap: () => Navigator.pushNamed(context, AppRoutes.portfolio),
           ),
           const SizedBox(height: 14),
           if (holdings.isEmpty)
@@ -811,7 +810,7 @@ class _PosicaoCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  holding.nomeStartup.isEmpty ? 'â€”' : holding.nomeStartup,
+                  holding.nomeStartup.isEmpty ? '-' : holding.nomeStartup,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -822,9 +821,7 @@ class _PosicaoCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  holding.setor.isEmpty
-                      ? 'Setor não informado'
-                      : holding.setor,
+                  holding.setor.isEmpty ? 'Setor não informado' : holding.setor,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -869,21 +866,39 @@ class _AtividadeCard extends StatelessWidget {
 
   const _AtividadeCard({required this.transaction});
 
+  String _labelTipo(String tipoUpper) {
+    if (tipoUpper.startsWith('COMPRA')) return 'Compra';
+    if (tipoUpper.startsWith('VENDA')) return 'Venda';
+    if (tipoUpper == 'ADICIONAR_SALDO') return 'Depósito';
+    if (tipoUpper == 'SACAR_SALDO') return 'Saque';
+    return transaction.tipo;
+  }
+
+  String _tituloFallback(String tipoUpper) {
+    if (tipoUpper == 'ADICIONAR_SALDO' || tipoUpper == 'SACAR_SALDO') {
+      return 'Saldo da carteira';
+    }
+
+    return 'Transação';
+  }
+
   @override
   Widget build(BuildContext context) {
     final tipoUpper = transaction.tipo.toUpperCase();
     final isCompra = tipoUpper.startsWith('COMPRA');
-    final tipoExibido = isCompra
-        ? 'Compra'
-        : tipoUpper.startsWith('VENDA')
-            ? 'Venda'
-            : transaction.tipo;
-    final cor = isCompra ? AppColors.destructive : AppColors.success;
-    final subtitle = [
+    final isSaque = tipoUpper == 'SACAR_SALDO';
+    final isDebito = isCompra || isSaque;
+    final tipoExibido = _labelTipo(tipoUpper);
+    final cor = isDebito ? AppColors.destructive : AppColors.success;
+    final titulo = transaction.nomeStartup.trim().isEmpty
+        ? _tituloFallback(tipoUpper)
+        : transaction.nomeStartup.trim();
+    final subtitle = <String>[
+      tipoExibido,
       if (transaction.detalhes.isNotEmpty) transaction.detalhes,
       if (transaction.data.isNotEmpty) transaction.data,
-    ].join(' Â· ');
-    final valorExibido = isCompra
+    ].join(' · ');
+    final valorExibido = isDebito
         ? -transaction.valor.abs()
         : transaction.valor.abs();
 
@@ -905,9 +920,7 @@ class _AtividadeCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(
-              isCompra
-                  ? Icons.south_west_rounded
-                  : Icons.north_east_rounded,
+              isDebito ? Icons.south_west_rounded : Icons.north_east_rounded,
               color: cor,
               size: 20,
             ),
@@ -918,9 +931,7 @@ class _AtividadeCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  transaction.nomeStartup.isEmpty
-                      ? 'â€”'
-                      : transaction.nomeStartup,
+                  titulo,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -931,9 +942,7 @@ class _AtividadeCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  subtitle.isEmpty
-                      ? tipoExibido
-                      : '$tipoExibido Â· $subtitle',
+                  subtitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -1142,7 +1151,7 @@ class _EvolucaoLineChart extends StatelessWidget {
               final i = spot.x.toInt().clamp(0, pontos.length - 1);
               final dt = datas[i];
               final dataLegivel = dt == null
-                  ? 'â€”'
+                  ? '-'
                   : DateFormat('dd/MM/yyyy').format(dt);
               return LineTooltipItem(
                 '${formatarReais(spot.y)}\nData: $dataLegivel',

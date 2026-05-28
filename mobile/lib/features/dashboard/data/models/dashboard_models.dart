@@ -99,7 +99,7 @@ class TransactionModel {
     return TransactionModel(
       tipo: _toText(json['tipo']),
       nomeStartup: _toText(json['nomeStartup'] ?? json['startupId']),
-      detalhes: quantidade > 0 ? '${quantidade.toStringAsFixed(0)} tokens' : '',
+      detalhes: _buildTokenDetails(quantidade),
       data: _toText(json['createdAt']),
       valor: _toDouble(json['valorTotalCentavos']) / 100,
     );
@@ -116,3 +116,11 @@ double _toDouble(dynamic value) {
 }
 
 String _toText(dynamic value) => value == null ? '' : value.toString();
+
+String _buildTokenDetails(double quantidade) {
+  if (quantidade <= 0) return '';
+
+  final quantidadeTexto = quantidade.toStringAsFixed(0);
+  final sufixo = quantidade == 1 ? 'token' : 'tokens';
+  return '$quantidadeTexto $sufixo';
+}
