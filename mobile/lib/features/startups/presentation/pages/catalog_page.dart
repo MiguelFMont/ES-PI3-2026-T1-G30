@@ -1,8 +1,5 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:mesclainvest/app/routes.dart';
-import 'package:mesclainvest/core/state/app_data_refresh_bus.dart';
 import 'package:mesclainvest/core/theme/app_colors.dart';
 
 import '../../data/startup_service.dart';
@@ -21,7 +18,6 @@ class CatalogPage extends StatefulWidget {
 class _CatalogPageState extends State<CatalogPage> {
   final StartupService _service = StartupService();
   final TextEditingController _searchController = TextEditingController();
-  StreamSubscription<AppDataRefreshEvent>? _refreshSubscription;
 
   List<Startup> _startups = [];
   CatalogState _state = CatalogState.loading;
@@ -37,127 +33,47 @@ class _CatalogPageState extends State<CatalogPage> {
     'Em Expansão',
   ];
 
-  List<String> get _availableSectorOptions {
-    final sectors = _startups
-        .map((startup) => startup.setor.trim())
-        .where((sector) => sector.isNotEmpty)
-        .toSet()
-        .toList();
-
-    sectors.sort();
-    return sectors;
-  }
-
-  // Backend tem duplicatas; colapsamos por assinatura funcional até a limpeza.
-  String _catalogKey(Startup startup) {
-    final nomeNormalizado = startup.nome.trim().toLowerCase();
-    if (nomeNormalizado.isNotEmpty) return nomeNormalizado;
-
-    return [
-      startup.descricao.trim().toLowerCase(),
-      startup.estagio.trim().toLowerCase(),
-    ].join('|');
-  }
-
-  int _catalogScore(Startup startup) {
-    var score = 0;
-
-    if (startup.nome.trim().isNotEmpty) score += 100;
-    if (startup.descricao.trim().isNotEmpty) score += 20;
-    if (startup.estagio.trim().isNotEmpty) score += 15;
-    if (startup.setor.trim().isNotEmpty) score += 10;
-    if (startup.logo.trim().isNotEmpty) score += 10;
-    if (startup.resumoExecutivo.trim().isNotEmpty) score += 15;
-    if (startup.totalTokens > 0) score += 20;
-    if (startup.tokensDisponiveis >= 0) score += 24;
-    if (startup.tokensDisponiveis > 0 &&
-        startup.tokensDisponiveis != startup.totalTokens) {
-      score += 8;
-    }
-    if (startup.precoToken > 0) score += 20;
-    if (startup.variacaoPreco != null) score += 6;
-    if (startup.socios.isNotEmpty) score += 10;
-    if (startup.conselho.isNotEmpty) score += 6;
-    if (startup.mentores.isNotEmpty) score += 6;
-    if (startup.videos.isNotEmpty) score += 4;
-    if (startup.atualizacoes.isNotEmpty) score += 4;
-
-    return score;
-  }
-
-  Startup _preferCatalogStartup(Startup current, Startup candidate) {
-    final currentScore = _catalogScore(current);
-    final candidateScore = _catalogScore(candidate);
-
-    if (candidateScore > currentScore) return candidate;
-    return current;
-  }
+  static const List<String> _sectorOptions = [
+    'Sustentabilidade',
+    'Saúde',
+    'Educação',
+    'Fintech',
+    'Agritech',
+    'Mobilidade',
+  ];
 
   @override
   void initState() {
     super.initState();
-    _refreshSubscription = AppDataRefreshBus.instance.stream.listen((event) {
-      if (!event.affects(AppDataRefreshScope.catalog) || !mounted) {
-        return;
-      }
-
-      _fetchStartups(showLoading: false);
-    });
     _fetchStartups();
     _searchController.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
-    _refreshSubscription?.cancel();
     _searchController.dispose();
     super.dispose();
   }
 
-  Future<void> _fetchStartups({bool showLoading = true}) async {
-    if (showLoading || _startups.isEmpty) {
-      setState(() {
-        _state = CatalogState.loading;
-        _errorMessage = null;
-        _startups = [];
-      });
-    }
+  Future<void> _fetchStartups() async {
+    setState(() {
+      _state = CatalogState.loading;
+      _errorMessage = null;
+      _startups = [];
+    });
 
     try {
       final startups = await _service.listarStartups(estagio: _selectedStage);
-      final uniqueStartupsByKey = <String, Startup>{};
-      for (final startup in startups) {
-        final key = _catalogKey(startup);
-        final current = uniqueStartupsByKey[key];
-        uniqueStartupsByKey[key] = current == null
-            ? startup
-            : _preferCatalogStartup(current, startup);
-      }
-      final uniqueStartups = uniqueStartupsByKey.values.toList();
-      final availableSectors = uniqueStartups
-          .map((startup) => startup.setor.trim())
-          .where((sector) => sector.isNotEmpty)
-          .toSet();
+      final seen = <String>{};
 
-      if (!mounted) return;
       setState(() {
-        _startups = uniqueStartups;
-        _selectedSectors.removeWhere(
-          (sector) => !availableSectors.contains(sector),
-        );
+        _startups = startups.where((s) => seen.add(s.id)).toList();
         _state = CatalogState.success;
       });
     } catch (e) {
-      if (!mounted) return;
-      if (!showLoading && _startups.isNotEmpty) {
-        debugPrint('Erro ao atualizar catálogo em segundo plano: $e');
-        return;
-      }
-
       setState(() {
-        _errorMessage = e is StartupApiException
-            ? e.message
-            : 'Não foi possível carregar as startups agora.';
+        _errorMessage =
+            'Não foi possível carregar as startups.\nVerifique sua conexão e tente novamente.';
         _state = CatalogState.error;
       });
     }
@@ -172,7 +88,7 @@ class _CatalogPageState extends State<CatalogPage> {
           .where(
             (s) =>
                 s.nome.toLowerCase().contains(query) ||
-                (s.setor.isNotEmpty && s.setor.toLowerCase().contains(query)),
+                s.setor.toLowerCase().contains(query),
           )
           .toList();
     }
@@ -186,13 +102,6 @@ class _CatalogPageState extends State<CatalogPage> {
     }
 
     return list;
-  }
-
-  int get _activeFilterCount {
-    var count = _selectedSectors.length;
-    if (_selectedStage != null) count++;
-    if (_sortBy != 'recentes') count++;
-    return count;
   }
 
   void _onStartupTapped(Startup startup) {
@@ -212,7 +121,7 @@ class _CatalogPageState extends State<CatalogPage> {
         selectedSectors: Set.of(_selectedSectors),
         sortBy: _sortBy,
         stageOptions: _stageOptions,
-        sectorOptions: _availableSectorOptions,
+        sectorOptions: _sectorOptions,
         onApply: (stage, sectors, sortBy) {
           final stageChanged = stage != _selectedStage;
 
@@ -248,52 +157,60 @@ class _CatalogPageState extends State<CatalogPage> {
   }
 
   Widget _buildHeader() {
-    return SizedBox(
-      height: 182,
-      width: double.infinity,
+    return ClipRect(
       child: Stack(
-        fit: StackFit.expand,
         children: [
-          const CustomPaint(painter: _CatalogHeaderPainter()),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Spacer(),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 46),
-                child: Text(
+          Positioned.fill(child: Container(color: const Color(0xFFAD1457))),
+          Positioned(
+            top: -55,
+            right: -45,
+            child: Container(
+              width: 210,
+              height: 210,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE91E8C).withValues(alpha: 0.22),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -18,
+            right: 55,
+            child: Container(
+              width: 95,
+              height: 95,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.07),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
                   'Catálogo de Startups',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 23,
+                    fontSize: 22,
                     fontWeight: FontWeight.w800,
                     color: Colors.white,
-                    height: 1.05,
                   ),
                 ),
-              ),
-              const SizedBox(height: 7),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 46),
-                child: Text(
+                const SizedBox(height: 2),
+                Text(
                   'Ecossistema Mescla · PUC-Campinas',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white.withValues(alpha: 0.88),
+                    fontSize: 12,
+                    color: Colors.white.withValues(alpha: 0.85),
                   ),
                 ),
-              ),
-              const SizedBox(height: 20),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 46),
-                child: _buildSearchBar(),
-              ),
-              const SizedBox(height: 26),
-            ],
+                const SizedBox(height: 14),
+                _buildSearchBar(),
+              ],
+            ),
           ),
         ],
       ),
@@ -301,18 +218,16 @@ class _CatalogPageState extends State<CatalogPage> {
   }
 
   Widget _buildSearchBar() {
-    final activeFilterCount = _activeFilterCount;
-
     return Container(
-      height: 42,
+      height: 44,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(13),
+        borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 14,
-            offset: const Offset(0, 4),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -321,24 +236,17 @@ class _CatalogPageState extends State<CatalogPage> {
           const SizedBox(width: 14),
           const Icon(
             Icons.search_rounded,
-            size: 19,
-            color: AppColors.primary,
+            size: 20,
+            color: AppColors.mutedForeground,
           ),
-          const SizedBox(width: 9),
+          const SizedBox(width: 8),
           Expanded(
             child: TextField(
               controller: _searchController,
-              cursorColor: AppColors.primary,
-              style: const TextStyle(
-                fontSize: 13,
-                color: Color(0xFF1E293B),
-                fontWeight: FontWeight.w500,
-              ),
-              decoration: InputDecoration(
-                hintText: _availableSectorOptions.isEmpty
-                    ? 'Buscar startups...'
-                    : 'Buscar startups ou setores...',
-                hintStyle: const TextStyle(
+              style: const TextStyle(fontSize: 13, color: Color(0xFF1E293B)),
+              decoration: const InputDecoration(
+                hintText: 'Buscar startups ou setores...',
+                hintStyle: TextStyle(
                   fontSize: 13,
                   color: AppColors.mutedForeground,
                 ),
@@ -348,76 +256,23 @@ class _CatalogPageState extends State<CatalogPage> {
               ),
             ),
           ),
-          if (_searchController.text.isNotEmpty)
-            InkWell(
-              onTap: _searchController.clear,
-              borderRadius: BorderRadius.circular(18),
-              child: const SizedBox(
-                width: 32,
-                height: 42,
-                child: Icon(
-                  Icons.close_rounded,
-                  size: 17,
-                  color: AppColors.mutedForeground,
-                ),
-              ),
-            ),
-          const SizedBox(width: 6),
-          InkWell(
+          const VerticalDivider(
+            width: 1,
+            thickness: 1,
+            color: Color(0xFFE2E8F0),
+          ),
+          GestureDetector(
             onTap: _showFilterSheet,
-            borderRadius: BorderRadius.circular(12),
-            child: SizedBox(
-              width: 42,
-              height: 42,
-              child: Center(
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Container(
-                      width: 30,
-                      height: 30,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(11),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
-                      ),
-                      child: const Icon(
-                        Icons.filter_alt_outlined,
-                        size: 17,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                    if (activeFilterCount > 0)
-                      Positioned(
-                        top: -4,
-                        right: -5,
-                        child: Container(
-                          height: 16,
-                          constraints: const BoxConstraints(minWidth: 16),
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: AppColors.primary,
-                            borderRadius: BorderRadius.circular(99),
-                            border: Border.all(color: Colors.white, width: 2),
-                          ),
-                          child: Text(
-                            activeFilterCount.toString(),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 9,
-                              fontWeight: FontWeight.w800,
-                              height: 1,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
+            child: const SizedBox(
+              width: 44,
+              height: 44,
+              child: Icon(
+                Icons.filter_alt_rounded,
+                size: 20,
+                color: AppColors.primary,
               ),
             ),
           ),
-          const SizedBox(width: 6),
         ],
       ),
     );
@@ -425,16 +280,12 @@ class _CatalogPageState extends State<CatalogPage> {
 
   Widget _buildResultCount() {
     final filtered = _filteredStartups;
-    final label = switch (_state) {
-      CatalogState.loading => 'Carregando...',
-      CatalogState.error => 'Catálogo indisponível',
-      CatalogState.success => '${filtered.length} '
-          'startup${filtered.length != 1 ? 's' : ''} '
-          'encontrada${filtered.length != 1 ? 's' : ''}',
-    };
+    final label = _state == CatalogState.loading
+        ? 'Carregando...'
+        : '${filtered.length} startup${filtered.length != 1 ? 's' : ''} encontrada${filtered.length != 1 ? 's' : ''}';
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(46, 17, 46, 8),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       child: Text(
         label,
         style: const TextStyle(fontSize: 13, color: AppColors.mutedForeground),
@@ -520,7 +371,7 @@ class _CatalogPageState extends State<CatalogPage> {
       color: AppColors.primary,
       onRefresh: _fetchStartups,
       child: ListView.builder(
-        padding: const EdgeInsets.only(top: 6, bottom: 24),
+        padding: const EdgeInsets.only(top: 4, bottom: 24),
         itemCount: list.length,
         itemBuilder: (context, index) => StartupCard(
           startup: list[index],
@@ -529,28 +380,6 @@ class _CatalogPageState extends State<CatalogPage> {
       ),
     );
   }
-}
-
-class _CatalogHeaderPainter extends CustomPainter {
-  const _CatalogHeaderPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final basePaint = Paint()..color = AppColors.primary;
-    canvas.drawRect(Offset.zero & size, basePaint);
-
-    final accentPaint = Paint()..color = const Color(0xFFC22A7B);
-    final accentPath = Path()
-      ..moveTo(size.width * 0.47, 0)
-      ..lineTo(size.width, 0)
-      ..lineTo(size.width, size.height)
-      ..lineTo(size.width * 0.34, size.height)
-      ..close();
-    canvas.drawPath(accentPath, accentPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _FilterSheet extends StatefulWidget {
@@ -601,8 +430,6 @@ class _FilterSheetState extends State<_FilterSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final hasSectorFilters = widget.sectorOptions.isNotEmpty;
-
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
       child: Column(
@@ -665,29 +492,27 @@ class _FilterSheetState extends State<_FilterSheet> {
             }).toList(),
           ),
           const SizedBox(height: 20),
-          if (hasSectorFilters) ...[
-            _buildSectionLabel('Setor'),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: widget.sectorOptions.map((sector) {
-                final selected = _sectors.contains(sector);
-                return _FilterChip(
-                  label: sector,
-                  selected: selected,
-                  onTap: () => setState(() {
-                    if (selected) {
-                      _sectors.remove(sector);
-                    } else {
-                      _sectors.add(sector);
-                    }
-                  }),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 20),
-          ],
+          _buildSectionLabel('Setor'),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: widget.sectorOptions.map((sector) {
+              final selected = _sectors.contains(sector);
+              return _FilterChip(
+                label: sector,
+                selected: selected,
+                onTap: () => setState(() {
+                  if (selected) {
+                    _sectors.remove(sector);
+                  } else {
+                    _sectors.add(sector);
+                  }
+                }),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 20),
           _buildSectionLabel('Ordenar por'),
           const SizedBox(height: 10),
           _buildSortOption('recentes', 'Mais recentes'),

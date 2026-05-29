@@ -63,7 +63,7 @@ class StartupCard extends StatelessWidget {
         : AppColors.destructive;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 46, vertical: 7),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
       child: Material(
         color: AppColors.card,
         borderRadius: BorderRadius.circular(14),
