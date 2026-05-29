@@ -10,6 +10,7 @@ se conecta com o backend via repository
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:mesclainvest/shared/widgets/mescla_notificacao.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../app/routes.dart';
 import '../../../../core/state/app_data_refresh_bus.dart';
@@ -153,12 +154,10 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$recurso em breve'),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: const Color(0xFF263238),
-      ),
+    MesclaNotificacao.mostrar(
+      context,
+      label: '$recurso em breve',
+      cor: const Color(0xFF263238),
     );
   }
 

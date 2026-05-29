@@ -80,20 +80,18 @@ class _MfaPageState extends State<MfaPage> {
       if (!mounted) return;
       Navigator.pop(context); // fecha loading
       setState(() => _mfaAppAtivo = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('App Autenticador desativado com sucesso.'),
-          backgroundColor: Colors.orange,
-        ),
+      MesclaNotificacao.mostrar(
+        context,
+        label: 'App Autenticador desativado com sucesso.',
+        cor: Colors.orange,
       );
     } catch (e) {
       if (!mounted) return;
       Navigator.pop(context); // fecha loading
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString().replaceAll('Exception: ', '')),
-          backgroundColor: Colors.red,
-        ),
+      MesclaNotificacao.mostrar(
+        context,
+        label: e.toString().replaceAll('Exception: ', ''),
+        cor: AppColors.destructive,
       );
     }
   }
@@ -130,11 +128,10 @@ class _MfaPageState extends State<MfaPage> {
     } catch (e) {
       if (!mounted) return;
       Navigator.pop(context); // fecha o loading
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString().replaceAll('Exception: ', '')),
-          backgroundColor: Colors.red,
-        ),
+      MesclaNotificacao.mostrar(
+        context,
+        label: e.toString().replaceAll('Exception: ', ''),
+        cor: AppColors.destructive,
       );
     }
   }

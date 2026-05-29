@@ -5,6 +5,7 @@ import axios from 'axios';
 import { getAuth } from '../../config/firebase';
 import { FieldValue } from 'firebase-admin/firestore';
 import { env } from '../../config/env';
+import { validarSenhaForte } from '../auth/auth.service';
 
 // Converte uma string de data (ISO, timestamp ou DD/MM/AAAA) para DD/MM/AAAA.
 // Retorna '—' se o valor for inválido ou ausente.
@@ -108,6 +109,8 @@ export class UsersService {
   }
 
   async alterarSenha(uid: string, senhaAtual: string, novaSenha: string) {
+  validarSenhaForte(novaSenha);
+
   const user = await this.repo.findByUid(uid);
   if (!user) throw new Error('Usuário não encontrado.');
 

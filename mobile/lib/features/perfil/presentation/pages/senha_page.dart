@@ -93,11 +93,10 @@ class _SenhaPageState extends State<SenhaPage> {
   }
 
   void _mostrarSnack(String msg, {required bool erro}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: erro ? Colors.red : Colors.green,
-      ),
+    MesclaNotificacao.mostrar(
+      context,
+      label: msg,
+      cor: erro ? AppColors.destructive : Colors.green,
     );
   }
 

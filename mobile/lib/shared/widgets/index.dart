@@ -13,3 +13,4 @@ export 'perfil_badge.dart';
 export 'item_estatistica.dart';
 export 'secao_menu.dart';
 export 'campo_info.dart';
+export 'mescla_notificacao.dart';

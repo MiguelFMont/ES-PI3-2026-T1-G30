@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../../shared/widgets/mescla_button.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/mescla_auth_layout.dart';
+import '../../../../shared/widgets/mescla_notificacao.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../../../shared/widgets/campo_texto.dart';
 
@@ -61,7 +62,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
 
     // 1. Validações de segurança e integridade
     if (_email == null || _token == null) {
-      _showSnackBar(
+      _showNotificacao(
         'Erro de comunicação. Volte e tente novamente.',
         isError: true,
       );
@@ -69,17 +70,12 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     }
 
     if (!_senhaValida) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('A senha não atende todos os requisitos.'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showNotificacao('A senha não atende todos os requisitos.', isError: true);
       return;
     }
 
     if (novaSenha != confirmaSenha) {
-      _showSnackBar('As senhas não coincidem.', isError: true);
+      _showNotificacao('As senhas não coincidem.', isError: true);
       return;
     }
 
@@ -93,14 +89,14 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
         novaSenha,
       );
 
-      _showSnackBar(mensagem, isError: false);
+      _showNotificacao(mensagem, isError: false);
 
       // 3. Sucesso! Volta para a tela de Login, destruindo a pilha de telas de recuperação
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/login');
       }
     } catch (e) {
-      _showSnackBar(e.toString(), isError: true);
+      _showNotificacao(e.toString(), isError: true);
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -108,12 +104,11 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     }
   }
 
-  void _showSnackBar(String message, {required bool isError}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Colors.red : Colors.green,
-      ),
+  void _showNotificacao(String message, {required bool isError}) {
+    MesclaNotificacao.mostrar(
+      context,
+      label: message.replaceAll('Exception: ', ''),
+      cor: isError ? AppColors.destructive : Colors.green,
     );
   }
 

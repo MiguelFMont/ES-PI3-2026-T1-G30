@@ -48,6 +48,23 @@ class AuthDatasource {
     }
   }
 
+  /// Verifica no backend se o CPF já está cadastrado.
+  /// Retorna true se estiver disponível (ainda não cadastrado).
+  Future<bool> cpfDisponivel(String cpf) async {
+    final response = await http.post(
+      Uri.parse('${AppHttpClient.baseUrl}/auth/register/verificar-cpf'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'cpf': cpf}),
+    );
+
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      final payload = data['data'] ?? data;
+      return payload['disponivel'] == true;
+    }
+    throw Exception(data['message'] ?? 'Erro ao verificar CPF.');
+  }
+
   Future<void> concluirCadastro(
     String email,
     String token,

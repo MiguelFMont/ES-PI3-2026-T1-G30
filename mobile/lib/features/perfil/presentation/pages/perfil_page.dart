@@ -96,14 +96,10 @@ class _PerfilPageState extends State<PerfilPage> {
   }
 
   void _showFeedback(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: isError
-            ? AppColors.destructive
-            : const Color(0xFF263238),
-      ),
+    MesclaNotificacao.mostrar(
+      context,
+      label: message,
+      cor: isError ? AppColors.destructive : Colors.green,
     );
   }
 
@@ -192,7 +188,6 @@ class _PerfilPageState extends State<PerfilPage> {
               Navigator.pop(ctx);
 
               final navigator = Navigator.of(context);
-              final messenger = ScaffoldMessenger.of(context);
 
               showDialog(
                 context: context,
@@ -207,10 +202,10 @@ class _PerfilPageState extends State<PerfilPage> {
                 navigator.pushNamedAndRemoveUntil('/login', (route) => false);
               } catch (e) {
                 navigator.pop();
-                messenger.showSnackBar(
-                  const SnackBar(
-                    content: Text('Erro ao sair. Tente novamente.'),
-                  ),
+                MesclaNotificacao.mostrar(
+                  context,
+                  label: 'Erro ao sair. Tente novamente.',
+                  cor: AppColors.destructive,
                 );
               }
             },
@@ -387,6 +382,7 @@ class _PerfilPageState extends State<PerfilPage> {
               ),
             ],
           ),
+          const SizedBox(height: 8),
           Row(
             children: [
               const PerfilBadge(

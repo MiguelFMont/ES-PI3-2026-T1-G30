@@ -34,6 +34,8 @@ class MesclaButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: AppColors.card,
+          disabledBackgroundColor: AppColors.muted,
+          disabledForegroundColor: AppColors.mutedForeground,
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),

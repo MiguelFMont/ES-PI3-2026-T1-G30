@@ -188,14 +188,10 @@ class _BalcaoPageState extends State<BalcaoPage> {
   }
 
   void _showFeedback(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: isError
-            ? AppColors.destructive
-            : const Color(0xFF263238),
-      ),
+    MesclaNotificacao.mostrar(
+      context,
+      label: message,
+      cor: isError ? AppColors.destructive : Colors.green,
     );
   }
 

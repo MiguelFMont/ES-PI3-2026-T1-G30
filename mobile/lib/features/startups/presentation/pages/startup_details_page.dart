@@ -84,10 +84,10 @@ class _StartupDetailsPageState extends State<StartupDetailsPage> {
     final precoToken = _startup.precoToken;
 
     if (precoToken <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Preço do token indisponível para esta startup.'),
-        ),
+      MesclaNotificacao.mostrar(
+        context,
+        label: 'Preço do token indisponível para esta startup.',
+        cor: AppColors.destructive,
       );
       return;
     }
@@ -109,10 +109,10 @@ class _StartupDetailsPageState extends State<StartupDetailsPage> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _isInvesting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Não foi possível buscar os dados da carteira.'),
-        ),
+      MesclaNotificacao.mostrar(
+        context,
+        label: 'Não foi possível buscar os dados da carteira.',
+        cor: AppColors.destructive,
       );
       return;
     }
@@ -149,15 +149,12 @@ class _StartupDetailsPageState extends State<StartupDetailsPage> {
       if (!mounted) return;
 
       if (sucesso) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              trade.type == _TradeType.buy
-                  ? 'Compra realizada com sucesso!'
-                  : 'Venda realizada com sucesso!',
-            ),
-            backgroundColor: AppColors.success,
-          ),
+        MesclaNotificacao.mostrar(
+          context,
+          label: trade.type == _TradeType.buy
+              ? 'Compra realizada com sucesso!'
+              : 'Venda realizada com sucesso!',
+          cor: Colors.green,
         );
 
         AppDataRefreshBus.instance.refresh(
@@ -180,9 +177,11 @@ class _StartupDetailsPageState extends State<StartupDetailsPage> {
       final message = e is StartupApiException
           ? e.message
           : 'Não foi possível concluir a negociação.';
-      ScaffoldMessenger.of(
+      MesclaNotificacao.mostrar(
         context,
-      ).showSnackBar(SnackBar(content: Text(message)));
+        label: message,
+        cor: AppColors.destructive,
+      );
     } finally {
       if (mounted) {
         setState(() => _isInvesting = false);

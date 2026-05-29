@@ -30,6 +30,17 @@ class AuthRepository {
     }
   }
 
+  /// Verifica se o CPF está disponível.
+  /// Retorna true (disponível), false (já cadastrado) ou null quando não
+  /// foi possível verificar (ex.: endpoint ainda não publicado).
+  Future<bool?> cpfDisponivel(String cpf) async {
+    try {
+      return await _datasource.cpfDisponivel(cpf);
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> concluirCadastro(
     String email,
     String token,

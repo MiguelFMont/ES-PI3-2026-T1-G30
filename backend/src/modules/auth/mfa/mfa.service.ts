@@ -5,6 +5,7 @@ import * as QRCode from 'qrcode';
 import * as crypto from 'crypto';
 import { getDb } from '../../../config/firebase';
 import { FieldValue } from 'firebase-admin/firestore';
+import { encryptToken, decryptToken } from '../auth.service';
 
 // ───── SETUP: gera secret e QR code ─────
 
@@ -15,9 +16,9 @@ export async function setupMfaService(uid: string, email: string) {
     length: 20,
   });
 
-  // Salva o secret como pendente — só vira definitivo após verificação
+  // Salva o secret como pendente (criptografado) — só vira definitivo após verificação
   await getDb().collection('users').doc(uid).update({
-    mfaSecretPending: secret.base32,
+    mfaSecretPending: encryptToken(secret.base32),
   });
 
   const qrCodeDataUrl = await QRCode.toDataURL(secret.otpauth_url!);
@@ -38,8 +39,10 @@ export async function verifyAndActivateMfaService(uid: string, code: string) {
     throw new Error('Nenhuma configuração de MFA pendente. Reinicie o processo.');
   }
 
+  const secretPlain = decryptToken(userData.mfaSecretPending);
+
   const isValid = speakeasy.totp.verify({
-    secret: userData.mfaSecretPending,
+    secret: secretPlain,
     encoding: 'base32',
     token: code,
     window: 1, // tolera 30s de diferença de clock
@@ -47,7 +50,7 @@ export async function verifyAndActivateMfaService(uid: string, code: string) {
 
   if (!isValid) throw new Error('Código inválido. Tente novamente.');
 
-  // Promove o secret de pendente para ativo
+  // Promove o secret de pendente para ativo (mantém criptografado)
   await getDb().collection('users').doc(uid).update({
     mfaEnabled: true,
     mfaSecret: userData.mfaSecretPending,
@@ -93,10 +96,10 @@ export async function mfaChallengeService(uid: string, tempToken: string, code: 
   if (data.tokenHash !== tokenHash) throw new Error('Token inválido.');
 
   const userDoc = await getDb().collection('users').doc(uid).get();
-  const { mfaSecret } = userDoc.data()!;
+  const mfaSecretPlain = decryptToken(userDoc.data()!.mfaSecret);
 
   const isValid = speakeasy.totp.verify({
-    secret: mfaSecret,
+    secret: mfaSecretPlain,
     encoding: 'base32',
     token: code,
     window: 1,
@@ -104,8 +107,9 @@ export async function mfaChallengeService(uid: string, tempToken: string, code: 
 
   if (!isValid) throw new Error('Código inválido. Tente novamente.');
 
-  // Recupera o idToken que foi guardado durante o login e limpa o documento
-  const { idToken, refreshToken } = data;
+  // Descriptografa os tokens que foram guardados durante o login e limpa o documento
+  const idToken = decryptToken(data.idToken);
+  const refreshToken = decryptToken(data.refreshToken);
   await docRef.delete();
 
   return { idToken, refreshToken, uid };

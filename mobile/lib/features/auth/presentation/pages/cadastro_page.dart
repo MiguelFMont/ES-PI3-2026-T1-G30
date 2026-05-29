@@ -5,7 +5,10 @@ import '../../data/repositories/auth_repository.dart';
 import '../../../../shared/widgets/campo_texto.dart';
 import '../../../../shared/widgets/campo_data.dart';
 import '../../../../shared/widgets/mescla_auth_layout.dart';
+import '../../../../shared/widgets/mescla_notificacao.dart';
 import '../../../../shared/formatters/cpf_formatter.dart';
+import '../../../../shared/formatters/telefone_formatter.dart';
+import '../../../../shared/validators/cpf_validator.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/mescla_button.dart';
 
@@ -29,6 +32,20 @@ class _CadastroPageState extends State<CadastroPage> {
   final _pageController = PageController();
   int _etapaAtual = 0;
   bool _isLoading = false;
+  bool _verificandoCpf = false;
+
+  // ── Estado de validação por campo (null = neutro) ──────────────────────────
+  bool? _dataValida;
+  bool? _cpfValido;
+  bool? _telefoneValido;
+  bool? _nomeValido;
+  bool? _emailValido;
+  bool? _senhaEstado;
+  String? _dataErro;
+  String? _cpfErro;
+  String? _telefoneErro;
+  String? _nomeErro;
+  String? _emailErro;
 
   // ── Requisitos da senha ────────────────────────────────────────────────────
   bool get _temMinimo => _senhaController.text.length >= 8;
@@ -42,7 +59,14 @@ class _CadastroPageState extends State<CadastroPage> {
   @override
   void initState() {
     super.initState();
-    _senhaController.addListener(() => setState(() {}));
+    _senhaController.addListener(
+      () => setState(() {
+        _senhaEstado = _estado(
+          ok: _senhaValida,
+          vazio: _senhaController.text.isEmpty,
+        );
+      }),
+    );
   }
 
   @override
@@ -56,8 +80,55 @@ class _CadastroPageState extends State<CadastroPage> {
     super.dispose();
   }
 
-  void _irAvancar() {
+  // ── Validade de cada etapa (controla a cor do botão Avançar) ───────────────
+  bool get _etapa0Ok =>
+      CpfValidator.isValid(_cpfController.text) &&
+      _dataNascimento != null &&
+      !_dataNascimento!.isAfter(DateTime.now());
+
+  bool get _etapa1Ok {
+    final tel = TelefoneFormatter.somenteDigitos(_telefoneController.text);
+    final nome = _nomeController.text.trim();
+    return (tel.length == 10 || tel.length == 11) &&
+        nome.length >= 3 &&
+        nome.contains(' ');
+  }
+
+  bool get _etapa2Ok =>
+      RegExp(
+        r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+      ).hasMatch(_emailController.text.trim()) &&
+      _senhaValida;
+
+  bool get _etapaAtualOk => _etapaAtual == 0 ? _etapa0Ok : _etapa1Ok;
+
+  // Estado visual de um campo: null = vazio/neutro, true = verde, false = vermelho.
+  bool? _estado({required bool ok, required bool vazio}) => vazio ? null : ok;
+
+  Future<void> _irAvancar() async {
     FocusScope.of(context).unfocus();
+
+    // Etapa 0: além do formato, confere no backend se o CPF já existe.
+    if (_etapaAtual == 0) {
+      setState(() => _verificandoCpf = true);
+      final disponivel = await _repository.cpfDisponivel(_cpfController.text);
+      if (!mounted) return;
+      setState(() => _verificandoCpf = false);
+
+      if (disponivel == false) {
+        setState(() {
+          _cpfValido = false;
+          _cpfErro = 'Este CPF já está cadastrado.';
+        });
+        MesclaNotificacao.mostrar(
+          context,
+          label: 'Este CPF já está cadastrado.',
+          cor: AppColors.destructive,
+        );
+        return;
+      }
+    }
+
     _pageController.nextPage(
       duration: const Duration(milliseconds: 400),
       curve: Curves.fastOutSlowIn,
@@ -79,25 +150,7 @@ class _CadastroPageState extends State<CadastroPage> {
   }
 
   Future<void> _cadastrar() async {
-    // 1. Validação simples antes de chamar a API
-    if (!_emailController.text.contains('@')) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Digite um e-mail válido.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-    if (!_senhaValida) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('A senha não atende todos os requisitos.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
+    if (!_etapa2Ok) return;
 
     setState(() => _isLoading = true);
 
@@ -107,7 +160,7 @@ class _CadastroPageState extends State<CadastroPage> {
         _nomeController.text,
         _emailController.text,
         _cpfController.text,
-        _telefoneController.text,
+        TelefoneFormatter.somenteDigitos(_telefoneController.text),
         _senhaController.text,
       );
 
@@ -125,8 +178,10 @@ class _CadastroPageState extends State<CadastroPage> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+      MesclaNotificacao.mostrar(
+        context,
+        label: e.toString().replaceAll('Exception: ', ''),
+        cor: AppColors.destructive,
       );
     } finally {
       setState(() => _isLoading = false);
@@ -160,10 +215,28 @@ class _CadastroPageState extends State<CadastroPage> {
       controller: _pageController,
       physics: const NeverScrollableScrollPhysics(),
       children: [
-        SingleChildScrollView(child: _etapaDataCpf()),
-        SingleChildScrollView(child: _etapaTelefoneNome()),
-        SingleChildScrollView(child: _etapaEmailSenha()),
+        _paginaCentralizada(_etapaDataCpf()),
+        _paginaCentralizada(_etapaTelefoneNome()),
+        _paginaCentralizada(_etapaEmailSenha()),
       ],
+    );
+  }
+
+  // Centraliza verticalmente o conteúdo da etapa, mantendo o scroll quando o
+  // teclado abre (ex.: telas menores).
+  Widget _paginaCentralizada(Widget conteudo) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: IntrinsicHeight(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [conteudo],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -172,7 +245,15 @@ class _CadastroPageState extends State<CadastroPage> {
       children: [
         _mensagemEtapa(0),
         CampoData(
-          onDateChanged: (date) => setState(() => _dataNascimento = date),
+          valido: _dataValida,
+          mensagemErro: _dataErro,
+          initialDate: _dataNascimento,
+          onDateChanged: (date) => setState(() {
+            _dataNascimento = date;
+            final ok = date != null && !date.isAfter(DateTime.now());
+            _dataValida = ok ? true : null;
+            _dataErro = null;
+          }),
         ),
         const SizedBox(height: 10),
         CampoTexto(
@@ -180,6 +261,17 @@ class _CadastroPageState extends State<CadastroPage> {
           label: 'CPF',
           keyboardType: TextInputType.number,
           inputFormatters: [CpfFormatter()],
+          valido: _cpfValido,
+          mensagemErro: _cpfErro,
+          onChanged: (v) => setState(() {
+            _cpfValido = _estado(
+              ok: CpfValidator.isValid(v),
+              vazio: v.trim().isEmpty,
+            );
+            _cpfErro = _cpfValido == false
+                ? 'CPF inválido. Confira os números.'
+                : null;
+          }),
         ),
         const SizedBox(height: 20),
         _botaoAvancar(),
@@ -196,12 +288,37 @@ class _CadastroPageState extends State<CadastroPage> {
           controller: _telefoneController,
           label: 'Telefone',
           keyboardType: TextInputType.phone,
+          inputFormatters: [TelefoneFormatter()],
+          valido: _telefoneValido,
+          mensagemErro: _telefoneErro,
+          onChanged: (v) => setState(() {
+            final tel = TelefoneFormatter.somenteDigitos(v);
+            _telefoneValido = _estado(
+              ok: tel.length == 10 || tel.length == 11,
+              vazio: tel.isEmpty,
+            );
+            _telefoneErro = _telefoneValido == false
+                ? 'Telefone inválido. Confira os números.'
+                : null;
+          }),
         ),
         const SizedBox(height: 10),
         CampoTexto(
           controller: _nomeController,
           label: 'Nome Completo',
           keyboardType: TextInputType.name,
+          valido: _nomeValido,
+          mensagemErro: _nomeErro,
+          onChanged: (v) => setState(() {
+            final nome = v.trim();
+            _nomeValido = _estado(
+              ok: nome.length >= 3 && nome.contains(' '),
+              vazio: nome.isEmpty,
+            );
+            _nomeErro = _nomeValido == false
+                ? 'Informe seu nome e sobrenome.'
+                : null;
+          }),
         ),
         const SizedBox(height: 20),
         _botaoAvancar(),
@@ -218,12 +335,26 @@ class _CadastroPageState extends State<CadastroPage> {
           controller: _emailController,
           label: 'E-mail',
           keyboardType: TextInputType.emailAddress,
+          valido: _emailValido,
+          mensagemErro: _emailErro,
+          onChanged: (v) => setState(() {
+            _emailValido = _estado(
+              ok: RegExp(
+                r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+              ).hasMatch(v.trim()),
+              vazio: v.trim().isEmpty,
+            );
+            _emailErro = _emailValido == false
+                ? 'E-mail inválido.'
+                : null;
+          }),
         ),
         const SizedBox(height: 10),
         CampoTexto(
           controller: _senhaController,
           label: 'Senha',
           obscureText: true,
+          valido: _senhaEstado,
         ),
         // ── Requisitos em tempo real ───────────────────────────────────────
         const SizedBox(height: 16),
@@ -372,11 +503,13 @@ class _CadastroPageState extends State<CadastroPage> {
     );
   }
 
-  Widget _botaoAvancar() =>
-      MesclaButton(label: 'Avançar', onPressed: _irAvancar);
+  Widget _botaoAvancar() => MesclaButton(
+    label: _verificandoCpf ? 'Verificando...' : 'Avançar',
+    onPressed: (_etapaAtualOk && !_verificandoCpf) ? _irAvancar : null,
+  );
 
   Widget _botaoCadastrar() =>
-      MesclaButton(label: 'Cadastrar', onPressed: _cadastrar);
+      MesclaButton(label: 'Cadastrar', onPressed: _etapa2Ok ? _cadastrar : null);
 
   Widget _botaoVoltar() {
     return TextButton(

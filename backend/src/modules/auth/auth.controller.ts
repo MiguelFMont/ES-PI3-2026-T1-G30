@@ -8,7 +8,8 @@ import {
     novaSenhaService,
     validarTokenService,
     reenviarTokenCadastroService,
-    logoutService
+    logoutService,
+    verificarCpfDisponivelService
 } from './auth.service';
 import { sendError, sendSuccess } from '../../shared/utils/response.utils';
 
@@ -70,6 +71,21 @@ export async function iniciarCadastroController(req: Request, res: Response) {
   } catch (error: any) {
     console.error("Erro ao iniciar cadastro:", error);
     return sendError(res, error.message || "Erro ao iniciar cadastro.", 400);
+  }
+}
+
+export async function verificarCpfController(req: Request, res: Response) {
+  try {
+    const { cpf } = req.body;
+
+    if (!cpf) return sendError(res, "CPF é obrigatório.", 400);
+
+    const result = await verificarCpfDisponivelService(cpf);
+
+    return sendSuccess(res, result, 200);
+  } catch (error: any) {
+    console.error("Erro ao verificar CPF:", error);
+    return sendError(res, error.message || "Erro ao verificar CPF.", 400);
   }
 }
 
