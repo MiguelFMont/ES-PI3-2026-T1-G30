@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mesclainvest/core/state/app_data_refresh_bus.dart';
 import 'package:mesclainvest/core/theme/app_colors.dart';
 import 'package:mesclainvest/features/balcao/presentation/pages/balcao_page.dart';
 import 'package:mesclainvest/features/dashboard/presentation/pages/dashboard_page.dart';
@@ -64,8 +65,27 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
   }
 
   void _onTap(int index) {
-    if (_currentIndex == index) return;
-    setState(() => _currentIndex = index);
+    if (_currentIndex != index) {
+      setState(() => _currentIndex = index);
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      AppDataRefreshBus.instance.refresh(
+        scopes: _refreshScopesForIndex(index),
+        reason: 'tab-switch',
+      );
+    });
+  }
+
+  Set<AppDataRefreshScope> _refreshScopesForIndex(int index) {
+    return switch (index) {
+      0 => const {AppDataRefreshScope.dashboard},
+      1 => const {AppDataRefreshScope.portfolio},
+      2 => const {AppDataRefreshScope.catalog},
+      3 => const {AppDataRefreshScope.balcao},
+      4 => const {AppDataRefreshScope.perfilWallet},
+      _ => const {AppDataRefreshScope.all},
+    };
   }
 
   bool _isMobileLayout(BuildContext context) =>

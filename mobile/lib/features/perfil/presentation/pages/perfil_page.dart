@@ -1,7 +1,10 @@
 // lib/features/perfil/presentation/pages/perfil_page.dart
 // Autor: Miguel Fernandes Monteiro — RA: 25014808
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../../../core/state/app_data_refresh_bus.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/repositories/perfil_repository.dart';
 import '../../domain/perfil_models.dart';
@@ -26,6 +29,7 @@ class _PerfilPageState extends State<PerfilPage> {
   WalletBalanceModel? _wallet;
   String? _walletErrorMessage;
   bool _isWalletLoading = true;
+  StreamSubscription<AppDataRefreshEvent>? _refreshSubscription;
 
   static const double _sobreposicaoCard = 48.0;
 
@@ -33,7 +37,20 @@ class _PerfilPageState extends State<PerfilPage> {
   void initState() {
     super.initState();
     _perfilFuture = _repo.buscarPerfil();
+    _refreshSubscription = AppDataRefreshBus.instance.stream.listen((event) {
+      if (!event.affects(AppDataRefreshScope.perfilWallet) || !mounted) {
+        return;
+      }
+
+      _loadWallet(showLoading: false);
+    });
     _loadWallet();
+  }
+
+  @override
+  void dispose() {
+    _refreshSubscription?.cancel();
+    super.dispose();
   }
 
   void _informacoesPessoais() {
@@ -106,6 +123,13 @@ class _PerfilPageState extends State<PerfilPage> {
             _walletErrorMessage = null;
             _isWalletLoading = false;
           });
+          AppDataRefreshBus.instance.refresh(
+            scopes: const {
+              AppDataRefreshScope.dashboard,
+              AppDataRefreshScope.portfolio,
+            },
+            reason: 'wallet-balance-updated',
+          );
           _showFeedback(update.message);
         },
       ),

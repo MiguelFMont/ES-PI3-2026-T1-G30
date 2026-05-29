@@ -7,9 +7,12 @@ mostra saldo, participacoes, grafico e ultimas operacoes
 se conecta com o backend via repository
 */
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../app/routes.dart';
+import '../../../../core/state/app_data_refresh_bus.dart';
 import '../../../../core/network/http_client.dart';
 import '../../../../core/storage/session_manager.dart';
 import '../../../../shared/widgets/saldo_card.dart';
@@ -33,20 +36,45 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
   Map<String, StartupModel> _startupsPorId = {};
   bool _isLoading = true;
   String? _erro;
+  StreamSubscription<AppDataRefreshEvent>? _refreshSubscription;
 
   @override
   void initState() {
     super.initState();
+    _refreshSubscription = AppDataRefreshBus.instance.stream.listen((event) {
+      if (!event.affects(AppDataRefreshScope.portfolio) || !mounted) {
+        return;
+      }
+
+      _carregarDados(showLoading: false);
+    });
     _carregarDados();
   }
 
+  @override
+  void dispose() {
+    _refreshSubscription?.cancel();
+    super.dispose();
+  }
+
+  // garante que os dados estejam carregados quando a tela for exibida
+  @override
+  void didUpdateWidget(covariant PortfolioScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_wallet == null && !_isLoading) {
+      _carregarDados();
+    }
+  }
+
   // carrega os dados da carteira (saldo, participações e operações) e os nomes das startups
-  Future<void> _carregarDados() async {
+  Future<void> _carregarDados({bool showLoading = true}) async {
     try {
-      setState(() {
-        _isLoading = true;
-        _erro = null;
-      });
+      if (showLoading || _wallet == null) {
+        setState(() {
+          _isLoading = true;
+          _erro = null;
+        });
+      }
 
       // busca o token JWT e o uid do usuário autenticado na sessão
       final token = await SessionManager.getToken();
@@ -68,11 +96,17 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
       if (!mounted) return;
       setState(() {
         _wallet = wallet;
-        _startupsPorId = {for (final startup in startups) startup.id: startup};
+        _startupsPorId = _mapearStartupsPorId(startups);
+        _erro = null;
         _isLoading = false;
       });
     } catch (e) {
       if (!mounted) return;
+      if (!showLoading && _wallet != null) {
+        debugPrint('Erro ao atualizar portfólio em segundo plano: $e');
+        return;
+      }
+
       setState(() {
         _erro = e.toString();
         _isLoading = false;
@@ -84,6 +118,26 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
   StartupModel? _startupPorId(String? startupId) {
     if (startupId == null) return null;
     return _startupsPorId[startupId];
+  }
+
+  Map<String, StartupModel> _mapearStartupsPorId(List<StartupModel> startups) {
+    final startupsPorId = <String, StartupModel>{};
+
+    for (final startup in startups) {
+      final id = startup.id.trim();
+      if (id.isNotEmpty) {
+        startupsPorId[id] = startup;
+      }
+
+      for (final aliasId in startup.aliasIds) {
+        final aliasNormalizado = aliasId.trim();
+        if (aliasNormalizado.isNotEmpty) {
+          startupsPorId[aliasNormalizado] = startup;
+        }
+      }
+    }
+
+    return startupsPorId;
   }
 
   String? _nomeStartup(String? startupId) => _startupPorId(startupId)?.nome;
@@ -274,7 +328,7 @@ class _PortfolioHeader extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'O que eu tenho · Visão consolidada',
+            'O que eu tenho',
             style: GoogleFonts.inter(
               fontSize: 13,
               color: Colors.white.withValues(alpha: 0.82),

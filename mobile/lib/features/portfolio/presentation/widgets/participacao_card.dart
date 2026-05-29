@@ -46,11 +46,15 @@ class ParticipacaoCard extends StatelessWidget {
         ? startup!.estagio
         : 'Startup';
     final precoAtual = startup?.precoAtualReais ?? participacao.precoMedio;
-    final valorDaPosicao = participacao.quantidade * precoAtual;
+    final valorDaPosicao = participacao.totalTokens * precoAtual;
     final lucro = valorDaPosicao - participacao.totalInvestido;
     final variacao = startup?.variacaoPercent ?? 0;
     final lucroPositivo = lucro >= 0;
     final variacaoPositiva = variacao >= 0;
+    final quantidadeBloqueada = participacao.quantidadeBloqueada;
+    final bloqueadosLabel = quantidadeBloqueada == 1
+        ? '1 bloqueado'
+        : '$quantidadeBloqueada bloqueados';
 
     return GestureDetector(
       onTap: onTap,
@@ -123,7 +127,7 @@ class ParticipacaoCard extends StatelessWidget {
                               ),
                             ),
                           ),
-                          if (participacao.quantidadeBloqueada > 0) ...[
+                          if (quantidadeBloqueada > 0) ...[
                             const SizedBox(width: 6),
                             Container(
                               padding: const EdgeInsets.symmetric(
@@ -138,7 +142,7 @@ class ParticipacaoCard extends StatelessWidget {
                                 ),
                               ),
                               child: Text(
-                                'Expansão',
+                                bloqueadosLabel,
                                 style: GoogleFonts.inter(
                                   fontSize: 9,
                                   fontWeight: FontWeight.w600,
@@ -199,7 +203,7 @@ class ParticipacaoCard extends StatelessWidget {
                 Expanded(
                   child: _Metrica(
                     label: 'Tokens',
-                    valor: '${participacao.quantidade}',
+                    valor: '${participacao.totalTokens}',
                   ),
                 ),
                 const SizedBox(width: 12),

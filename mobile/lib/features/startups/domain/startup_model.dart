@@ -75,6 +75,7 @@ class Atualizacao {
 
 class Startup {
   final String id;
+  final List<String> aliasIds;
   final String nome;
   final String logo;
   final String descricao;
@@ -82,9 +83,12 @@ class Startup {
   final String setor;
   final double precoToken;
   final double? variacaoPreco;
+  final int descontoVendaDiretaBps;
   final bool investido;
   final double capitalAportado;
   final int totalTokens;
+  final int tokensDisponiveis;
+  final DateTime? createdAt;
   final String resumoExecutivo;
   final List<Socio> socios;
   final List<Membro> conselho;
@@ -94,6 +98,7 @@ class Startup {
 
   Startup({
     required this.id,
+    this.aliasIds = const [],
     required this.nome,
     required this.logo,
     required this.descricao,
@@ -101,9 +106,12 @@ class Startup {
     this.setor = '',
     this.precoToken = 0,
     this.variacaoPreco,
+    this.descontoVendaDiretaBps = 0,
     this.investido = false,
     required this.capitalAportado,
     required this.totalTokens,
+    this.tokensDisponiveis = 0,
+    this.createdAt,
     required this.resumoExecutivo,
     required this.socios,
     required this.conselho,
@@ -113,8 +121,14 @@ class Startup {
   });
 
   factory Startup.fromJson(Map<String, dynamic> json) {
+    final totalTokens = _intFromJson(json['totalTokens']);
+    final tokensDisponiveis = _intFromJson(
+      json['tokensDisponiveis'] ?? json['totalTokens'],
+    );
+
     return Startup(
       id: _stringFromJson(json['id']),
+      aliasIds: _stringListFromJson(json['aliasIds']),
       nome: _stringFromJson(json['nome']),
       logo: _stringFromJson(json['logo']),
       descricao: _stringFromJson(json['descricao']),
@@ -127,9 +141,14 @@ class Startup {
       variacaoPreco: json['variacaoPreco'] == null
           ? null
           : _doubleFromJson(json['variacaoPreco']),
+      descontoVendaDiretaBps: _intFromJson(json['descontoVendaDiretaBps']),
       investido: json['investido'] == true,
       capitalAportado: _doubleFromJson(json['capitalAportado']),
-      totalTokens: _intFromJson(json['totalTokens']),
+      totalTokens: totalTokens,
+      tokensDisponiveis: totalTokens > 0
+          ? tokensDisponiveis.clamp(0, totalTokens).toInt()
+          : tokensDisponiveis,
+      createdAt: _dateTimeFromJson(json['createdAt']),
       resumoExecutivo: _stringFromJson(
         json['resumoExecutivo'] ?? json['resumoExecutive'],
       ),
@@ -185,6 +204,40 @@ Map<String, dynamic> _mapFromJson(dynamic value) {
     return value.map((key, item) => MapEntry(key.toString(), item));
   }
   return const <String, dynamic>{};
+}
+
+List<String> _stringListFromJson(dynamic value) {
+  if (value is! List) return const [];
+
+  return value
+      .map((item) => _stringFromJson(item))
+      .where((item) => item.trim().isNotEmpty)
+      .toList();
+}
+
+DateTime? _dateTimeFromJson(dynamic value) {
+  if (value == null) return null;
+  if (value is DateTime) return value;
+  if (value is String) return DateTime.tryParse(value);
+
+  final map = _mapFromJson(value);
+  final seconds = map['_seconds'] ?? map['seconds'];
+  final nanoseconds = map['_nanoseconds'] ?? map['nanoseconds'] ?? 0;
+  if (seconds is num) {
+    return DateTime.fromMillisecondsSinceEpoch(
+      seconds.toInt() * 1000 +
+          (nanoseconds is num ? nanoseconds.toInt() ~/ 1000000 : 0),
+    );
+  }
+
+  if (value is num) {
+    final timestamp = value.toInt();
+    return DateTime.fromMillisecondsSinceEpoch(
+      timestamp < 10000000000 ? timestamp * 1000 : timestamp,
+    );
+  }
+
+  return null;
 }
 
 // O backend remoto serializa datas do Firestore como mapa com _seconds.

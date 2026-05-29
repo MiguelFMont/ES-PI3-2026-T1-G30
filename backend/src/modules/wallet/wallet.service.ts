@@ -82,7 +82,9 @@ export async function getDadosDashboardService(uid: string | undefined) {
     // calcula valor total atual de todos os holdings 
     // .reduce percorre o array e soma os valores 
     const valorTotalCarteira = holdings.reduce(
-        (soma: number, holding: any) => soma + (holding.quantidade * holding.precoMedioCentavos) / 100,
+        (soma: number, holding: any) =>
+          soma +
+          (getHoldingOwnedQuantity(holding) * holding.precoMedioCentavos) / 100,
         0);
     
     // calcula o total investido somando todas as compras de tokens (holdings)
@@ -177,6 +179,13 @@ function isNonNegativeInteger(value: unknown): value is number {
 // É usada no POST /wallet/add-balance para aceitar apenas valorCentavos válido.
 function isPositiveInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value > 0;
+}
+
+function getHoldingOwnedQuantity(holding: {
+  quantidade: number;
+  quantidadeBloqueada: number;
+}): number {
+  return holding.quantidade + holding.quantidadeBloqueada;
 }
 
 // Garante que o filtro "tipo" só aceite os nomes oficiais do contrato em português.

@@ -26,8 +26,10 @@ class ParticipacaoModel {
 
   // preço médio em reais
   double get precoMedio => precoMedioCentavos / 100;
+  // posse total inclui tokens livres e bloqueados em ofertas abertas
+  int get totalTokens => quantidade + quantidadeBloqueada;
   // valor total da posição em reais
-  double get valorDaPosicao => quantidade * precoMedio;
+  double get valorDaPosicao => totalTokens * precoMedio;
   // total investido em reais
   double get totalInvestido => valorDaPosicao;
 
@@ -37,7 +39,7 @@ class ParticipacaoModel {
       startupId: map['startupId'] ?? '',
       quantidade: (map['quantidade'] ?? 0).toInt(),
       quantidadeBloqueada: (map['quantidadeBloqueada'] ?? 0).toInt(),
-      precoMedioCentavos: (map['precoMedioCentavos'] ?? 0).toInt(),
+      precoMedioCentavos: (map['precoMedioCentavos'] ?? 0).toDouble(),
       createdAt: DateTime.parse(map['createdAt']),
       updatedAt: DateTime.parse(map['updatedAt']),
     );

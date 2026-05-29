@@ -60,6 +60,8 @@ class OperacaoTile extends StatelessWidget {
         return 'Venda Balcão';
       case 'ADICIONAR_SALDO':
         return 'Depósito';
+      case 'SACAR_SALDO':
+        return 'Saque';
       default:
         return operacao.tipo;
     }
@@ -69,6 +71,7 @@ class OperacaoTile extends StatelessWidget {
   Color get _corTipo {
     if (operacao.isCompra) return const Color(0xFFF44336);
     if (operacao.isVenda) return const Color(0xFF4CAF50);
+    if (operacao.isSaque) return const Color(0xFF01579B);
     return const Color(0xFF01579B);
   }
 
@@ -79,8 +82,6 @@ class OperacaoTile extends StatelessWidget {
     }
     return const Color(0xFF01579B);
   }
-
-  String get _sinalValor => operacao.isCompra ? '-' : '+';
 
   @override
   Widget build(BuildContext context) {
@@ -149,7 +150,7 @@ class OperacaoTile extends StatelessWidget {
                     // nome da startup ou "saldo"
                     Text(
                       nomeStartup ??
-                          (operacao.tipo == 'ADICIONAR_SALDO'
+                          (operacao.tipo == 'ADICIONAR_SALDO' || operacao.tipo == 'SACAR_SALDO'
                               ? 'Saldo'
                               : operacao.startupId ?? ''),
                       style: GoogleFonts.inter(
@@ -175,7 +176,7 @@ class OperacaoTile extends StatelessWidget {
           ),
           // valor total
           Text(
-            '$_sinalValor R\$ ${_formatarValor(operacao.valorTotalReais)}',
+            '${operacao.isCompra || operacao.isSaque ? '-' : '+'}R\$ ${_formatarValor(operacao.valorTotalReais)}',
             style: GoogleFonts.inter(
               fontSize: 14,
               fontWeight: FontWeight.w700,

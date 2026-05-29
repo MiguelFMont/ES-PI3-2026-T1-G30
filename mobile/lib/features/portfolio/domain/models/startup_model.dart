@@ -8,6 +8,7 @@ representa os dados da startup que aparecem no card de participação
 
 class StartupModel {
   final String id;
+  final List<String> aliasIds;
   final String nome;
   final String logo;
   final String descricao;
@@ -20,6 +21,7 @@ class StartupModel {
 
   const StartupModel({
     required this.id,
+    this.aliasIds = const [],
     required this.nome,
     required this.logo,
     required this.descricao,
@@ -41,6 +43,8 @@ class StartupModel {
   }
 
   factory StartupModel.fromMap(Map<String, dynamic> map) {
+    final totalTokens = (map['totalTokens'] ?? 0).toInt();
+    final tokensDisponiveis = (map['tokensDisponiveis'] ?? totalTokens).toInt();
     final precoInicial =
         (map['precoTokenInicialCentavos'] ?? map['precoInicialCentavos'] ?? 0)
             .toInt();
@@ -52,15 +56,27 @@ class StartupModel {
 
     return StartupModel(
       id: map['id'] ?? '',
+      aliasIds: _aliasIdsFromMap(map['aliasIds']),
       nome: map['nome'] ?? '',
       logo: map['logo'] ?? '',
       descricao: map['descricao'] ?? '',
       estagio: map['estagio'] ?? '',
       capitalAportado: (map['capitalAportado'] ?? 0).toDouble(),
-      totalTokens: (map['totalTokens'] ?? 0).toInt(),
-      tokensDisponiveis: (map['tokensDisponiveis'] ?? 0).toInt(),
+      totalTokens: totalTokens,
+      tokensDisponiveis: totalTokens > 0
+          ? tokensDisponiveis.clamp(0, totalTokens).toInt()
+          : tokensDisponiveis,
       precoTokenInicialCentavos: precoInicial,
       precoTokenAtualCentavos: precoAtual,
     );
+  }
+
+  static List<String> _aliasIdsFromMap(dynamic value) {
+    if (value is! List) return const [];
+
+    return value
+        .map((item) => '$item')
+        .where((item) => item.trim().isNotEmpty)
+        .toList();
   }
 }

@@ -58,23 +58,28 @@ class HoldingModel {
   const HoldingModel({
     required this.nomeStartup,
     required this.setor,
+    required this.totalTokens,
     required this.valorInvestido,
     required this.percentualRetorno,
   });
 
   final String nomeStartup;
   final String setor;
+  final double totalTokens;
   final double valorInvestido;
   final double percentualRetorno;
 
   factory HoldingModel.fromJson(Map<String, dynamic> json) {
     final quantidade = _toDouble(json['quantidade']);
+    final quantidadeBloqueada = _toDouble(json['quantidadeBloqueada']);
     final precoMedioCentavos = _toDouble(json['precoMedioCentavos']);
+    final quantidadeTotal = quantidade + quantidadeBloqueada;
 
     return HoldingModel(
       nomeStartup: _toText(json['nomeStartup'] ?? json['startupId']),
       setor: _toText(json['setor']),
-      valorInvestido: (quantidade * precoMedioCentavos) / 100,
+      totalTokens: quantidadeTotal,
+      valorInvestido: (quantidadeTotal * precoMedioCentavos) / 100,
       percentualRetorno: _toDouble(json['percentualRetorno']),
     );
   }
@@ -109,9 +114,9 @@ class TransactionModel {
     return TransactionModel(
       tipo: _toText(json['tipo']),
       nomeStartup: _toText(json['nomeStartup'] ?? json['startupId']),
-      detalhes: quantidade > 0 ? '${quantidade.toStringAsFixed(0)} tokens' : '',
-      data: _formatDateTime(createdAt),
-      valor: _centavosParaReais(json['valorTotalCentavos']),
+      detalhes: _buildTokenDetails(quantidade),
+      data: _toText(json['createdAt']),
+      valor: _toDouble(json['valorTotalCentavos']) / 100,
       createdAt: createdAt,
       precoUnitario: precoUnitarioCentavos == null
           ? null
@@ -119,8 +124,6 @@ class TransactionModel {
     );
   }
 }
-
-double _centavosParaReais(dynamic value) => _toDouble(value) / 100;
 
 double _toDouble(dynamic value) {
   if (value is num) return value.toDouble();
@@ -143,9 +146,12 @@ double? _toNullableDouble(dynamic value) {
 
 String _toText(dynamic value) => value == null ? '' : value.toString();
 
-String _formatDateTime(DateTime value) {
-  if (value.millisecondsSinceEpoch == 0) return '';
-  return value.toIso8601String();
+String _buildTokenDetails(double quantidade) {
+  if (quantidade <= 0) return '';
+
+  final quantidadeTexto = quantidade.toStringAsFixed(0);
+  final sufixo = quantidade == 1 ? 'token' : 'tokens';
+  return '$quantidadeTexto $sufixo';
 }
 
 DateTime _toDateTime(dynamic value) {

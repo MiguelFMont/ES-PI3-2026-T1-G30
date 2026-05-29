@@ -7,7 +7,9 @@
     "dev": "nodemon --exec ts-node src/local.ts",
     "build": "tsc",
     "start": "npm run build && node dist/local.js",
+    "audit:duplicate-startups": "ts-node scripts/audit-duplicate-startups.ts",
     "fix:wallet-fields": "ts-node scripts/fix-wallet-fields.ts",
+    "rebalance:startup-tokenomics": "ts-node scripts/rebalance-startup-tokenomics.ts",
     "seed:trading-fields": "ts-node scripts/seed-trading-fields.ts",
     "seed:price-history": "ts-node scripts/seed-price-history.ts"
   },

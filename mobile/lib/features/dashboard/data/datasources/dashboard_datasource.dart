@@ -8,7 +8,10 @@ import '../models/dashboard_models.dart';
 
 class DashboardDatasource {
   Future<DashboardSummaryModel> getSummary() async {
-    final body = await _get('/wallet/dashboard', 'Erro ao buscar resumo do dashboard.');
+    final body = await _get(
+      '/wallet/dashboard',
+      'Erro ao buscar resumo do dashboard.',
+    );
     final dashboard = body['dashboard'];
 
     if (dashboard is! Map<String, dynamic>) {
@@ -19,12 +22,21 @@ class DashboardDatasource {
   }
 
   Future<List<HoldingModel>> getHoldings() async {
-    final body = await _get('/wallet/holdings', 'Erro ao buscar posicoes investidas.');
-    return _parseItems(body, HoldingModel.fromJson);
+    final body = await _get(
+      '/wallet/holdings',
+      'Erro ao buscar participacoes investidas.',
+    );
+    return _parseItems(
+      body,
+      HoldingModel.fromJson,
+    ).where((holding) => holding.totalTokens > 0).toList();
   }
 
   Future<List<TransactionModel>> getTransactions() async {
-    final body = await _get('/wallet/transactions', 'Erro ao buscar transacoes do dashboard.');
+    final body = await _get(
+      '/wallet/transactions',
+      'Erro ao buscar transacoes do dashboard.',
+    );
     return _parseItems(body, TransactionModel.fromJson);
   }
 
@@ -46,7 +58,7 @@ class DashboardDatasource {
       throw Exception(errorMessage);
     }
 
-    final decoded = jsonDecode(response.body);
+    final decoded = jsonDecode(utf8.decode(response.bodyBytes));
     if (decoded is! Map<String, dynamic>) {
       throw Exception('Resposta invalida do servidor.');
     }

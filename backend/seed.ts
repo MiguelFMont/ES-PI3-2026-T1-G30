@@ -1,23 +1,55 @@
 import { getDb } from "./src/config/firebase";
 import { Timestamp } from "firebase-admin/firestore";
+import { resolveStartupTokenomicsTarget } from "./scripts/lib/startup-tokenomics-policy";
 
 // initializeFirebase();
 
 const db = getDb();
+const DEFAULT_PRECO_TOKEN_CENTAVOS = 1000;
+const DEFAULT_DESCONTO_VENDA_DIRETA_BPS = 1000;
+
+function startupDocId(nome: string): string {
+  return nome
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+// Aplica a politica central de tokenomia para manter capital e total de tokens
+// consistentes entre a seed e os scripts de manutencao do Firestore.
+function withStartupTokenomicsPolicy<T extends { nome: string; estagio: string }>(
+  startup: T,
+): T & StartupTokenomicsSeedFields {
+  const target = resolveStartupTokenomicsTarget({
+    nome: startup.nome,
+    estagio: startup.estagio,
+  });
+
+  return {
+    ...startup,
+    capitalAportado: target.capitalAportado,
+    totalTokens: target.totalTokens,
+  };
+}
+
+type StartupTokenomicsSeedFields = {
+  capitalAportado: number;
+  totalTokens: number;
+};
 
 async function seed(): Promise<void> {
   console.log("Iniciando seed...");
 
   const startups = [
-    {
+    withStartupTokenomicsPolicy({
       nome: "AgroIA",
       logo: "https://placehold.co/200x200?text=AgroIA",
       descricao:
         "Plataforma de inteligêcia artificial para monitoramento de lavoura via sátelite.",
       estagio: "Em Expansão",
       setor: "Agritech",
-      capitalAportado: 320000,
-      totalTokens: 1000000,
       resumoExecutivo:
         "A AgroIA moderniza o agronégocio brasileiro com tecnologia de ponta.",
       socios: [
@@ -68,16 +100,14 @@ async function seed(): Promise<void> {
         },
       ],
       createdAt: Timestamp.fromDate(new Date()),
-    },
-    {
+    }),
+    withStartupTokenomicsPolicy({
       nome: "MedFácil",
       logo: "https://placehold.co/200x200?text=Medfacil",
       descricao:
         "Conecta pacientes a médicos para consultas online com prontuários digital integrado.",
       estagio: "Em Operação",
       setor: "Saúde",
-      capitalAportado: 85000,
-      totalTokens: 500000,
       resumoExecutivo:
         "A MedFácil democratiza o acesso à saúde através de telemedicina acessível.",
       socios: [
@@ -123,16 +153,14 @@ async function seed(): Promise<void> {
         },
       ],
       createdAt: Timestamp.fromDate(new Date()),
-    },
-    {
+    }),
+    withStartupTokenomicsPolicy({
       nome: "EduBlocks",
       logo: "https://placehold.co/200x200?text=EduBlocks",
       descricao:
         "Ensino de programação para crianças de 6 a 14 anos através de jogos e desafios.",
       estagio: "Nova",
       setor: "Educação",
-      capitalAportado: 0,
-      totalTokens: 200000,
       resumoExecutivo:
         "A EduBlocks acredita que toda criança pode aprender a programar de forma lúdica.",
       socios: [
@@ -159,16 +187,14 @@ async function seed(): Promise<void> {
       videos: [],
       atualizacoes: [],
       createdAt: Timestamp.fromDate(new Date()),
-    },
-    {
+    }),
+    withStartupTokenomicsPolicy({
       nome: "FinTrack",
       logo: "https://placehold.co/200x200?text=FinTrack",
       descricao:
         "Plataforma de gestão financeira pessoal com categorização automática de gastos por IA.",
       estagio: "Em Operação",
       setor: "Fintech",
-      capitalAportado: 150000,
-      totalTokens: 750000,
       resumoExecutivo:
         "A FinTrack ajuda brasileiros a organizarem suas finanças com inteligência artificial acessível.",
       socios: [
@@ -225,16 +251,14 @@ async function seed(): Promise<void> {
         },
       ],
       createdAt: Timestamp.fromDate(new Date()),
-    },
-    {
+    }),
+    withStartupTokenomicsPolicy({
       nome: "GreenRoute",
       logo: "https://placehold.co/200x200?text=GreenRoute",
       descricao:
         "App de mobilidade urbana sustentável que calcula rotas com menor emissão de carbono.",
       estagio: "Nova",
       setor: "Mobilidade",
-      capitalAportado: 0,
-      totalTokens: 300000,
       resumoExecutivo:
         "A GreenRoute quer transformar o jeito que as pessoas se locomovem nas cidades, priorizando o meio ambiente.",
       socios: [
@@ -261,11 +285,32 @@ async function seed(): Promise<void> {
       videos: [],
       atualizacoes: [],
       createdAt: Timestamp.fromDate(new Date()),
-    },
+    }),
   ];
 
   for (const startup of startups) {
-    await db.collection("startups").add(startup);
+    const existingSnapshot = await db
+      .collection("startups")
+      .where("nome", "==", startup.nome)
+      .limit(1)
+      .get();
+
+    if (!existingSnapshot.empty) {
+      console.log(`${startup.nome} já existe. Inserção ignorada.`);
+      continue;
+    }
+
+    await db
+      .collection("startups")
+      .doc(startupDocId(startup.nome))
+      .set({
+        ...startup,
+        tokensDisponiveis: startup.totalTokens,
+        precoTokenInicialCentavos: DEFAULT_PRECO_TOKEN_CENTAVOS,
+        precoTokenAtualCentavos: DEFAULT_PRECO_TOKEN_CENTAVOS,
+        descontoVendaDiretaBps: DEFAULT_DESCONTO_VENDA_DIRETA_BPS,
+        updatedAt: Timestamp.fromDate(new Date()),
+      });
     console.log(`${startup.nome} inserida`);
   }
   console.log("\nSeed concluída verifique o FireBase console");

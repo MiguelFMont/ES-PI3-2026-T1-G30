@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../app/routes.dart';
+import '../../../../core/state/app_data_refresh_bus.dart';
 import '../../../../core/storage/session_manager.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../features/perfil/data/datasource/perfil_datasource.dart';
@@ -24,13 +27,14 @@ class _DashboardPageState extends State<DashboardPage> {
   final DashboardDatasource _datasource = DashboardDatasource();
   final PerfilDatasource _perfilDatasource = PerfilDatasource();
   final StartupService _startupService = StartupService();
+  StreamSubscription<AppDataRefreshEvent>? _refreshSubscription;
 
   bool _isLoading = true;
   DashboardSummaryModel? _summary;
   List<HoldingModel>? _holdings;
   List<TransactionModel>? _transactions;
   List<Startup>? _startupsDestaque;
-  List<Startup> _todasStartups = const [];
+  Map<String, Startup> _startupsPorId = const {};
   String _primeiroNome = '';
 
   String _periodoSelecionado = '1M';
@@ -38,7 +42,20 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   void initState() {
     super.initState();
+    _refreshSubscription = AppDataRefreshBus.instance.stream.listen((event) {
+      if (!event.affects(AppDataRefreshScope.dashboard) || !mounted) {
+        return;
+      }
+
+      _carregarDados();
+    });
     _carregarDados();
+  }
+
+  @override
+  void dispose() {
+    _refreshSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _carregarDados() async {
@@ -64,8 +81,8 @@ class _DashboardPageState extends State<DashboardPage> {
         _holdings = holdings;
         _transactions = transactions;
         _primeiroNome = _primeiroNomeDe(perfil?.nome);
-        _todasStartups = startups ?? const [];
         _startupsDestaque = _selecionarDestaques(startups);
+        _startupsPorId = _mapearStartupsPorId(startups);
         _isLoading = false;
       });
     } catch (e) {
@@ -130,12 +147,47 @@ class _DashboardPageState extends State<DashboardPage> {
 
   List<Startup> _selecionarDestaques(List<Startup>? startups) {
     if (startups == null || startups.isEmpty) return const [];
-    final ordenadas = [...startups]..sort((a, b) {
-      final varA = a.variacaoPreco ?? 0;
-      final varB = b.variacaoPreco ?? 0;
-      return varB.compareTo(varA);
-    });
+    final ordenadas = [...startups]
+      ..sort((a, b) {
+        final varA = a.variacaoPreco ?? 0;
+        final varB = b.variacaoPreco ?? 0;
+        return varB.compareTo(varA);
+      });
     return ordenadas.take(3).toList();
+  }
+
+  Map<String, Startup> _mapearStartupsPorId(List<Startup>? startups) {
+    if (startups == null || startups.isEmpty) return const {};
+
+    final startupsPorId = <String, Startup>{};
+
+    for (final startup in startups) {
+      final id = startup.id.trim();
+      if (id.isNotEmpty) {
+        startupsPorId[id] = startup;
+      }
+
+      for (final aliasId in startup.aliasIds) {
+        final aliasNormalizado = aliasId.trim();
+        if (aliasNormalizado.isNotEmpty) {
+          startupsPorId[aliasNormalizado] = startup;
+        }
+      }
+    }
+
+    return startupsPorId;
+  }
+
+  String _resolverNomeStartup(String nomeOuId) {
+    final valor = nomeOuId.trim();
+    if (valor.isEmpty) return '-';
+
+    final startup = _startupsPorId[valor];
+    if (startup != null && startup.nome.trim().isNotEmpty) {
+      return startup.nome.trim();
+    }
+
+    return valor;
   }
 
   @override
@@ -178,7 +230,7 @@ class _DashboardPageState extends State<DashboardPage> {
             child: _buildGraficoEvolucao(summary.pontosGrafico),
           ),
           SliverToBoxAdapter(
-            child: _buildMinhasPosicoes(_holdings ?? const [], _todasStartups),
+            child: _buildMinhasPosicoes(_holdings ?? const []),
           ),
           SliverToBoxAdapter(child: _buildStartupsDestaque()),
           SliverToBoxAdapter(
@@ -437,8 +489,7 @@ class _DashboardPageState extends State<DashboardPage> {
           _SecaoTitulo(
             titulo: 'Startups em destaque',
             acao: 'Ver todas',
-            onAcaoTap: () =>
-                Navigator.pushNamed(context, AppRoutes.catalog),
+            onAcaoTap: () => Navigator.pushNamed(context, AppRoutes.catalog),
           ),
           const SizedBox(height: 14),
           if (startups.isEmpty)
@@ -471,30 +522,32 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildMinhasPosicoes(List<HoldingModel> holdings, List<Startup> startups) {
+  Widget _buildMinhasPosicoes(List<HoldingModel> holdings) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(27, 0, 22, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _SecaoTitulo(
-            titulo: 'Minhas Posições Primárias',
+            titulo: 'Minhas participações',
             acao: 'Ver carteira',
-            onAcaoTap: () =>
-                Navigator.pushNamed(context, AppRoutes.portfolio),
+            onAcaoTap: () => Navigator.pushNamed(context, AppRoutes.portfolio),
           ),
           const SizedBox(height: 14),
           if (holdings.isEmpty)
             _EstadoVazio(
               icone: Icons.work_outline_rounded,
-              mensagem: 'Você ainda não possui posições.',
+              mensagem: 'Você ainda não possui participações.',
             )
           else
             ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: holdings.length,
-              itemBuilder: (_, i) => _PosicaoCard(holding: holdings[i], startups: startups),
+              itemBuilder: (_, i) => _PosicaoCard(
+                holding: holdings[i],
+                nomeStartup: _resolverNomeStartup(holdings[i].nomeStartup),
+              ),
             ),
         ],
       ),
@@ -525,8 +578,12 @@ class _DashboardPageState extends State<DashboardPage> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: transacoesExibidas.length,
-              itemBuilder: (_, i) =>
-                  _AtividadeCard(transaction: transacoesExibidas[i]),
+              itemBuilder: (_, i) => _AtividadeCard(
+                transaction: transacoesExibidas[i],
+                nomeStartup: _resolverNomeStartup(
+                  transacoesExibidas[i].nomeStartup,
+                ),
+              ),
             ),
         ],
       ),
@@ -1022,16 +1079,15 @@ class _OportunidadeCard extends StatelessWidget {
 
 class _PosicaoCard extends StatelessWidget {
   final HoldingModel holding;
-  final List<Startup> startups;
+  final String nomeStartup;
 
-  const _PosicaoCard({required this.holding, required this.startups});
+  const _PosicaoCard({required this.holding, required this.nomeStartup});
 
   @override
   Widget build(BuildContext context) {
     final cor = holding.percentualRetorno >= 0
         ? AppColors.success
         : AppColors.destructive;
-    final nome = _resolverNomeStartup(holding.nomeStartup, startups);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1053,7 +1109,7 @@ class _PosicaoCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  nome.isEmpty ? '—' : nome,
+                  nomeStartup,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -1064,9 +1120,7 @@ class _PosicaoCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  holding.setor.isEmpty
-                      ? 'Setor não informado'
-                      : holding.setor,
+                  holding.setor.isEmpty ? 'Setor não informado' : holding.setor,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -1108,28 +1162,43 @@ class _PosicaoCard extends StatelessWidget {
 
 class _AtividadeCard extends StatelessWidget {
   final TransactionModel transaction;
+  final String nomeStartup;
 
-  const _AtividadeCard({required this.transaction});
+  const _AtividadeCard({required this.transaction, required this.nomeStartup});
+
+  String _labelTipo(String tipoUpper) {
+    if (tipoUpper.startsWith('COMPRA')) return 'Compra';
+    if (tipoUpper.startsWith('VENDA')) return 'Venda';
+    if (tipoUpper == 'ADICIONAR_SALDO') return 'Depósito';
+    if (tipoUpper == 'SACAR_SALDO') return 'Saque';
+    return transaction.tipo;
+  }
+
+  String _tituloFallback(String tipoUpper) {
+    if (tipoUpper == 'ADICIONAR_SALDO' || tipoUpper == 'SACAR_SALDO') {
+      return 'Saldo da carteira';
+    }
+
+    return 'Transação';
+  }
 
   @override
   Widget build(BuildContext context) {
     final tipoUpper = transaction.tipo.toUpperCase();
     final isCompra = tipoUpper.startsWith('COMPRA');
-    final tipoExibido = isCompra
-        ? 'Compra'
-        : tipoUpper.startsWith('VENDA')
-            ? 'Venda'
-            : transaction.tipo;
-    final cor = isCompra ? AppColors.destructive : AppColors.success;
-    final dtParsed = transaction.data.isNotEmpty ? DateTime.tryParse(transaction.data) : null;
-    final dataFormatada = (dtParsed != null && dtParsed.millisecondsSinceEpoch != 0)
-        ? DateFormat('dd/MM/yyyy').format(dtParsed)
-        : '';
-    final subtitle = [
+    final isSaque = tipoUpper == 'SACAR_SALDO';
+    final isDebito = isCompra || isSaque;
+    final tipoExibido = _labelTipo(tipoUpper);
+    final cor = isDebito ? AppColors.destructive : AppColors.success;
+    final titulo = nomeStartup.trim().isEmpty
+        ? _tituloFallback(tipoUpper)
+        : nomeStartup.trim();
+    final subtitle = <String>[
+      tipoExibido,
       if (transaction.detalhes.isNotEmpty) transaction.detalhes,
-      if (dataFormatada.isNotEmpty) dataFormatada,
+      if (transaction.data.isNotEmpty) _formatarDataCurta(transaction.data),
     ].join(' · ');
-    final valorExibido = isCompra
+    final valorExibido = isDebito
         ? -transaction.valor.abs()
         : transaction.valor.abs();
 
@@ -1151,9 +1220,7 @@ class _AtividadeCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(
-              isCompra
-                  ? Icons.south_west_rounded
-                  : Icons.north_east_rounded,
+              isDebito ? Icons.south_west_rounded : Icons.north_east_rounded,
               color: cor,
               size: 20,
             ),
@@ -1164,9 +1231,7 @@ class _AtividadeCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  transaction.nomeStartup.isEmpty
-                      ? '—'
-                      : transaction.nomeStartup,
+                  titulo,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -1177,9 +1242,7 @@ class _AtividadeCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  subtitle.isEmpty
-                      ? tipoExibido
-                      : '$tipoExibido · $subtitle',
+                  subtitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -1499,10 +1562,24 @@ String _formatPercent(double valor) {
   return '$sign$formatted%';
 }
 
-String _resolverNomeStartup(String raw, List<Startup> catalog) {
-  if (raw.isEmpty) return '';
-  for (final s in catalog) {
-    if (s.id == raw) return s.nome;
-  }
-  return raw;
+String _formatarDataCurta(String raw) {
+  final data = DateTime.tryParse(raw)?.toLocal();
+  if (data == null) return raw;
+
+  const meses = [
+    'jan.',
+    'fev.',
+    'mar.',
+    'abr.',
+    'mai.',
+    'jun.',
+    'jul.',
+    'ago.',
+    'set.',
+    'out.',
+    'nov.',
+    'dez.',
+  ];
+
+  return '${data.day} de ${meses[data.month - 1]}';
 }

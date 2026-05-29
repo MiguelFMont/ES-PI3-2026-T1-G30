@@ -50,6 +50,8 @@ class OperacaoModel {
   // verifica se é uma operação de compra ou venda
   bool get isCompra => tipo == 'COMPRA_DIRETA' || tipo == 'COMPRA_BALCAO';
   bool get isVenda => tipo == 'VENDA_DIRETA' || tipo == 'VENDA_BALCAO';
+  bool get isSaque => tipo == 'SACAR_SALDO';
+  bool get isDeposito => tipo == 'ADICIONAR_SALDO';
 
   factory OperacaoModel.fromJson(Map<String, dynamic> json) {
     final precoUnitarioCentavos = _toNullableInt(

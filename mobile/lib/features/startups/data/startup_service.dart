@@ -7,7 +7,7 @@ import 'package:mesclainvest/core/network/http_client.dart';
 import 'package:mesclainvest/core/storage/session_manager.dart';
 
 import '../domain/startup_model.dart';
-import 'startup_mock.dart';
+import '../domain/startup_price_point.dart';
 
 class StartupService {
   static const Duration _requestTimeout = Duration(seconds: 10);
@@ -22,13 +22,22 @@ class StartupService {
     );
   }
 
-  Future<List<Startup>> listarStartups({String? estagio}) async {
-    if (kUseMock) {
-      await Future.delayed(const Duration(milliseconds: 600));
-      if (estagio == null || estagio.isEmpty) return List.of(mockStartups);
-      return mockStartups.where((s) => s.estagio == estagio).toList();
+  Future<Map<String, String>> _authorizedHeaders() async {
+    final token = await SessionManager.getToken();
+    if (token == null || token.isEmpty) {
+      throw StartupApiException(
+        'Sessão expirada. Faça login novamente.',
+        401,
+      );
     }
 
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+  }
+
+  Future<List<Startup>> listarStartups({String? estagio}) async {
     final url = _buildUri(
       '/startups',
       estagio != null && estagio.isNotEmpty ? {'estagio': estagio} : null,
@@ -77,14 +86,6 @@ class StartupService {
   }
 
   Future<Startup> buscarStartupPorId(String startupId) async {
-    if (kUseMock) {
-      await Future.delayed(const Duration(milliseconds: 600));
-      return mockStartups.firstWhere(
-        (startup) => startup.id == startupId,
-        orElse: () => throw StartupApiException('Startup nao encontrada.', 404),
-      );
-    }
-
     final url = _buildUri('/startups/$startupId');
 
     try {
@@ -125,24 +126,236 @@ class StartupService {
     }
   }
 
-  Future<bool> investirStartup(String startupId, int quantidade) async {
+  Future<List<StartupPricePoint>> buscarHistoricoPrecos(
+    String startupId,
+  ) async {
+    final normalizedStartupId = startupId.trim();
+    if (normalizedStartupId.isEmpty) return const [];
+
+    final url = _buildUri('/startups/$normalizedStartupId/price-history');
+
+    try {
+      final response = await http.get(url).timeout(_requestTimeout);
+
+      if (response.statusCode == 200) {
+        final body = _decodeJsonObject(response.body);
+        final data = body['data'] ?? body['items'];
+        if (data is! List) return const [];
+
+        return data
+            .map((item) => StartupPricePoint.fromJson(_asJsonMap(item)))
+            .where((point) => point.preco > 0)
+            .toList();
+      }
+
+      throw StartupApiException(
+        _extractErrorMessage(response.body) ??
+            'Erro ao buscar histórico de preço: ${response.statusCode}',
+        response.statusCode,
+      );
+    } on TimeoutException {
+      throw StartupApiException(
+        'O histórico de preço demorou para responder. Tente novamente.',
+      );
+    } on SocketException {
+      throw StartupApiException(
+        'Não foi possível conectar ao histórico de preço.',
+      );
+    } catch (e) {
+      if (e is StartupApiException) {
+        rethrow;
+      }
+      throw StartupApiException(
+        'Não foi possível carregar o histórico de preço agora.',
+      );
+    }
+  }
+
+  Future<int> buscarQuantidadeTokensUsuario(String startupId) async {
+    final normalizedStartupId = startupId.trim();
+    if (normalizedStartupId.isEmpty) return 0;
+
+    if (await SessionManager.emModoTeste()) {
+      await Future.delayed(const Duration(milliseconds: 300));
+      return 0;
+    }
+
+    final url = _buildUri('/wallet/holdings');
+
+    try {
+      final response = await http
+          .get(url, headers: await _authorizedHeaders())
+          .timeout(_requestTimeout);
+
+      if (response.statusCode == 200) {
+        final body = _decodeJsonObject(response.body);
+        final items = body['items'];
+        if (items is! List) return 0;
+
+        for (final item in items) {
+          final map = _asJsonMap(item);
+          if ('${map['startupId']}' == normalizedStartupId) {
+            return _intFromJson(map['quantidade']);
+          }
+        }
+        return 0;
+      }
+
+      throw StartupApiException(
+        _extractErrorMessage(response.body) ??
+            'Erro ao buscar participação: ${response.statusCode}',
+        response.statusCode,
+      );
+    } on TimeoutException {
+      throw StartupApiException(
+        'A carteira demorou para responder. Tente novamente.',
+      );
+    } on SocketException {
+      throw StartupApiException('Não foi possível conectar à carteira.');
+    } catch (e) {
+      if (e is StartupApiException) {
+        rethrow;
+      }
+      throw StartupApiException(
+        'Não foi possível carregar sua participação agora.',
+      );
+    }
+  }
+
+  Future<int> buscarSaldoDisponivelCentavos() async {
+    final headers = await _authorizedHeaders();
+    final url = _buildUri('/wallet');
+
+    try {
+      final response = await http.get(url, headers: headers).timeout(
+        _requestTimeout,
+      );
+
+      if (response.statusCode == 200) {
+        final body = _decodeJsonObject(response.body);
+        return (body['saldoCentavos'] as num? ?? 0).toInt();
+      }
+
+      throw StartupApiException(
+        _extractErrorMessage(response.body) ??
+            'Não foi possível carregar o saldo da carteira.',
+        response.statusCode,
+      );
+    } on TimeoutException {
+      throw StartupApiException(
+        'A carteira demorou para responder. Tente novamente.',
+      );
+    } on SocketException {
+      throw StartupApiException(
+        'Não foi possível conectar ao servidor da carteira.',
+      );
+    } on FormatException {
+      throw StartupApiException(
+        'O servidor retornou dados inválidos para a carteira.',
+      );
+    } catch (e) {
+      if (e is StartupApiException) {
+        rethrow;
+      }
+
+      throw StartupApiException(
+        'Não foi possível carregar o saldo disponível agora.',
+      );
+    }
+  }
+
+  Future<StartupPurchaseResult> investirStartup(
+    String startupId,
+    int quantidade,
+  ) async {
     final normalizedStartupId = startupId.trim();
     if (normalizedStartupId.isEmpty || quantidade <= 0) {
-      return false;
+      throw StartupApiException(
+        'Informe uma quantidade inteira válida.',
+        400,
+      );
     }
 
-    if (kUseMock) {
+    if (await SessionManager.emModoTeste()) {
       await Future.delayed(const Duration(seconds: 2));
-      return true;
+      return StartupPurchaseResult(
+        transactionId: 'skip-purchase',
+        startupId: normalizedStartupId,
+        quantidade: quantidade,
+        precoUnitarioCentavos: 0,
+        valorTotalCentavos: 0,
+        saldoNovoCentavos: 0,
+      );
     }
 
+    final headers = await _authorizedHeaders();
     final url = _buildUri('/trades/direct-buy');
 
     try {
       final response = await http
           .post(
             url,
-            headers: await _authenticatedHeaders(),
+            headers: headers,
+            body: jsonEncode({
+              'startupId': normalizedStartupId,
+              'quantidade': quantidade,
+            }),
+          )
+          .timeout(_requestTimeout);
+
+      if (response.statusCode == 200) {
+        return StartupPurchaseResult.fromJson(
+          _decodeJsonObject(response.body),
+        );
+      }
+
+      throw StartupApiException(
+        _extractErrorMessage(response.body) ??
+            'Não foi possível concluir a compra de tokens.',
+        response.statusCode,
+      );
+    } on TimeoutException {
+      throw StartupApiException(
+        'A compra demorou para responder. Tente novamente.',
+      );
+    } on SocketException {
+      throw StartupApiException(
+        'Não foi possível conectar ao servidor de compras.',
+      );
+    } on FormatException {
+      throw StartupApiException(
+        'O servidor retornou dados inválidos para esta compra.',
+      );
+    } catch (e) {
+      if (e is StartupApiException) {
+        rethrow;
+      }
+
+      throw StartupApiException(
+        'Não foi possível concluir a compra agora.',
+      );
+    }
+  }
+
+  Future<bool> venderStartup(String startupId, int quantidade) async {
+    final normalizedStartupId = startupId.trim();
+    if (normalizedStartupId.isEmpty || quantidade <= 0) {
+      return false;
+    }
+
+    if (await SessionManager.emModoTeste()) {
+      await Future.delayed(const Duration(seconds: 1));
+      return true;
+    }
+
+    final headers = await _authorizedHeaders();
+    final url = _buildUri('/trades/direct-sell');
+
+    try {
+      final response = await http
+          .post(
+            url,
+            headers: headers,
             body: jsonEncode({
               'startupId': normalizedStartupId,
               'quantidade': quantidade,
@@ -156,37 +369,25 @@ class StartupService {
 
       throw StartupApiException(
         _extractErrorMessage(response.body) ??
-            _resolveInvestmentErrorMessage(response.statusCode),
+            _resolveDirectSellErrorMessage(response.statusCode),
         response.statusCode,
       );
     } on TimeoutException {
       throw StartupApiException(
-        'A compra demorou para responder. Tente novamente.',
+        'A venda demorou para responder. Tente novamente.',
       );
     } on SocketException {
       throw StartupApiException(
-        'Não foi possível conectar ao servidor para concluir a compra.',
+        'Não foi possível conectar ao servidor para concluir a venda.',
       );
     } catch (e) {
       if (e is StartupApiException) {
         rethrow;
       }
       throw StartupApiException(
-        'Não foi possível concluir o investimento agora.',
+        'Não foi possível concluir a venda agora.',
       );
     }
-  }
-
-  Future<Map<String, String>> _authenticatedHeaders() async {
-    final token = await SessionManager.getToken();
-    if (token == null || token.isEmpty) {
-      throw StartupApiException('Sessão expirada. Faça login novamente.', 401);
-    }
-
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer $token',
-    };
   }
 
   Map<String, dynamic> _decodeJsonObject(String body) {
@@ -204,6 +405,13 @@ class StartupService {
     throw const FormatException('JSON object expected.');
   }
 
+  int _intFromJson(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse('$value') ?? 0;
+  }
+
   String _resolveListErrorMessage(http.Response response) {
     if (response.statusCode >= 500) {
       return 'O catálogo está indisponível no momento. Tente novamente mais tarde.';
@@ -213,13 +421,13 @@ class StartupService {
         'Erro ao buscar startups: ${response.statusCode}';
   }
 
-  String _resolveInvestmentErrorMessage(int statusCode) {
+  String _resolveDirectSellErrorMessage(int statusCode) {
     return switch (statusCode) {
       401 => 'Sessão expirada. Faça login novamente.',
       404 => 'Startup não encontrada.',
-      409 => 'Não foi possível concluir a compra com os dados atuais.',
+      409 => 'Não foi possível concluir a venda com os dados atuais.',
       >= 500 => 'O serviço de investimentos está indisponível no momento.',
-      _ => 'Erro ao investir na startup: $statusCode',
+      _ => 'Erro ao vender tokens da startup: $statusCode',
     };
   }
 
@@ -228,14 +436,14 @@ class StartupService {
       final decoded = jsonDecode(body);
       if (decoded is Map) {
         final error = decoded['error'];
+        if (error is Map) {
+          final nestedMessage = error['message'];
+          if (nestedMessage is String && nestedMessage.trim().isNotEmpty) {
+            return nestedMessage.trim();
+          }
+        }
         if (error is String && error.trim().isNotEmpty) {
           return error.trim();
-        }
-        if (error is Map) {
-          final message = error['message'];
-          if (message is String && message.trim().isNotEmpty) {
-            return message.trim();
-          }
         }
         final message = decoded['message'];
         if (message is String && message.trim().isNotEmpty) {
@@ -258,4 +466,34 @@ class StartupApiException implements Exception {
 
   @override
   String toString() => 'StartupApiException: $message (Status: $statusCode)';
+}
+
+class StartupPurchaseResult {
+  final String transactionId;
+  final String startupId;
+  final int quantidade;
+  final int precoUnitarioCentavos;
+  final int valorTotalCentavos;
+  final int saldoNovoCentavos;
+
+  const StartupPurchaseResult({
+    required this.transactionId,
+    required this.startupId,
+    required this.quantidade,
+    required this.precoUnitarioCentavos,
+    required this.valorTotalCentavos,
+    required this.saldoNovoCentavos,
+  });
+
+  factory StartupPurchaseResult.fromJson(Map<String, dynamic> json) {
+    return StartupPurchaseResult(
+      transactionId: json['transactionId'] as String? ?? '',
+      startupId: json['startupId'] as String? ?? '',
+      quantidade: (json['quantidade'] as num? ?? 0).toInt(),
+      precoUnitarioCentavos: (json['precoUnitarioCentavos'] as num? ?? 0)
+          .toInt(),
+      valorTotalCentavos: (json['valorTotalCentavos'] as num? ?? 0).toInt(),
+      saldoNovoCentavos: (json['saldoNovoCentavos'] as num? ?? 0).toInt(),
+    );
+  }
 }
