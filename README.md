@@ -102,6 +102,40 @@ npm run dev
 
 ---
 
+### 3. Configurar o Firebase
+
+Faça login:
+
+```bash
+firebase login
+```
+
+Selecione o projeto:
+
+```bash
+firebase use <project-id>
+```
+
+---
+
+### 4. Executar os Emuladores Firebase (Opcional)
+
+```bash
+firebase emulators:start
+```
+
+Isso iniciará os serviços locais configurados (Functions, Firestore etc.).
+
+---
+
+### 5. Implantar as Cloud Functions
+
+```bash
+firebase deploy --only functions
+```
+
+---
+
 ### 3. Configurar e executar o Aplicativo Mobile
 
 ```bash
