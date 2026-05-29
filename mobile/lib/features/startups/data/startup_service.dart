@@ -169,8 +169,18 @@ class StartupService {
   }
 
   Future<int> buscarQuantidadeTokensUsuario(String startupId) async {
-    final normalizedStartupId = startupId.trim();
-    if (normalizedStartupId.isEmpty) return 0;
+    return buscarQuantidadeTokensUsuarioPorIds([startupId]);
+  }
+
+  Future<int> buscarQuantidadeTokensUsuarioPorIds(
+    Iterable<String> startupIds,
+  ) async {
+    final normalizedStartupIds = startupIds
+        .map((startupId) => startupId.trim())
+        .where((startupId) => startupId.isNotEmpty)
+        .toSet();
+
+    if (normalizedStartupIds.isEmpty) return 0;
 
     final url = _buildUri('/wallet/holdings');
 
@@ -184,13 +194,14 @@ class StartupService {
         final items = body['items'];
         if (items is! List) return 0;
 
+        var totalTokens = 0;
         for (final item in items) {
           final map = _asJsonMap(item);
-          if ('${map['startupId']}' == normalizedStartupId) {
-            return _intFromJson(map['quantidade']);
+          if (normalizedStartupIds.contains('${map['startupId']}')) {
+            totalTokens += _intFromJson(map['quantidade']);
           }
         }
-        return 0;
+        return totalTokens;
       }
 
       throw StartupApiException(

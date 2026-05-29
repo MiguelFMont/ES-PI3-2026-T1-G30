@@ -18,11 +18,11 @@ export class StartupsService {
     return startup;
   }
 
-    async buscarHistoricoPrecos(id: string) {
-        const startup = await repo.findById(id);
-        if (!startup) {
-            throw new Error('Startup não encontrada');
-        }
-        return repo.findPriceHistory(id);
+  async buscarHistoricoPrecos(id: string) {
+    const startup = await repo.findByIdMerged(id);
+    if (!startup || !startup.id) {
+      throw new Error("Startup não encontrada");
     }
+    return repo.findPriceHistory(startup.id);
+  }
 }

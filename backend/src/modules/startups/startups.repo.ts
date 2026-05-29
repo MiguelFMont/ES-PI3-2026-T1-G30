@@ -2,6 +2,7 @@ import { Timestamp } from "firebase-admin/firestore";
 
 import { FirestoreBaseRepo } from "../../infra/repositories/firestore.base.repo";
 import { getDb } from "../../config/firebase";
+import { resolvePreferredStartupCanonicalIdByName } from "./startup-canonical-id-policy";
 import { Startup } from "./startups.modal";
 
 type StartupDoc = Record<string, unknown> & { id: string };
@@ -31,17 +32,22 @@ export class StartupsRepo extends FirestoreBaseRepo {
 
   async findByIdMerged(id: string): Promise<Startup | null> {
     const docs = await this.listStartupDocs();
-    if (!docs.some((doc) => doc.id === id)) {
+    const group = this.findGroupByAnyId(docs, id);
+    if (!group) {
       return null;
     }
 
-    for (const group of this.groupStartupDocs(docs).values()) {
-      if (group.some((doc) => doc.id === id)) {
-        return this.mergeStartupGroup(group);
-      }
+    return this.mergeStartupGroup(group);
+  }
+
+  async resolveCanonicalId(id: string): Promise<string | null> {
+    const docs = await this.listStartupDocs();
+    const group = this.findGroupByAnyId(docs, id);
+    if (!group) {
+      return null;
     }
 
-    return null;
+    return this.selectCanonicalDoc(group).id;
   }
 
   private async listStartupDocs(): Promise<StartupDoc[]> {
@@ -57,6 +63,23 @@ export class StartupsRepo extends FirestoreBaseRepo {
     return [...this.groupStartupDocs(docs).values()].map((group) =>
       this.mergeStartupGroup(group),
     );
+  }
+
+  private findGroupByAnyId(docs: StartupDoc[], id: string): StartupDoc[] | null {
+    const normalizedId = this.normalizeId(id);
+    if (normalizedId.length === 0) {
+      return null;
+    }
+
+    for (const group of this.groupStartupDocs(docs).values()) {
+      if (
+        group.some((doc) => this.normalizeId(doc.id) === normalizedId)
+      ) {
+        return group;
+      }
+    }
+
+    return null;
   }
 
   private groupStartupDocs(docs: StartupDoc[]) {
@@ -86,17 +109,12 @@ export class StartupsRepo extends FirestoreBaseRepo {
 
   private mergeStartupGroup(group: StartupDoc[]): Startup {
     const ordered = [...group].sort((a, b) => this.compareCandidates(a, b));
-    const base = ordered[0];
+    const canonical = this.selectCanonicalDoc(group, ordered);
     const totalTokens =
       this.pickNumber(ordered, "totalTokens", { positiveOnly: true }) ??
       this.pickNumber(ordered, "totalTokens") ??
       0;
-    const tokensDisponiveisRaw =
-      this.pickNumber(ordered, "tokensDisponiveis") ?? totalTokens;
-    const tokensDisponiveis =
-      totalTokens > 0
-        ? Math.min(tokensDisponiveisRaw, totalTokens)
-        : tokensDisponiveisRaw;
+    const tokensDisponiveis = this.resolveTokensDisponiveis(ordered, totalTokens);
     const precoTokenInicialCentavos =
       this.pickNumber(ordered, "precoTokenInicialCentavos", {
         positiveOnly: true,
@@ -116,8 +134,8 @@ export class StartupsRepo extends FirestoreBaseRepo {
       ) ?? Timestamp.now();
 
     return {
-      id: base.id,
-      aliasIds: ordered.map((startup) => startup.id),
+      id: canonical.id,
+      aliasIds: this.buildAliasIds(canonical.id, ordered),
       nome: this.pickText(ordered, ["nome"]),
       logo: this.pickText(ordered, ["logo"]),
       descricao: this.pickText(ordered, ["descricao"]),
@@ -148,6 +166,67 @@ export class StartupsRepo extends FirestoreBaseRepo {
     };
   }
 
+  private selectCanonicalDoc(
+    group: StartupDoc[],
+    orderedGroup?: StartupDoc[],
+  ): StartupDoc {
+    const ordered =
+      orderedGroup ?? [...group].sort((a, b) => this.compareCandidates(a, b));
+    const preferredCanonicalId = resolvePreferredStartupCanonicalIdByName(
+      this.pickText(ordered, ["nome"]),
+    );
+
+    if (preferredCanonicalId) {
+      const preferredDoc = ordered.find((doc) => doc.id === preferredCanonicalId);
+      if (preferredDoc) {
+        return preferredDoc;
+      }
+    }
+
+    return ordered[0];
+  }
+
+  private buildAliasIds(canonicalId: string, group: StartupDoc[]): string[] {
+    const aliases = new Set<string>();
+    const normalizedCanonicalId = this.normalizeId(canonicalId);
+
+    if (normalizedCanonicalId.length > 0) {
+      aliases.add(canonicalId);
+    }
+
+    for (const doc of group) {
+      const normalizedId = this.normalizeId(doc.id);
+      if (normalizedId.length === 0) {
+        continue;
+      }
+
+      if (normalizedId === normalizedCanonicalId) {
+        continue;
+      }
+
+      aliases.add(doc.id);
+    }
+
+    return [...aliases];
+  }
+
+  private resolveTokensDisponiveis(
+    candidates: StartupDoc[],
+    totalTokens: number,
+  ): number {
+    const values = candidates
+      .map((candidate) => candidate.tokensDisponiveis)
+      .filter((value): value is number => this.isFiniteNumber(value))
+      .filter((value) => value >= 0)
+      .map((value) => (totalTokens > 0 ? Math.min(value, totalTokens) : value));
+
+    if (values.length === 0) {
+      return totalTokens;
+    }
+
+    return Math.min(...values);
+  }
+
   private compareCandidates(a: StartupDoc, b: StartupDoc): number {
     const scoreDifference = this.scoreCandidate(b) - this.scoreCandidate(a);
     if (scoreDifference !== 0) {
@@ -171,6 +250,22 @@ export class StartupsRepo extends FirestoreBaseRepo {
 
   private scoreCandidate(doc: StartupDoc): number {
     let score = 0;
+    const totalTokens = this.isPositiveNumber(doc.totalTokens)
+      ? doc.totalTokens
+      : undefined;
+    const tokensDisponiveis = this.isNonNegativeNumber(doc.tokensDisponiveis)
+      ? doc.tokensDisponiveis
+      : undefined;
+    const precoTokenInicialCentavos = this.isPositiveNumber(
+      doc.precoTokenInicialCentavos,
+    )
+      ? doc.precoTokenInicialCentavos
+      : undefined;
+    const precoTokenAtualCentavos = this.isPositiveNumber(
+      doc.precoTokenAtualCentavos,
+    )
+      ? doc.precoTokenAtualCentavos
+      : undefined;
 
     if (this.isNonEmptyString(doc.nome)) score += 100;
     if (this.isNonEmptyString(doc.descricao)) score += 20;
@@ -185,16 +280,37 @@ export class StartupsRepo extends FirestoreBaseRepo {
     }
 
     if (this.hasOwnField(doc, "capitalAportado")) score += 8;
-    if (this.isPositiveNumber(doc.totalTokens)) score += 25;
-    if (this.isNonNegativeNumber(doc.tokensDisponiveis)) score += 30;
-    if (this.isPositiveNumber(doc.precoTokenInicialCentavos)) score += 20;
-    if (this.isPositiveNumber(doc.precoTokenAtualCentavos)) score += 25;
+    if (totalTokens !== undefined) score += 25;
+    if (tokensDisponiveis !== undefined) score += 30;
+    if (precoTokenInicialCentavos !== undefined) score += 20;
+    if (precoTokenAtualCentavos !== undefined) score += 25;
     if (this.hasNonEmptyArray(doc.socios)) score += 10;
     if (this.hasNonEmptyArray(doc.conselho)) score += 6;
     if (this.hasNonEmptyArray(doc.mentores)) score += 6;
     if (this.hasNonEmptyArray(doc.videos)) score += 4;
     if (this.hasNonEmptyArray(doc.atualizacoes)) score += 4;
     if (this.timestampMillis(doc.updatedAt) > 0) score += 5;
+    if (this.timestampMillis(doc.ultimaAtualizacaoPrecoAt) > 0) score += 8;
+
+    // Um documento que já reflete emissão/recompra real de tokens deve ganhar
+    // prioridade sobre uma duplicata seedada ainda "pristina".
+    if (
+      totalTokens !== undefined &&
+      tokensDisponiveis !== undefined &&
+      tokensDisponiveis < totalTokens
+    ) {
+      score += 60;
+    }
+
+    // Variação de preço também indica que este documento está participando do
+    // fluxo real de negociação, não apenas armazenando a seed inicial.
+    if (
+      precoTokenInicialCentavos !== undefined &&
+      precoTokenAtualCentavos !== undefined &&
+      precoTokenAtualCentavos !== precoTokenInicialCentavos
+    ) {
+      score += 20;
+    }
 
     return score;
   }
@@ -304,7 +420,20 @@ export class StartupsRepo extends FirestoreBaseRepo {
       return "";
     }
 
-    return value.trim().toLowerCase().replace(/\s+/g, " ");
+    return value
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, " ");
+  }
+
+  private normalizeId(value: unknown): string {
+    if (!this.isNonEmptyString(value)) {
+      return "";
+    }
+
+    return value.trim();
   }
 
   private hasOwnField(data: Record<string, unknown>, field: string): boolean {
@@ -335,28 +464,55 @@ export class StartupsRepo extends FirestoreBaseRepo {
     startupId: string,
     limit = 365,
   ): Promise<StartupPriceHistoryPoint[]> {
+    const docs = await this.listStartupDocs();
+    const group = this.findGroupByAnyId(docs, startupId);
+    const startupIds = group
+      ? this.buildAliasIds(this.selectCanonicalDoc(group).id, group)
+      : [startupId.trim()].filter((id) => id.length > 0);
     const db = getDb();
-    const snapshot = await db
-      .collection('priceHistory')
-      .doc(startupId)
-      .collection('points')
-      .orderBy('createdAt', 'asc')
-      .limit(limit)
-      .get();
+    const snapshots = await Promise.all(
+      startupIds.map((id) =>
+        db
+          .collection("priceHistory")
+          .doc(id)
+          .collection("points")
+          .orderBy("createdAt", "asc")
+          .limit(limit)
+          .get(),
+      ),
+    );
 
-    return snapshot.docs.map((doc) => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        startupId:
-          typeof data.startupId === 'string' && data.startupId.trim() !== ''
-            ? data.startupId
-            : startupId,
-        precoCentavos:
-          typeof data.precoCentavos === 'number' ? data.precoCentavos : 0,
-        motivo: typeof data.motivo === 'string' ? data.motivo : '',
-        createdAt: data.createdAt,
-      };
-    });
+    return snapshots
+      .flatMap((snapshot) =>
+        snapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            startupId:
+              typeof data.startupId === "string" && data.startupId.trim() !== ""
+                ? data.startupId
+                : startupId,
+            precoCentavos:
+              typeof data.precoCentavos === "number" ? data.precoCentavos : 0,
+            motivo: typeof data.motivo === "string" ? data.motivo : "",
+            createdAt: data.createdAt,
+          };
+        }),
+      )
+      .sort((a, b) => {
+        const createdAtDifference =
+          this.timestampMillis(a.createdAt) - this.timestampMillis(b.createdAt);
+        if (createdAtDifference !== 0) {
+          return createdAtDifference;
+        }
+
+        const startupIdDifference = a.startupId.localeCompare(b.startupId);
+        if (startupIdDifference !== 0) {
+          return startupIdDifference;
+        }
+
+        return a.id.localeCompare(b.id);
+      })
+      .slice(0, limit);
   }
 }

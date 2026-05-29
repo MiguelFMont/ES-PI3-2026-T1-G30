@@ -3,6 +3,7 @@
 // e normalizar a resposta final antes de enviar JSON ao cliente.
 
 import { AppError } from "../../shared/errors/app.error";
+import { StartupsRepo } from "../startups/startups.repo";
 import { WalletRepo } from "../wallet/wallet.repo";
 import {
   DirectBuyResult,
@@ -11,6 +12,7 @@ import {
 } from "./trades.repo";
 
 const tradesRepo = new TradesRepo();
+const startupsRepo = new StartupsRepo();
 const walletRepo = new WalletRepo();
 
 interface DirectBuyInput {
@@ -321,10 +323,16 @@ export async function directBuyService(
 ): Promise<DirectBuyResponse> {
   const authenticatedUid = assertAuthenticated(uid);
   const { startupId, quantidade } = parseDirectBuyInput(input);
+  const startup = await startupsRepo.findByIdMerged(startupId);
+  const canonicalStartupId = startup?.id ?? startupId;
   // Garante a existência da wallet antes da compra.
   // Isso mantém o comportamento atual de criação automática da wallet quando necessário.
   await walletRepo.getOrCreateWallet(authenticatedUid);
-  const result = await tradesRepo.directBuy(authenticatedUid, startupId, quantidade);
+  const result = await tradesRepo.directBuy(
+    authenticatedUid,
+    canonicalStartupId,
+    quantidade,
+  );
 
   return toDirectBuyResponse(result);
 }
@@ -344,10 +352,21 @@ export async function directSellService(
 ): Promise<DirectSellResponse> {
   const authenticatedUid = assertAuthenticated(uid);
   const { startupId, quantidade } = parseDirectSellInput(input);
+  const startup = await startupsRepo.findByIdMerged(startupId);
+  const canonicalStartupId = startup?.id ?? startupId;
+  const holdingStartupIds = startup == null
+    ? [canonicalStartupId]
+    : [
+        canonicalStartupId,
+        ...(startup.aliasIds ?? []).filter(
+          (aliasId) => aliasId !== canonicalStartupId,
+        ),
+      ];
   const result = await tradesRepo.directSell(
     authenticatedUid,
-    startupId,
+    canonicalStartupId,
     quantidade,
+    holdingStartupIds,
   );
 
   return toDirectSellResponse(result);

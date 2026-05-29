@@ -41,6 +41,13 @@ class _StartupDetailsPageState extends State<StartupDetailsPage> {
     _fetchStartupDetails();
   }
 
+  Set<String> _startupIds(Startup startup) {
+    return {
+      startup.id.trim(),
+      ...startup.aliasIds.map((aliasId) => aliasId.trim()),
+    }.where((startupId) => startupId.isNotEmpty).toSet();
+  }
+
   Future<void> _fetchStartupDetails() async {
     setState(() {
       _isLoading = true;
@@ -48,15 +55,15 @@ class _StartupDetailsPageState extends State<StartupDetailsPage> {
     });
 
     try {
-      final startupFuture = _service.buscarStartupPorId(widget.startup.id);
+      final startup = await _service.buscarStartupPorId(widget.startup.id);
+      final startupIds = _startupIds(startup);
       final historyFuture = _opcional(
-        _service.buscarHistoricoPrecos(widget.startup.id),
+        _service.buscarHistoricoPrecos(startup.id),
       );
       final tokensFuture = _opcional(
-        _service.buscarQuantidadeTokensUsuario(widget.startup.id),
+        _service.buscarQuantidadeTokensUsuarioPorIds(startupIds),
       );
 
-      final startup = await startupFuture;
       final history = await historyFuture;
       final tokens = await tokensFuture;
 
@@ -100,7 +107,7 @@ class _StartupDetailsPageState extends State<StartupDetailsPage> {
     try {
       final summaryFuture = _dashboardDatasource.getSummary();
       final tokensFuture = _opcional(
-        _service.buscarQuantidadeTokensUsuario(_startup.id),
+        _service.buscarQuantidadeTokensUsuarioPorIds(_startupIds(_startup)),
       );
       final summary = await summaryFuture;
       final tokens = await tokensFuture;

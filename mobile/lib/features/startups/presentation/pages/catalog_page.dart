@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:mesclainvest/app/routes.dart';
+import 'package:mesclainvest/core/state/app_data_refresh_bus.dart';
 import 'package:mesclainvest/core/theme/app_colors.dart';
 
 import '../../data/startup_service.dart';
@@ -18,6 +21,7 @@ class CatalogPage extends StatefulWidget {
 class _CatalogPageState extends State<CatalogPage> {
   final StartupService _service = StartupService();
   final TextEditingController _searchController = TextEditingController();
+  StreamSubscription<AppDataRefreshEvent>? _refreshSubscription;
 
   List<Startup> _startups = [];
   CatalogState _state = CatalogState.loading;
@@ -42,39 +46,89 @@ class _CatalogPageState extends State<CatalogPage> {
     'Mobilidade',
   ];
 
+  String _normalizeKey(String value) {
+    return value
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'[áàãâä]'), 'a')
+        .replaceAll(RegExp(r'[éèêë]'), 'e')
+        .replaceAll(RegExp(r'[íìîï]'), 'i')
+        .replaceAll(RegExp(r'[óòõôö]'), 'o')
+        .replaceAll(RegExp(r'[úùûü]'), 'u')
+        .replaceAll('ç', 'c')
+        .replaceAll(RegExp(r'\s+'), ' ');
+  }
+
+  List<Startup> _deduplicateStartups(List<Startup> startups) {
+    final seenKeys = <String>{};
+    final uniqueStartups = <Startup>[];
+
+    for (final startup in startups) {
+      final candidateKeys = <String>{
+        _normalizeKey(startup.id),
+        _normalizeKey(startup.nome),
+        ...startup.aliasIds.map(_normalizeKey),
+      }.where((key) => key.isNotEmpty);
+
+      final alreadySeen = candidateKeys.any(seenKeys.contains);
+      if (alreadySeen) {
+        continue;
+      }
+
+      seenKeys.addAll(candidateKeys);
+      uniqueStartups.add(startup);
+    }
+
+    return uniqueStartups;
+  }
+
   @override
   void initState() {
     super.initState();
+    _refreshSubscription = AppDataRefreshBus.instance.stream.listen((event) {
+      if (!event.affects(AppDataRefreshScope.catalog) || !mounted) {
+        return;
+      }
+
+      _fetchStartups(showLoading: false);
+    });
     _fetchStartups();
     _searchController.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
+    _refreshSubscription?.cancel();
     _searchController.dispose();
     super.dispose();
   }
 
-  Future<void> _fetchStartups() async {
-    setState(() {
-      _state = CatalogState.loading;
-      _errorMessage = null;
-      _startups = [];
-    });
+  Future<void> _fetchStartups({bool showLoading = true}) async {
+    if (showLoading) {
+      setState(() {
+        _state = CatalogState.loading;
+        _errorMessage = null;
+        _startups = [];
+      });
+    }
 
     try {
       final startups = await _service.listarStartups(estagio: _selectedStage);
-      final seen = <String>{};
+      if (!mounted) return;
 
       setState(() {
-        _startups = startups.where((s) => seen.add(s.id)).toList();
+        _startups = _deduplicateStartups(startups);
         _state = CatalogState.success;
+        _errorMessage = null;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
-        _errorMessage =
-            'Não foi possível carregar as startups.\nVerifique sua conexão e tente novamente.';
-        _state = CatalogState.error;
+        if (showLoading || _startups.isEmpty) {
+          _errorMessage =
+              'Não foi possível carregar as startups.\nVerifique sua conexão e tente novamente.';
+          _state = CatalogState.error;
+        }
       });
     }
   }

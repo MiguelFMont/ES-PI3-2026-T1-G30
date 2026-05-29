@@ -12,6 +12,7 @@
 import { Timestamp } from "firebase-admin/firestore";
 
 import { getDb } from "../src/config/firebase";
+import { resolvePreferredStartupCanonicalIdByName } from "../src/modules/startups/startup-canonical-id-policy";
 
 type StartupDoc = Record<string, unknown> & { id: string };
 
@@ -20,7 +21,12 @@ function normalizeText(value: unknown): string {
     return "";
   }
 
-  return value.trim().toLowerCase().replace(/\s+/g, " ");
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ");
 }
 
 function groupKey(doc: StartupDoc): string {
@@ -55,6 +61,24 @@ function timestampMillis(value: unknown): number {
 
 function scoreCandidate(doc: StartupDoc): number {
   let score = 0;
+  const totalTokens =
+    isFiniteNumber(doc.totalTokens) && doc.totalTokens > 0
+      ? doc.totalTokens
+      : undefined;
+  const tokensDisponiveis =
+    isFiniteNumber(doc.tokensDisponiveis) && doc.tokensDisponiveis >= 0
+      ? doc.tokensDisponiveis
+      : undefined;
+  const precoTokenInicialCentavos =
+    isFiniteNumber(doc.precoTokenInicialCentavos) &&
+    doc.precoTokenInicialCentavos > 0
+      ? doc.precoTokenInicialCentavos
+      : undefined;
+  const precoTokenAtualCentavos =
+    isFiniteNumber(doc.precoTokenAtualCentavos) &&
+    doc.precoTokenAtualCentavos > 0
+      ? doc.precoTokenAtualCentavos
+      : undefined;
 
   if (normalizeText(doc.nome).length > 0) score += 100;
   if (normalizeText(doc.descricao).length > 0) score += 20;
@@ -63,28 +87,33 @@ function scoreCandidate(doc: StartupDoc): number {
   if (normalizeText(doc.logo).length > 0) score += 10;
   if (normalizeText(doc.resumoExecutivo).length > 0) score += 15;
   if (Object.prototype.hasOwnProperty.call(doc, "capitalAportado")) score += 8;
-  if (isFiniteNumber(doc.totalTokens) && doc.totalTokens > 0) score += 25;
-  if (isFiniteNumber(doc.tokensDisponiveis) && doc.tokensDisponiveis >= 0) {
-    score += 30;
-  }
-  if (
-    isFiniteNumber(doc.precoTokenInicialCentavos) &&
-    doc.precoTokenInicialCentavos > 0
-  ) {
-    score += 20;
-  }
-  if (
-    isFiniteNumber(doc.precoTokenAtualCentavos) &&
-    doc.precoTokenAtualCentavos > 0
-  ) {
-    score += 25;
-  }
+  if (totalTokens !== undefined) score += 25;
+  if (tokensDisponiveis !== undefined) score += 30;
+  if (precoTokenInicialCentavos !== undefined) score += 20;
+  if (precoTokenAtualCentavos !== undefined) score += 25;
   if (hasNonEmptyArray(doc.socios)) score += 10;
   if (hasNonEmptyArray(doc.conselho)) score += 6;
   if (hasNonEmptyArray(doc.mentores)) score += 6;
   if (hasNonEmptyArray(doc.videos)) score += 4;
   if (hasNonEmptyArray(doc.atualizacoes)) score += 4;
   if (timestampMillis(doc.updatedAt) > 0) score += 5;
+  if (timestampMillis(doc.ultimaAtualizacaoPrecoAt) > 0) score += 8;
+
+  if (
+    totalTokens !== undefined &&
+    tokensDisponiveis !== undefined &&
+    tokensDisponiveis < totalTokens
+  ) {
+    score += 60;
+  }
+
+  if (
+    precoTokenInicialCentavos !== undefined &&
+    precoTokenAtualCentavos !== undefined &&
+    precoTokenAtualCentavos !== precoTokenInicialCentavos
+  ) {
+    score += 20;
+  }
 
   return score;
 }
@@ -110,6 +139,22 @@ function compareCandidates(a: StartupDoc, b: StartupDoc): number {
   return a.id.localeCompare(b.id);
 }
 
+function selectCanonicalDoc(group: StartupDoc[]): StartupDoc {
+  const ordered = [...group].sort(compareCandidates);
+  const preferredCanonicalId = resolvePreferredStartupCanonicalIdByName(
+    typeof ordered[0]?.nome === "string" ? ordered[0].nome : "",
+  );
+
+  if (preferredCanonicalId) {
+    const preferredDoc = ordered.find((doc) => doc.id === preferredCanonicalId);
+    if (preferredDoc) {
+      return preferredDoc;
+    }
+  }
+
+  return ordered[0];
+}
+
 function formatTimestamp(value: unknown): string {
   if (!(value instanceof Timestamp)) {
     return "-";
@@ -133,8 +178,7 @@ async function main(): Promise<void> {
   }
 
   const duplicateGroups = [...groups.values()]
-    .filter((group) => group.length > 1)
-    .map((group) => [...group].sort(compareCandidates));
+    .filter((group) => group.length > 1);
 
   console.log(
     `[audit:duplicate-startups] startups encontradas: ${docs.length}`,
@@ -149,7 +193,7 @@ async function main(): Promise<void> {
   }
 
   for (const group of duplicateGroups) {
-    const canonical = group[0];
+    const canonical = selectCanonicalDoc(group);
     const nome =
       typeof canonical.nome === "string" ? canonical.nome : canonical.id;
 
@@ -157,7 +201,7 @@ async function main(): Promise<void> {
     console.log(`[DUPLICADA] ${nome}`);
     console.log(`- documento canônico sugerido: ${canonical.id}`);
 
-    for (const doc of group) {
+    for (const doc of [...group].sort(compareCandidates)) {
       console.log(
         `  - ${doc.id} | score=${scoreCandidate(doc)} | capital=${doc.capitalAportado ?? "-"} | total=${doc.totalTokens ?? "-"} | disponiveis=${doc.tokensDisponiveis ?? "-"} | precoAtual=${doc.precoTokenAtualCentavos ?? "-"} | updatedAt=${formatTimestamp(doc.updatedAt)}`,
       );
