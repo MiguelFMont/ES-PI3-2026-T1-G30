@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
@@ -86,8 +87,10 @@ class _DashboardPageState extends State<DashboardPage> {
         _isLoading = false;
       });
     } catch (e) {
-      if (e.toString().toLowerCase().contains('sessao expirada') ||
-          e.toString().toLowerCase().contains('sessão expirada')) {
+      final msg = e.toString().toLowerCase();
+      final sessaoExpirada =
+          msg.contains('sessao expirada') || msg.contains('sessão expirada');
+      if (sessaoExpirada && !await SessionManager.emModoTeste()) {
         await SessionManager.fazerLogout();
         if (!mounted) return;
         Navigator.of(
@@ -870,10 +873,10 @@ class _MiniLineChart extends StatelessWidget {
         maxX: (normalizedValues.length - 1).toDouble(),
         minY: minY,
         maxY: maxY,
-        gridData: const FlGridData(show: false),
-        titlesData: const FlTitlesData(show: false),
+        gridData: FlGridData(show: false),
+        titlesData: FlTitlesData(show: false),
         borderData: FlBorderData(show: false),
-        lineTouchData: const LineTouchData(enabled: false),
+        lineTouchData: LineTouchData(enabled: false),
         lineBarsData: [
           LineChartBarData(
             spots: spots,
@@ -1347,13 +1350,73 @@ class _EstadoVazio extends StatelessWidget {
   }
 }
 
-class _EvolucaoLineChart extends StatelessWidget {
+class _EvolucaoLineChart extends StatefulWidget {
   final List<DashboardChartPointModel> pontos;
 
   const _EvolucaoLineChart({required this.pontos});
 
   @override
+  State<_EvolucaoLineChart> createState() => _EvolucaoLineChartState();
+}
+
+class _EvolucaoLineChartState extends State<_EvolucaoLineChart> {
+  double? _activeX;
+
+  @override
+  void didUpdateWidget(covariant _EvolucaoLineChart oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.pontos != widget.pontos) {
+      _activeX = null;
+    }
+  }
+
+  void _updateActivePosition(Offset localPosition, double width) {
+    if (width <= 0) return;
+    final maxX = (widget.pontos.length - 1).toDouble();
+    final chartMaxX = maxX < 1 ? 1.0 : maxX;
+    final clampedDx = localPosition.dx.clamp(0.0, width).toDouble();
+    final activeX = (clampedDx / width) * chartMaxX;
+
+    setState(() => _activeX = activeX.clamp(0.0, maxX).toDouble());
+  }
+
+  _EvolucaoChartSample _sampleAt(
+    double x,
+    List<DateTime?> datas,
+  ) {
+    final pontos = widget.pontos;
+    if (pontos.length == 1) {
+      return _EvolucaoChartSample(
+        x: 0,
+        value: pontos.first.valor,
+        date: datas.first,
+      );
+    }
+
+    final lowerIndex = x.floor().clamp(0, pontos.length - 1).toInt();
+    final upperIndex = x.ceil().clamp(0, pontos.length - 1).toInt();
+    final lower = pontos[lowerIndex];
+    final upper = pontos[upperIndex];
+    final progress = upperIndex == lowerIndex ? 0.0 : x - lowerIndex;
+    final value = lower.valor + ((upper.valor - lower.valor) * progress);
+
+    final lowerDate = datas[lowerIndex];
+    final upperDate = datas[upperIndex];
+    DateTime? date;
+    if (lowerDate != null && upperDate != null) {
+      final diff =
+          upperDate.millisecondsSinceEpoch - lowerDate.millisecondsSinceEpoch;
+      date = lowerDate.add(Duration(milliseconds: (diff * progress).round()));
+    } else {
+      date = lowerDate ?? upperDate;
+    }
+
+    return _EvolucaoChartSample(x: x, value: value, date: date);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final pontos = widget.pontos;
     final datas = pontos.map((p) => _parseData(p.data)).toList(growable: false);
 
     final spots = <FlSpot>[
@@ -1365,129 +1428,210 @@ class _EvolucaoLineChart extends StatelessWidget {
     final minValor = valores.reduce((a, b) => a < b ? a : b);
     final maxValor = valores.reduce((a, b) => a > b ? a : b);
     final folga = (maxValor - minValor).abs() * 0.15;
-    final minY = (minValor - folga).clamp(0, double.infinity).toDouble();
-    final maxY = maxValor + (folga == 0 ? maxValor * 0.15 + 1 : folga);
-    final intervalY = (maxY - minY) / 4;
+    final rawMinY = (minValor - folga).clamp(0, double.infinity).toDouble();
+    final rawMaxY = maxValor + (folga == 0 ? maxValor * 0.15 + 1 : folga);
 
-    final ultimoIndice = (pontos.length - 1).clamp(0, pontos.length);
-    final intervalX = pontos.length <= 4
-        ? 1.0
-        : (ultimoIndice / 3).ceilToDouble();
+    final intervalY = _niceInterval(rawMaxY - rawMinY, 4);
+    final minY = (rawMinY / intervalY).floor() * intervalY;
+    final maxY = (rawMaxY / intervalY).ceil() * intervalY;
 
-    return LineChart(
-      LineChartData(
-        minX: 0,
-        maxX: ultimoIndice.toDouble().clamp(1, double.infinity),
-        minY: minY,
-        maxY: maxY,
-        gridData: FlGridData(
-          show: true,
-          drawVerticalLine: false,
-          horizontalInterval: intervalY > 0 ? intervalY : null,
-          getDrawingHorizontalLine: (_) => FlLine(
-            color: AppColors.muted.withValues(alpha: 0.7),
-            strokeWidth: 1,
-            dashArray: const [4, 4],
-          ),
-        ),
-        borderData: FlBorderData(show: false),
-        titlesData: FlTitlesData(
-          topTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          rightTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          leftTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 52,
-              interval: intervalY > 0 ? intervalY : null,
-              getTitlesWidget: (value, _) => Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: Text(
-                  _formatarValorEixoCompacto(value),
-                  style: const TextStyle(
-                    color: AppColors.mutedForeground,
-                    fontSize: 10,
+    final ultimoIndice = pontos.length <= 1 ? 0 : pontos.length - 1;
+    final chartMaxX = ultimoIndice < 1 ? 1.0 : ultimoIndice.toDouble();
+    final xLabelIndices = _selecionarIndicesEquidistantes(pontos.length, 4);
+
+    const reservedLeft = 52.0;
+    const reservedBottom = 32.0;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final totalWidth = constraints.maxWidth;
+        final totalHeight = constraints.maxHeight;
+        final plotWidth = (totalWidth - reservedLeft).clamp(0.0, totalWidth);
+        final plotHeight = (totalHeight - reservedBottom)
+            .clamp(0.0, totalHeight);
+        final active = _activeX == null ? null : _sampleAt(_activeX!, datas);
+        final activeDx = active == null
+            ? 0.0
+            : (active.x / chartMaxX) * plotWidth;
+        final range = (maxY - minY).abs();
+        final activeDy = active == null || range == 0
+            ? plotHeight / 2
+            : ((maxY - active.value) / range * plotHeight)
+                  .clamp(0.0, plotHeight)
+                  .toDouble();
+        const tooltipWidth = 112.0;
+        const tooltipHeight = 54.0;
+        final tooltipLeft = active == null
+            ? 0.0
+            : (reservedLeft + activeDx - tooltipWidth / 2)
+                  .clamp(
+                    0.0,
+                    (totalWidth - tooltipWidth).clamp(0.0, totalWidth),
+                  )
+                  .toDouble();
+        final tooltipTop = active == null
+            ? 0.0
+            : (activeDy - tooltipHeight - 12)
+                  .clamp(
+                    0.0,
+                    (plotHeight - tooltipHeight).clamp(0.0, plotHeight),
+                  )
+                  .toDouble();
+
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            LineChart(
+              LineChartData(
+                minX: 0,
+                maxX: chartMaxX,
+                minY: minY,
+                maxY: maxY,
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: intervalY > 0 ? intervalY : null,
+                  getDrawingHorizontalLine: (_) => FlLine(
+                    color: AppColors.muted.withValues(alpha: 0.7),
+                    strokeWidth: 1,
+                    dashArray: const [4, 4],
                   ),
                 ),
-              ),
-            ),
-          ),
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 32,
-              interval: intervalX,
-              getTitlesWidget: (value, _) {
-                final i = value.toInt();
-                if (i < 0 || i >= datas.length) return const SizedBox.shrink();
-                final dt = datas[i];
-                if (dt == null) return const SizedBox.shrink();
-                return Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    DateFormat('dd/MM').format(dt),
-                    style: const TextStyle(
-                      color: AppColors.mutedForeground,
-                      fontSize: 11,
+                borderData: FlBorderData(show: false),
+                titlesData: FlTitlesData(
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: reservedLeft,
+                      interval: intervalY > 0 ? intervalY : null,
+                      getTitlesWidget: (value, _) => Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: Text(
+                          _formatarValorEixoCompacto(value),
+                          style: const TextStyle(
+                            color: AppColors.mutedForeground,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                );
-              },
-            ),
-          ),
-        ),
-        lineTouchData: LineTouchData(
-          touchTooltipData: LineTouchTooltipData(
-            getTooltipColor: (_) => AppColors.foreground,
-            tooltipRoundedRadius: 8,
-            tooltipPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 8,
-            ),
-            getTooltipItems: (touched) => touched.map((spot) {
-              final i = spot.x.toInt().clamp(0, pontos.length - 1);
-              final dt = datas[i];
-              final dataLegivel = dt == null
-                  ? '—'
-                  : DateFormat('dd/MM/yyyy').format(dt);
-              return LineTooltipItem(
-                '${formatarReais(spot.y)}\nData: $dataLegivel',
-                const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  height: 1.35,
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: reservedBottom,
+                      interval: 1,
+                      getTitlesWidget: (value, _) {
+                        final i = value.toInt();
+                        if (i < 0 || i >= datas.length) {
+                          return const SizedBox.shrink();
+                        }
+                        if (!xLabelIndices.contains(i)) {
+                          return const SizedBox.shrink();
+                        }
+                        final dt = datas[i];
+                        if (dt == null) return const SizedBox.shrink();
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            DateFormat('dd/MM').format(dt),
+                            style: const TextStyle(
+                              color: AppColors.mutedForeground,
+                              fontSize: 11,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                 ),
-              );
-            }).toList(),
-          ),
-        ),
-        lineBarsData: [
-          LineChartBarData(
-            spots: spots,
-            isCurved: true,
-            curveSmoothness: 0.25,
-            color: AppColors.primary,
-            barWidth: 2,
-            isStrokeCapRound: true,
-            dotData: const FlDotData(show: false),
-            belowBarData: BarAreaData(
-              show: true,
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  AppColors.primary.withValues(alpha: 0.2),
-                  AppColors.primary.withValues(alpha: 0.0),
+                lineTouchData: const LineTouchData(enabled: false),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: spots,
+                    isCurved: true,
+                    curveSmoothness: 0.25,
+                    color: AppColors.primary,
+                    barWidth: 2,
+                    isStrokeCapRound: true,
+                    dotData: const FlDotData(show: false),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          AppColors.primary.withValues(alpha: 0.2),
+                          AppColors.primary.withValues(alpha: 0.0),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
-          ),
-        ],
-      ),
+            if (active != null) ...[
+              Positioned(
+                left: reservedLeft + activeDx,
+                top: 0,
+                height: plotHeight,
+                child: Container(width: 1, color: const Color(0xFFD4D8DE)),
+              ),
+              Positioned(
+                left: reservedLeft + activeDx - 4,
+                top: activeDy - 4,
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.28),
+                        blurRadius: 8,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Positioned(
+                left: tooltipLeft,
+                top: tooltipTop,
+                child: _EvolucaoChartTooltip(sample: active),
+              ),
+            ],
+            Positioned(
+              left: reservedLeft,
+              top: 0,
+              width: plotWidth,
+              height: plotHeight,
+              child: MouseRegion(
+                cursor: SystemMouseCursors.precise,
+                onHover: (event) =>
+                    _updateActivePosition(event.localPosition, plotWidth),
+                onExit: (_) => setState(() => _activeX = null),
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTapDown: (details) =>
+                      _updateActivePosition(details.localPosition, plotWidth),
+                  onHorizontalDragStart: (details) =>
+                      _updateActivePosition(details.localPosition, plotWidth),
+                  onHorizontalDragUpdate: (details) =>
+                      _updateActivePosition(details.localPosition, plotWidth),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -1505,6 +1649,101 @@ class _EvolucaoLineChart extends StatelessWidget {
   static DateTime? _parseData(String raw) {
     if (raw.isEmpty) return null;
     return DateTime.tryParse(raw);
+  }
+
+  static double _niceInterval(double range, int targetSteps) {
+    if (range <= 0 || targetSteps <= 0) return 1;
+    final raw = range / targetSteps;
+    final magnitude = math
+        .pow(10, (math.log(raw) / math.ln10).floor())
+        .toDouble();
+    final normalized = raw / magnitude;
+
+    double nice;
+    if (normalized < 1.5) {
+      nice = 1;
+    } else if (normalized < 3) {
+      nice = 2;
+    } else if (normalized < 7) {
+      nice = 5;
+    } else {
+      nice = 10;
+    }
+    return nice * magnitude;
+  }
+
+  static Set<int> _selecionarIndicesEquidistantes(int total, int alvo) {
+    if (total <= 0) return const {};
+    if (total <= alvo) {
+      return {for (var i = 0; i < total; i++) i};
+    }
+    final passo = (total - 1) / (alvo - 1);
+    return {for (var k = 0; k < alvo; k++) (k * passo).round()};
+  }
+}
+
+class _EvolucaoChartSample {
+  final double x;
+  final double value;
+  final DateTime? date;
+
+  const _EvolucaoChartSample({
+    required this.x,
+    required this.value,
+    required this.date,
+  });
+}
+
+class _EvolucaoChartTooltip extends StatelessWidget {
+  final _EvolucaoChartSample sample;
+
+  const _EvolucaoChartTooltip({required this.sample});
+
+  @override
+  Widget build(BuildContext context) {
+    final date = sample.date;
+    return Container(
+      width: 112,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: const Color(0xFFECEFF1)),
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            date == null ? '—' : DateFormat('dd/MM/yyyy').format(date),
+            style: const TextStyle(
+              color: Color(0xFF7890A5),
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              height: 1.25,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            formatarReais(sample.value),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Color(0xFF17233C),
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

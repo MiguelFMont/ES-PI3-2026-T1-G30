@@ -51,6 +51,9 @@ firebase.json
 # Local analysis notes
 analyze_*.txt
 
+# Vídeos das startups (binários grandes, distribuídos fora do Git)
+assets/videos/*.mp4
+
 windows/
 linux/
 macos/

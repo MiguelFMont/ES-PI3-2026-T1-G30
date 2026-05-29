@@ -24,4 +24,14 @@ export class StartupsController {
             res.status(404).json({ error: err.message });
         }
     }
+
+    async buscarHistoricoPrecos(req: Request, res: Response) {
+        try {
+            const id = req.params.id as string;
+            const pontos = await service.buscarHistoricoPrecos(id);
+            res.status(200).json({ data: pontos });
+        } catch(err: any) {
+            res.status(404).json({ error: err.message });
+        }
+    }
 }

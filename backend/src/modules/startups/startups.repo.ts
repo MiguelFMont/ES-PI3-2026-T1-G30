@@ -6,6 +6,14 @@ import { Startup } from "./startups.modal";
 
 type StartupDoc = Record<string, unknown> & { id: string };
 
+export interface StartupPriceHistoryPoint {
+  id: string;
+  startupId: string;
+  precoCentavos: number;
+  motivo: string;
+  createdAt: unknown;
+}
+
 export class StartupsRepo extends FirestoreBaseRepo {
   constructor() {
     super("startups");
@@ -321,5 +329,34 @@ export class StartupsRepo extends FirestoreBaseRepo {
 
   private isNonEmptyString(value: unknown): value is string {
     return typeof value === "string" && value.trim().length > 0;
+  }
+
+  async findPriceHistory(
+    startupId: string,
+    limit = 365,
+  ): Promise<StartupPriceHistoryPoint[]> {
+    const db = getDb();
+    const snapshot = await db
+      .collection('priceHistory')
+      .doc(startupId)
+      .collection('points')
+      .orderBy('createdAt', 'asc')
+      .limit(limit)
+      .get();
+
+    return snapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        startupId:
+          typeof data.startupId === 'string' && data.startupId.trim() !== ''
+            ? data.startupId
+            : startupId,
+        precoCentavos:
+          typeof data.precoCentavos === 'number' ? data.precoCentavos : 0,
+        motivo: typeof data.motivo === 'string' ? data.motivo : '',
+        createdAt: data.createdAt,
+      };
+    });
   }
 }
