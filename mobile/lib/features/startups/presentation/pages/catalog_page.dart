@@ -49,11 +49,47 @@ class _CatalogPageState extends State<CatalogPage> {
   // O ambiente remoto atual possui documentos duplicados da mesma startup.
   // A tela colapsa esses itens por assinatura funcional até o banco ser limpo.
   String _catalogKey(Startup startup) {
+    final nomeNormalizado = startup.nome.trim().toLowerCase();
+    if (nomeNormalizado.isNotEmpty) return nomeNormalizado;
+
     return [
-      startup.nome.trim().toLowerCase(),
       startup.descricao.trim().toLowerCase(),
       startup.estagio.trim().toLowerCase(),
     ].join('|');
+  }
+
+  int _catalogScore(Startup startup) {
+    var score = 0;
+
+    if (startup.nome.trim().isNotEmpty) score += 100;
+    if (startup.descricao.trim().isNotEmpty) score += 20;
+    if (startup.estagio.trim().isNotEmpty) score += 15;
+    if (startup.setor.trim().isNotEmpty) score += 10;
+    if (startup.logo.trim().isNotEmpty) score += 10;
+    if (startup.resumoExecutivo.trim().isNotEmpty) score += 15;
+    if (startup.totalTokens > 0) score += 20;
+    if (startup.tokensDisponiveis >= 0) score += 24;
+    if (startup.tokensDisponiveis > 0 &&
+        startup.tokensDisponiveis != startup.totalTokens) {
+      score += 8;
+    }
+    if (startup.precoToken > 0) score += 20;
+    if (startup.variacaoPreco != null) score += 6;
+    if (startup.socios.isNotEmpty) score += 10;
+    if (startup.conselho.isNotEmpty) score += 6;
+    if (startup.mentores.isNotEmpty) score += 6;
+    if (startup.videos.isNotEmpty) score += 4;
+    if (startup.atualizacoes.isNotEmpty) score += 4;
+
+    return score;
+  }
+
+  Startup _preferCatalogStartup(Startup current, Startup candidate) {
+    final currentScore = _catalogScore(current);
+    final candidateScore = _catalogScore(candidate);
+
+    if (candidateScore > currentScore) return candidate;
+    return current;
   }
 
   @override
@@ -80,7 +116,11 @@ class _CatalogPageState extends State<CatalogPage> {
       final startups = await _service.listarStartups(estagio: _selectedStage);
       final uniqueStartupsByKey = <String, Startup>{};
       for (final startup in startups) {
-        uniqueStartupsByKey.putIfAbsent(_catalogKey(startup), () => startup);
+        final key = _catalogKey(startup);
+        final current = uniqueStartupsByKey[key];
+        uniqueStartupsByKey[key] = current == null
+            ? startup
+            : _preferCatalogStartup(current, startup);
       }
       final uniqueStartups = uniqueStartupsByKey.values.toList();
       final availableSectors = uniqueStartups
@@ -195,10 +235,7 @@ class _CatalogPageState extends State<CatalogPage> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   stops: [0.45, 0.45],
-                  colors: [
-                    AppColors.primary,
-                    Color(0xFFC2185B),
-                  ],
+                  colors: [AppColors.primary, Color(0xFFC2185B)],
                 ),
               ),
             ),

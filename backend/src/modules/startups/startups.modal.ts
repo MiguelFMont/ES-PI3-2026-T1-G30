@@ -27,6 +27,7 @@ export interface Atualizacao {
 
 export interface Startup {
   id?: string;
+  aliasIds?: string[];
   nome: string;
   logo: string;
   descricao: string;

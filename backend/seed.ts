@@ -4,6 +4,17 @@ import { Timestamp } from "firebase-admin/firestore";
 // initializeFirebase();
 
 const db = getDb();
+const DEFAULT_PRECO_TOKEN_CENTAVOS = 1000;
+const DEFAULT_DESCONTO_VENDA_DIRETA_BPS = 1000;
+
+function startupDocId(nome: string): string {
+  return nome
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
 
 async function seed(): Promise<void> {
   console.log("Iniciando seed...");
@@ -265,7 +276,28 @@ async function seed(): Promise<void> {
   ];
 
   for (const startup of startups) {
-    await db.collection("startups").add(startup);
+    const existingSnapshot = await db
+      .collection("startups")
+      .where("nome", "==", startup.nome)
+      .limit(1)
+      .get();
+
+    if (!existingSnapshot.empty) {
+      console.log(`${startup.nome} já existe. Inserção ignorada.`);
+      continue;
+    }
+
+    await db
+      .collection("startups")
+      .doc(startupDocId(startup.nome))
+      .set({
+        ...startup,
+        tokensDisponiveis: startup.totalTokens,
+        precoTokenInicialCentavos: DEFAULT_PRECO_TOKEN_CENTAVOS,
+        precoTokenAtualCentavos: DEFAULT_PRECO_TOKEN_CENTAVOS,
+        descontoVendaDiretaBps: DEFAULT_DESCONTO_VENDA_DIRETA_BPS,
+        updatedAt: Timestamp.fromDate(new Date()),
+      });
     console.log(`${startup.nome} inserida`);
   }
   console.log("\nSeed concluída verifique o FireBase console");

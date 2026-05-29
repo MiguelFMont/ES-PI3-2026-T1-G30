@@ -109,7 +109,27 @@ class _BalcaoPageState extends State<BalcaoPage> {
     _holdings = data.holdings;
     _myOffers = data.myOffers;
     _marketOffers = data.marketOffers;
-    _startupsById = {for (final startup in data.startups) startup.id: startup};
+    _startupsById = _mapearStartupsPorId(data.startups);
+  }
+
+  Map<String, StartupModel> _mapearStartupsPorId(List<StartupModel> startups) {
+    final startupsPorId = <String, StartupModel>{};
+
+    for (final startup in startups) {
+      final id = startup.id.trim();
+      if (id.isNotEmpty) {
+        startupsPorId[id] = startup;
+      }
+
+      for (final aliasId in startup.aliasIds) {
+        final aliasNormalizado = aliasId.trim();
+        if (aliasNormalizado.isNotEmpty) {
+          startupsPorId[aliasNormalizado] = startup;
+        }
+      }
+    }
+
+    return startupsPorId;
   }
 
   String _errorText(Object error) {

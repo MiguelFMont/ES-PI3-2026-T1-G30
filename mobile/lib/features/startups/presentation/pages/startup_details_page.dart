@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:mesclainvest/core/theme/app_colors.dart';
 
 import '../../data/startup_service.dart';
@@ -17,9 +19,11 @@ class _StartupDetailsPageState extends State<StartupDetailsPage> {
   final StartupService _service = StartupService();
 
   late Startup _startup;
+  int? _saldoDisponivelCentavos;
   bool _isLoading = true;
   bool _isInvesting = false;
   String? _errorMessage;
+  String? _walletErrorMessage;
 
   @override
   void initState() {
@@ -36,10 +40,23 @@ class _StartupDetailsPageState extends State<StartupDetailsPage> {
 
     try {
       final startup = await _service.buscarStartupPorId(widget.startup.id);
+      int? saldoDisponivelCentavos = _saldoDisponivelCentavos;
+      String? walletErrorMessage;
+
+      try {
+        saldoDisponivelCentavos = await _service
+            .buscarSaldoDisponivelCentavos();
+      } catch (e) {
+        walletErrorMessage = e is StartupApiException
+            ? e.message
+            : 'Não foi possível carregar o saldo da carteira.';
+      }
 
       if (!mounted) return;
       setState(() {
         _startup = startup;
+        _saldoDisponivelCentavos = saldoDisponivelCentavos;
+        _walletErrorMessage = walletErrorMessage;
         _isLoading = false;
       });
     } catch (e) {
@@ -53,115 +70,109 @@ class _StartupDetailsPageState extends State<StartupDetailsPage> {
     }
   }
 
+  Future<bool> _refreshWalletBalance() async {
+    try {
+      final saldoDisponivelCentavos = await _service
+          .buscarSaldoDisponivelCentavos();
+
+      if (!mounted) return false;
+      setState(() {
+        _saldoDisponivelCentavos = saldoDisponivelCentavos;
+        _walletErrorMessage = null;
+      });
+      return true;
+    } catch (e) {
+      final message = e is StartupApiException
+          ? e.message
+          : 'Não foi possível carregar o saldo da carteira.';
+
+      if (!mounted) return false;
+      setState(() => _walletErrorMessage = message);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: AppColors.destructive,
+        ),
+      );
+      return false;
+    }
+  }
+
   Future<void> _showInvestConfirmation() async {
-    const saldoUsuario = 5000.0;
-    const investimentoMinimo = 500.0;
-    const valorRecomendado = 1000.0;
-
-    final valorController = TextEditingController(
-      text: valorRecomendado.toStringAsFixed(0),
-    );
-
-    double valorDigitado() {
-      final normalized = valorController.text.replaceAll(',', '.');
-      return double.tryParse(normalized) ?? 0;
+    if (_startup.precoToken <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Não foi possível calcular o preço do token agora.'),
+          backgroundColor: AppColors.destructive,
+        ),
+      );
+      return;
     }
 
-    final valorAInvestir = await showDialog<double>(
+    if (_saldoDisponivelCentavos == null || _walletErrorMessage != null) {
+      final refreshed = await _refreshWalletBalance();
+      if (!refreshed || !mounted) return;
+    }
+
+    final quantidade = await showDialog<int>(
       context: context,
       builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            final valor = valorDigitado();
-            final saldoInsuficiente = valor > saldoUsuario;
-            final abaixoDoMinimo = valor < investimentoMinimo;
-            final podeConfirmar = !saldoInsuficiente && !abaixoDoMinimo;
-
-            return AlertDialog(
-              title: const Text('Confirmar investimento'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Deseja confirmar o investimento nesta startup?'),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Saldo disponível: ${saldoUsuario.toStringAsFixed(0)} tokens',
-                  ),
-                  Text(
-                    'Investimento mínimo: ${investimentoMinimo.toStringAsFixed(0)} tokens',
-                  ),
-                  Text(
-                    'Valor recomendado: ${valorRecomendado.toStringAsFixed(0)} tokens',
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: valorController,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    decoration: const InputDecoration(
-                      labelText: 'Valor a investir',
-                      suffixText: 'tokens',
-                      border: OutlineInputBorder(),
-                    ),
-                    onChanged: (_) => setDialogState(() {}),
-                  ),
-                  if (saldoInsuficiente) ...[
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Saldo insuficiente para esta operação.',
-                      style: TextStyle(color: Colors.red),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(this.context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Compra de tokens em breve.'),
-                          ),
-                        );
-                      },
-                      child: const Text('Comprar mais tokens'),
-                    ),
-                  ],
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancelar'),
-                ),
-                ElevatedButton(
-                  onPressed: podeConfirmar
-                      ? () => Navigator.pop(context, valor)
-                      : null,
-                  child: const Text('Confirmar'),
-                ),
-              ],
-            );
-          },
+        return _TokenPurchaseDialog(
+          startupNome: _startup.nome,
+          saldoDisponivelCentavos: _saldoDisponivelCentavos ?? 0,
+          precoUnitarioCentavos: (_startup.precoToken * 100).round(),
+          tokensDisponiveis: _startup.tokensDisponiveis,
         );
       },
     );
 
-    valorController.dispose();
-
-    if (valorAInvestir == null || !mounted) return;
+    if (quantidade == null || !mounted) return;
 
     setState(() => _isInvesting = true);
 
-    final success = await _service.investirStartup(_startup.id, valorAInvestir);
+    try {
+      final result = await _service.investirStartup(_startup.id, quantidade);
+      Startup? startupAtualizada;
 
-    if (!mounted) return;
+      try {
+        startupAtualizada = await _service.buscarStartupPorId(
+          widget.startup.id,
+        );
+      } catch (_) {
+        startupAtualizada = null;
+      }
 
-    setState(() => _isInvesting = false);
+      if (!mounted) return;
 
-    if (success) {
+      setState(() {
+        if (startupAtualizada != null) {
+          _startup = startupAtualizada;
+        }
+        _saldoDisponivelCentavos = result.saldoNovoCentavos;
+        _walletErrorMessage = null;
+        _isInvesting = false;
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Investimento realizado com sucesso!'),
-          backgroundColor: Colors.green,
+        SnackBar(
+          content: Text(
+            'Compra aprovada: ${_formatInteger(result.quantidade)} tokens por ${_formatCurrencyCentavos(result.valorTotalCentavos)}.',
+          ),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isInvesting = false);
+
+      final message = e is StartupApiException
+          ? e.message
+          : 'Não foi possível concluir a compra agora.';
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Compra rejeitada: $message'),
+          backgroundColor: AppColors.destructive,
         ),
       );
     }
@@ -260,8 +271,9 @@ class _DetailsContent extends StatelessWidget {
               Expanded(
                 child: _MetricTile(
                   icon: Icons.toll_rounded,
-                  label: 'Tokens',
-                  value: _formatTokens(startup.totalTokens),
+                  label: 'Disponíveis',
+                  value:
+                      '${_formatTokens(startup.tokensDisponiveis)} / ${_formatTokens(startup.totalTokens)}',
                 ),
               ),
             ],
@@ -295,10 +307,309 @@ class _DetailsContent extends StatelessWidget {
                     height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('Investir'),
+                : const Text('Comprar tokens'),
           ),
         ),
       ],
+    );
+  }
+}
+
+class _TokenPurchaseDialog extends StatefulWidget {
+  final String startupNome;
+  final int saldoDisponivelCentavos;
+  final int precoUnitarioCentavos;
+  final int tokensDisponiveis;
+
+  const _TokenPurchaseDialog({
+    required this.startupNome,
+    required this.saldoDisponivelCentavos,
+    required this.precoUnitarioCentavos,
+    required this.tokensDisponiveis,
+  });
+
+  @override
+  State<_TokenPurchaseDialog> createState() => _TokenPurchaseDialogState();
+}
+
+class _TokenPurchaseDialogState extends State<_TokenPurchaseDialog> {
+  late final TextEditingController _quantidadeController;
+
+  @override
+  void initState() {
+    super.initState();
+    _quantidadeController = TextEditingController(text: '1');
+  }
+
+  @override
+  void dispose() {
+    _quantidadeController.dispose();
+    super.dispose();
+  }
+
+  int? get _quantidade {
+    final text = _quantidadeController.text.trim();
+    if (text.isEmpty) return null;
+    return int.tryParse(text);
+  }
+
+  int get _valorTotalCentavos {
+    final quantidade = _quantidade;
+    if (quantidade == null || quantidade < 1) return 0;
+    return quantidade * widget.precoUnitarioCentavos;
+  }
+
+  String get _statusMessage {
+    if (widget.precoUnitarioCentavos <= 0) {
+      return 'Compra rejeitada: preço do token indisponível.';
+    }
+
+    if (widget.tokensDisponiveis <= 0) {
+      return 'Compra rejeitada: não há tokens disponíveis.';
+    }
+
+    final quantidade = _quantidade;
+    if (quantidade == null || quantidade < 1) {
+      return 'Informe uma quantidade inteira válida.';
+    }
+
+    if (quantidade > widget.tokensDisponiveis) {
+      return 'Compra rejeitada: quantidade indisponível.';
+    }
+
+    if (_valorTotalCentavos > widget.saldoDisponivelCentavos) {
+      return 'Compra rejeitada: saldo insuficiente.';
+    }
+
+    return 'Compra válida.';
+  }
+
+  bool get _canConfirm => _statusMessage == 'Compra válida.';
+
+  Color get _statusColor =>
+      _canConfirm ? AppColors.success : AppColors.destructive;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Confirmar compra',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.foreground,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                widget.startupNome,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.mutedForeground,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: _PurchaseInfoCard(
+                      label: 'Saldo em conta',
+                      value: _formatCurrencyCentavos(
+                        widget.saldoDisponivelCentavos,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _PurchaseInfoCard(
+                      label: 'Preço por token',
+                      value: _formatCurrencyCentavos(
+                        widget.precoUnitarioCentavos,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _PurchaseInfoCard(
+                label: 'Custo da compra',
+                value: _formatCurrencyCentavos(_valorTotalCentavos),
+                caption:
+                    '${_formatInteger(widget.tokensDisponiveis)} tokens disponíveis',
+                highlighted: true,
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: _quantidadeController,
+                autofocus: true,
+                keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.done,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: InputDecoration(
+                  labelText: 'Quantidade de tokens',
+                  suffixText: 'tokens',
+                  filled: true,
+                  fillColor: AppColors.secondary,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: AppColors.muted),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: AppColors.muted),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: AppColors.primary),
+                  ),
+                ),
+                onChanged: (_) => setState(() {}),
+                onSubmitted: (_) {
+                  if (_canConfirm) {
+                    Navigator.of(context).pop(_quantidade);
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: _statusColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      _canConfirm
+                          ? Icons.check_circle_rounded
+                          : Icons.cancel_rounded,
+                      color: _statusColor,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        _statusMessage,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: _statusColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Cancelar'),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    onPressed: _canConfirm
+                        ? () => Navigator.of(context).pop(_quantidade)
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: const Text('Confirmar compra'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PurchaseInfoCard extends StatelessWidget {
+  final String label;
+  final String value;
+  final String? caption;
+  final bool highlighted;
+
+  const _PurchaseInfoCard({
+    required this.label,
+    required this.value,
+    this.caption,
+    this.highlighted = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: highlighted
+            ? AppColors.primary.withValues(alpha: 0.08)
+            : AppColors.secondary,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: highlighted
+              ? AppColors.primary.withValues(alpha: 0.12)
+              : AppColors.muted,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.mutedForeground,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: AppColors.foreground,
+            ),
+          ),
+          if (caption != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              caption!,
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.mutedForeground,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -694,6 +1005,21 @@ String _formatCurrency(double value) {
     return 'R\$ ${(value / 1000).toStringAsFixed(0)}k';
   }
   return 'R\$ ${value.toStringAsFixed(0)}';
+}
+
+final NumberFormat _currencyFormat = NumberFormat.currency(
+  locale: 'pt_BR',
+  symbol: 'R\$ ',
+  decimalDigits: 2,
+);
+final NumberFormat _integerFormat = NumberFormat.decimalPattern('pt_BR');
+
+String _formatCurrencyCentavos(int value) {
+  return _currencyFormat.format(value / 100);
+}
+
+String _formatInteger(int value) {
+  return _integerFormat.format(value);
 }
 
 String _formatTokens(int value) {

@@ -81,6 +81,7 @@ class Atualizacao {
 // representa uma startup completa
 class Startup {
   final String id;
+  final List<String> aliasIds;
   final String nome;
   final String logo;
   final String descricao;
@@ -91,6 +92,7 @@ class Startup {
   final bool investido;
   final double capitalAportado;
   final int totalTokens;
+  final int tokensDisponiveis;
   final String resumoExecutivo;
   final List<Socio> socios;
   final List<Membro> conselho;
@@ -100,6 +102,7 @@ class Startup {
 
   Startup({
     required this.id,
+    this.aliasIds = const [],
     required this.nome,
     required this.logo,
     required this.descricao,
@@ -110,6 +113,7 @@ class Startup {
     this.investido = false,
     required this.capitalAportado,
     required this.totalTokens,
+    this.tokensDisponiveis = 0,
     required this.resumoExecutivo,
     required this.socios,
     required this.conselho,
@@ -119,8 +123,14 @@ class Startup {
   });
 
   factory Startup.fromJson(Map<String, dynamic> json) {
+    final totalTokens = _intFromJson(json['totalTokens']);
+    final tokensDisponiveis = _intFromJson(
+      json['tokensDisponiveis'] ?? json['totalTokens'],
+    );
+
     return Startup(
       id: _stringFromJson(json['id']),
+      aliasIds: _stringListFromJson(json['aliasIds']),
       nome: _stringFromJson(json['nome']),
       logo: _stringFromJson(json['logo']),
       descricao: _stringFromJson(json['descricao']),
@@ -135,7 +145,10 @@ class Startup {
           : _doubleFromJson(json['variacaoPreco']),
       investido: json['investido'] == true,
       capitalAportado: _doubleFromJson(json['capitalAportado']),
-      totalTokens: _intFromJson(json['totalTokens']),
+      totalTokens: totalTokens,
+      tokensDisponiveis: totalTokens > 0
+          ? tokensDisponiveis.clamp(0, totalTokens).toInt()
+          : tokensDisponiveis,
       resumoExecutivo: _stringFromJson(
         json['resumoExecutivo'] ?? json['resumoExecutive'],
       ),
@@ -192,6 +205,15 @@ Map<String, dynamic> _mapFromJson(dynamic value) {
     return value.map((key, item) => MapEntry(key.toString(), item));
   }
   return const <String, dynamic>{};
+}
+
+List<String> _stringListFromJson(dynamic value) {
+  if (value is! List) return const [];
+
+  return value
+      .map((item) => _stringFromJson(item))
+      .where((item) => item.trim().isNotEmpty)
+      .toList();
 }
 
 // O backend remoto serializa datas do Firestore como mapa com _seconds.

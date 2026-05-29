@@ -14,6 +14,7 @@ final List<Startup> mockStartups = [
     estagio: 'Em Expansão',
     capitalAportado: 1200000,
     totalTokens: 50000,
+    tokensDisponiveis: 50000,
     resumoExecutivo:
         'A VerdeTech desenvolve sensores IoT de baixo custo integrados a '
         'uma plataforma de IA que permite ao agricultor monitorar umidade do '
@@ -66,6 +67,7 @@ final List<Startup> mockStartups = [
     estagio: 'Em Operação',
     capitalAportado: 320000,
     totalTokens: 25000,
+    tokensDisponiveis: 25000,
     resumoExecutivo:
         'A MedConnect conecta pacientes de municípios com menos de 50 mil '
         'habitantes a especialistas via videoconsulta assíncrona. A plataforma '
@@ -111,6 +113,7 @@ final List<Startup> mockStartups = [
     estagio: 'Nova',
     capitalAportado: 80000,
     totalTokens: 10000,
+    tokensDisponiveis: 10000,
     resumoExecutivo:
         'A EduSpace usa modelos de linguagem leves para personalizar exercícios '
         'de matemática e português conforme o ritmo de cada aluno do ensino '

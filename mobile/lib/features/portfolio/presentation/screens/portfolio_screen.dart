@@ -39,11 +39,11 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
     _carregarDados();
   }
 
-  // garante que os dados estejam carregados quando a tela for exibida 
-  @override 
+  // garante que os dados estejam carregados quando a tela for exibida
+  @override
   void didUpdateWidget(covariant PortfolioScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if(_wallet == null && !_isLoading){
+    if (_wallet == null && !_isLoading) {
       _carregarDados();
     }
   }
@@ -76,7 +76,7 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
       if (!mounted) return;
       setState(() {
         _wallet = wallet;
-        _startupsPorId = {for (final startup in startups) startup.id: startup};
+        _startupsPorId = _mapearStartupsPorId(startups);
         _isLoading = false;
       });
     } catch (e) {
@@ -92,6 +92,26 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
   StartupModel? _startupPorId(String? startupId) {
     if (startupId == null) return null;
     return _startupsPorId[startupId];
+  }
+
+  Map<String, StartupModel> _mapearStartupsPorId(List<StartupModel> startups) {
+    final startupsPorId = <String, StartupModel>{};
+
+    for (final startup in startups) {
+      final id = startup.id.trim();
+      if (id.isNotEmpty) {
+        startupsPorId[id] = startup;
+      }
+
+      for (final aliasId in startup.aliasIds) {
+        final aliasNormalizado = aliasId.trim();
+        if (aliasNormalizado.isNotEmpty) {
+          startupsPorId[aliasNormalizado] = startup;
+        }
+      }
+    }
+
+    return startupsPorId;
   }
 
   String? _nomeStartup(String? startupId) => _startupPorId(startupId)?.nome;

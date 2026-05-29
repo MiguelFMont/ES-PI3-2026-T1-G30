@@ -143,10 +143,23 @@ class _DashboardPageState extends State<DashboardPage> {
   Map<String, Startup> _mapearStartupsPorId(List<Startup>? startups) {
     if (startups == null || startups.isEmpty) return const {};
 
-    return {
-      for (final startup in startups)
-        if (startup.id.trim().isNotEmpty) startup.id.trim(): startup,
-    };
+    final startupsPorId = <String, Startup>{};
+
+    for (final startup in startups) {
+      final id = startup.id.trim();
+      if (id.isNotEmpty) {
+        startupsPorId[id] = startup;
+      }
+
+      for (final aliasId in startup.aliasIds) {
+        final aliasNormalizado = aliasId.trim();
+        if (aliasNormalizado.isNotEmpty) {
+          startupsPorId[aliasNormalizado] = startup;
+        }
+      }
+    }
+
+    return startupsPorId;
   }
 
   String _resolverNomeStartup(String nomeOuId) {

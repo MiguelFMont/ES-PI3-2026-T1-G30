@@ -48,9 +48,9 @@ class StartupCard extends StatelessWidget {
 
   String _formatarTokens(int tokens) {
     if (tokens >= 1000) {
-      return '${(tokens / 1000).toStringAsFixed(0)}k tokens';
+      return '${(tokens / 1000).toStringAsFixed(0)}k';
     }
-    return '$tokens tokens';
+    return '$tokens';
   }
 
   @override
@@ -159,7 +159,7 @@ class StartupCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 3),
                           Text(
-                            _formatarTokens(startup.totalTokens),
+                            '${_formatarTokens(startup.tokensDisponiveis)} disponíveis',
                             style: const TextStyle(
                               fontSize: 11,
                               color: AppColors.mutedForeground,
