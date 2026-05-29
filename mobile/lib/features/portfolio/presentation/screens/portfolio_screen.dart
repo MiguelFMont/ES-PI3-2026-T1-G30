@@ -129,6 +129,11 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
         startupsPorId[id] = startup;
       }
 
+      final nome = startup.nome.trim();
+      if (nome.isNotEmpty) {
+        startupsPorId[nome] = startup;
+      }
+
       for (final aliasId in startup.aliasIds) {
         final aliasNormalizado = aliasId.trim();
         if (aliasNormalizado.isNotEmpty) {
@@ -251,10 +256,7 @@ class _PortfolioContent extends StatelessWidget {
                   titulo: 'Últimas Operações',
                   icone: Icons.receipt_long_outlined,
                   acao: 'Ver extrato completo',
-                  onAcao: () => Navigator.pushNamed(
-                    context,
-                    AppRoutes.extrato,
-                  ),
+                  onAcao: () => Navigator.pushNamed(context, AppRoutes.extrato),
                 ),
                 const SizedBox(height: 12),
                 if (wallet.operacoes.isEmpty)

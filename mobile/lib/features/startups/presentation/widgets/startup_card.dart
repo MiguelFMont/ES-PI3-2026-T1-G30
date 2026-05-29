@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mesclainvest/core/theme/app_colors.dart';
+import 'package:mesclainvest/shared/utils/startup_logo_resolver.dart';
 
 import '../../domain/startup_model.dart';
 
@@ -263,23 +264,35 @@ class StartupCard extends StatelessWidget {
   Widget _buildLogo() {
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
-      child: Image.network(
-        startup.logo,
-        width: 52,
-        height: 52,
-        fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => Container(
-          width: 52,
-          height: 52,
-          decoration: BoxDecoration(
-            color: AppColors.muted,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: const Icon(
-            Icons.business_rounded,
-            color: AppColors.mutedForeground,
-          ),
-        ),
+      child: isStartupLogoAsset(startup.logo)
+          ? Image.asset(
+              startup.logo,
+              width: 52,
+              height: 52,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => _buildLogoPlaceholder(),
+            )
+          : Image.network(
+              startup.logo,
+              width: 52,
+              height: 52,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => _buildLogoPlaceholder(),
+            ),
+    );
+  }
+
+  Widget _buildLogoPlaceholder() {
+    return Container(
+      width: 52,
+      height: 52,
+      decoration: BoxDecoration(
+        color: AppColors.muted,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Icon(
+        Icons.business_rounded,
+        color: AppColors.mutedForeground,
       ),
     );
   }

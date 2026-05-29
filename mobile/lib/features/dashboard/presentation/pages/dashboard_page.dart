@@ -13,6 +13,7 @@ import '../../../../features/perfil/data/datasource/perfil_datasource.dart';
 import '../../../../features/perfil/domain/perfil_models.dart';
 import '../../../../features/startups/data/startup_service.dart';
 import '../../../../features/startups/domain/startup_model.dart';
+import '../../../../shared/utils/startup_logo_resolver.dart';
 import '../../../../shared/formatters/reais_formatter.dart';
 import '../../data/datasources/dashboard_datasource.dart';
 import '../../data/models/dashboard_models.dart';
@@ -170,6 +171,11 @@ class _DashboardPageState extends State<DashboardPage> {
         startupsPorId[id] = startup;
       }
 
+      final nome = startup.nome.trim();
+      if (nome.isNotEmpty) {
+        startupsPorId[nome] = startup;
+      }
+
       for (final aliasId in startup.aliasIds) {
         final aliasNormalizado = aliasId.trim();
         if (aliasNormalizado.isNotEmpty) {
@@ -191,6 +197,13 @@ class _DashboardPageState extends State<DashboardPage> {
     }
 
     return valor;
+  }
+
+  String _resolverLogoStartup(String nomeOuId) {
+    final valor = nomeOuId.trim();
+    if (valor.isEmpty) return '';
+
+    return _startupsPorId[valor]?.logo ?? '';
   }
 
   @override
@@ -507,6 +520,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   final startup = startups[i];
                   return _OportunidadeCard(
                     nome: startup.nome,
+                    logoSource: startup.logo,
                     setor: startup.setor,
                     variacao: _formatPercent(startup.variacaoPreco ?? 0),
                     cor: cores[i % cores.length],
@@ -547,6 +561,7 @@ class _DashboardPageState extends State<DashboardPage> {
               itemBuilder: (_, i) => _PosicaoCard(
                 holding: holdings[i],
                 nomeStartup: _resolverNomeStartup(holdings[i].nomeStartup),
+                logoSource: _resolverLogoStartup(holdings[i].nomeStartup),
               ),
             ),
         ],
@@ -1005,6 +1020,7 @@ class _AcaoRapida extends StatelessWidget {
 
 class _OportunidadeCard extends StatelessWidget {
   final String nome;
+  final String logoSource;
   final String setor;
   final String variacao;
   final Color cor;
@@ -1012,6 +1028,7 @@ class _OportunidadeCard extends StatelessWidget {
 
   const _OportunidadeCard({
     required this.nome,
+    required this.logoSource,
     required this.setor,
     required this.variacao,
     required this.cor,
@@ -1032,9 +1049,10 @@ class _OportunidadeCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            backgroundColor: cor.withValues(alpha: 0.12),
-            child: Icon(Icons.business_rounded, color: cor, size: 20),
+          _DashboardStartupLogo(
+            logoSource: logoSource,
+            fallbackLabel: nome,
+            color: cor,
           ),
           const Spacer(),
           Text(
@@ -1080,8 +1098,13 @@ class _OportunidadeCard extends StatelessWidget {
 class _PosicaoCard extends StatelessWidget {
   final HoldingModel holding;
   final String nomeStartup;
+  final String logoSource;
 
-  const _PosicaoCard({required this.holding, required this.nomeStartup});
+  const _PosicaoCard({
+    required this.holding,
+    required this.nomeStartup,
+    required this.logoSource,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1099,9 +1122,10 @@ class _PosicaoCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            backgroundColor: cor.withValues(alpha: 0.12),
-            child: Icon(Icons.business_rounded, color: cor, size: 20),
+          _DashboardStartupLogo(
+            logoSource: logoSource,
+            fallbackLabel: nomeStartup,
+            color: cor,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -1157,6 +1181,66 @@ class _PosicaoCard extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _DashboardStartupLogo extends StatelessWidget {
+  const _DashboardStartupLogo({
+    required this.logoSource,
+    required this.fallbackLabel,
+    required this.color,
+  });
+
+  final String logoSource;
+  final String fallbackLabel;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final placeholder = CircleAvatar(
+      backgroundColor: color.withValues(alpha: 0.12),
+      child: Text(
+        _initials(fallbackLabel),
+        style: TextStyle(
+          color: color,
+          fontSize: 13,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+
+    if (logoSource.trim().isEmpty) {
+      return placeholder;
+    }
+
+    return ClipOval(
+      child: isStartupLogoAsset(logoSource)
+          ? Image.asset(
+              logoSource,
+              width: 40,
+              height: 40,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => placeholder,
+            )
+          : Image.network(
+              logoSource,
+              width: 40,
+              height: 40,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => placeholder,
+            ),
+    );
+  }
+
+  String _initials(String value) {
+    final cleaned = value.trim();
+    if (cleaned.isEmpty) {
+      return 'ST';
+    }
+
+    return cleaned.length >= 2
+        ? cleaned.substring(0, 2).toUpperCase()
+        : cleaned.toUpperCase();
   }
 }
 

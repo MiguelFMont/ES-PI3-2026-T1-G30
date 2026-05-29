@@ -8,6 +8,7 @@ mostra quantidade, preço médio, preço atual, valor da posição e lucro
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:mesclainvest/shared/utils/startup_logo_resolver.dart';
 import '../../domain/models/participacao_model.dart';
 import '../../domain/models/startup_model.dart';
 
@@ -52,6 +53,7 @@ class ParticipacaoCard extends StatelessWidget {
     final lucroPositivo = lucro >= 0;
     final variacaoPositiva = variacao >= 0;
     final quantidadeBloqueada = participacao.quantidadeBloqueada;
+    final logoSource = startup?.logo ?? '';
     final bloqueadosLabel = quantidadeBloqueada == 1
         ? '1 bloqueado'
         : '$quantidadeBloqueada bloqueados';
@@ -77,25 +79,9 @@ class ParticipacaoCard extends StatelessWidget {
             // logo + nome + valorização
             Row(
               children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE91E63).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Center(
-                    child: Text(
-                      nomeStartup.length >= 2
-                          ? nomeStartup.substring(0, 2).toUpperCase()
-                          : nomeStartup.toUpperCase(),
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFFE91E63),
-                      ),
-                    ),
-                  ),
+                _PortfolioStartupLogo(
+                  logoSource: logoSource,
+                  fallbackLabel: nomeStartup,
                 ),
                 const SizedBox(width: 12),
                 // nome da startup
@@ -275,6 +261,72 @@ class ParticipacaoCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _PortfolioStartupLogo extends StatelessWidget {
+  const _PortfolioStartupLogo({
+    required this.logoSource,
+    required this.fallbackLabel,
+  });
+
+  final String logoSource;
+  final String fallbackLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final placeholder = Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        color: const Color(0xFFE91E63).withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Center(
+        child: Text(
+          _initials(fallbackLabel),
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFFE91E63),
+          ),
+        ),
+      ),
+    );
+
+    if (logoSource.trim().isEmpty) {
+      return placeholder;
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: isStartupLogoAsset(logoSource)
+          ? Image.asset(
+              logoSource,
+              width: 48,
+              height: 48,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => placeholder,
+            )
+          : Image.network(
+              logoSource,
+              width: 48,
+              height: 48,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => placeholder,
+            ),
+    );
+  }
+
+  String _initials(String value) {
+    final cleaned = value.trim();
+    if (cleaned.isEmpty) {
+      return 'ST';
+    }
+
+    return cleaned.length >= 2
+        ? cleaned.substring(0, 2).toUpperCase()
+        : cleaned.toUpperCase();
   }
 }
 

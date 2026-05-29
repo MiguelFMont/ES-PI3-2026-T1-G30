@@ -1,3 +1,5 @@
+import 'package:mesclainvest/shared/utils/startup_logo_resolver.dart';
+
 /*
 Autora: Maria Júlia Lazarini Oleto
 RA: 25006031
@@ -58,7 +60,11 @@ class StartupModel {
       id: map['id'] ?? '',
       aliasIds: _aliasIdsFromMap(map['aliasIds']),
       nome: map['nome'] ?? '',
-      logo: map['logo'] ?? '',
+      logo: resolveStartupLogoSource(
+        startupId: map['id'] ?? '',
+        startupName: map['nome'] ?? '',
+        fallbackLogo: map['logo'] ?? '',
+      ),
       descricao: map['descricao'] ?? '',
       estagio: map['estagio'] ?? '',
       capitalAportado: (map['capitalAportado'] ?? 0).toDouble(),

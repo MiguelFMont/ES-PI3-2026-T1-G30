@@ -1,3 +1,5 @@
+import 'package:mesclainvest/shared/utils/startup_logo_resolver.dart';
+
 class Socio {
   final String nome;
   final String foto;
@@ -130,7 +132,11 @@ class Startup {
       id: _stringFromJson(json['id']),
       aliasIds: _stringListFromJson(json['aliasIds']),
       nome: _stringFromJson(json['nome']),
-      logo: _stringFromJson(json['logo']),
+      logo: resolveStartupLogoSource(
+        startupId: _stringFromJson(json['id']),
+        startupName: _stringFromJson(json['nome']),
+        fallbackLogo: _stringFromJson(json['logo']),
+      ),
       descricao: _stringFromJson(json['descricao']),
       estagio: _stringFromJson(json['estagio']),
       setor: _stringFromJson(json['setor']),

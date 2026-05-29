@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:mesclainvest/core/state/app_data_refresh_bus.dart';
 import 'package:mesclainvest/core/theme/app_colors.dart';
 import 'package:mesclainvest/features/dashboard/data/datasources/dashboard_datasource.dart';
+import 'package:mesclainvest/shared/utils/startup_logo_resolver.dart';
 import 'package:mesclainvest/shared/widgets/index.dart';
 
 import '../../data/startup_service.dart';
@@ -384,18 +385,13 @@ class _TradeDialogState extends State<_TradeDialog> {
                     const SizedBox(height: 22),
                     _TradeInfoCard(
                       icon: Icons.account_balance_wallet_outlined,
-                      label: _isBuy
-                          ? 'Saldo disponível'
-                          : 'Tokens disponíveis',
+                      label: _isBuy ? 'Saldo disponível' : 'Tokens disponíveis',
                       value: _isBuy
                           ? _formatCurrencyFull(widget.saldoDisponivel)
                           : '${_formatInt(widget.tokensDisponiveis)} tokens',
                     ),
                     const SizedBox(height: 12),
-                    _TradeTotalCard(
-                      isBuy: _isBuy,
-                      value: _total,
-                    ),
+                    _TradeTotalCard(isBuy: _isBuy, value: _total),
                     if (_validationMessage != null) ...[
                       const SizedBox(height: 10),
                       Text(
@@ -554,13 +550,21 @@ class _TradeLogo extends StatelessWidget {
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(14),
-      child: Image.network(
-        url,
-        width: 56,
-        height: 56,
-        fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => placeholder,
-      ),
+      child: isStartupLogoAsset(url)
+          ? Image.asset(
+              url,
+              width: 56,
+              height: 56,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => placeholder,
+            )
+          : Image.network(
+              url,
+              width: 56,
+              height: 56,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => placeholder,
+            ),
     );
   }
 }
@@ -880,10 +884,7 @@ class _DetailsContent extends StatelessWidget {
           onPeriodChanged: onPeriodChanged,
         ),
         const SizedBox(height: 22),
-        _DetailsTabs(
-          selectedTab: tabSelecionada,
-          onChanged: onTabChanged,
-        ),
+        _DetailsTabs(selectedTab: tabSelecionada, onChanged: onTabChanged),
         const SizedBox(height: 12),
         _TabContent(startup: startup, selectedTab: tabSelecionada),
         const SizedBox(height: 96),
@@ -1011,7 +1012,9 @@ class _StartupSummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final variacao = startup.variacaoPreco ?? 0;
-    final variacaoColor = variacao >= 0 ? AppColors.success : AppColors.destructive;
+    final variacaoColor = variacao >= 0
+        ? AppColors.success
+        : AppColors.destructive;
 
     return Container(
       height: 318,
@@ -1267,7 +1270,9 @@ class _PerformanceSection extends StatelessWidget {
       fallbackValue: startup.precoToken,
     );
     final stats = _PriceStats.from(series, startup.totalTokens);
-    final color = stats.variation >= 0 ? AppColors.success : AppColors.destructive;
+    final color = stats.variation >= 0
+        ? AppColors.success
+        : AppColors.destructive;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 42),
@@ -1289,7 +1294,11 @@ class _PerformanceSection extends StatelessWidget {
           children: [
             const Row(
               children: [
-                Icon(Icons.trending_up_rounded, color: AppColors.primary, size: 16),
+                Icon(
+                  Icons.trending_up_rounded,
+                  color: AppColors.primary,
+                  size: 16,
+                ),
                 SizedBox(width: 7),
                 Text(
                   'Performance',
@@ -1524,10 +1533,7 @@ class _StartupPriceChartState extends State<_StartupPriceChart> {
                 left: activeDx,
                 top: 0,
                 bottom: 0,
-                child: Container(
-                  width: 1,
-                  color: const Color(0xFFD4D8DE),
-                ),
+                child: Container(width: 1, color: const Color(0xFFD4D8DE)),
               ),
               Positioned(
                 left: activeDx - 4,
@@ -1758,10 +1764,7 @@ class _DetailsTabs extends StatelessWidget {
   final String selectedTab;
   final ValueChanged<String> onChanged;
 
-  const _DetailsTabs({
-    required this.selectedTab,
-    required this.onChanged,
-  });
+  const _DetailsTabs({required this.selectedTab, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -1909,8 +1912,7 @@ class _SocietariaContent extends StatelessWidget {
             description: '',
             imageUrl: socio.foto,
           ),
-        if (startup.conselho.isNotEmpty)
-          const _SectionLabel(label: 'Conselho'),
+        if (startup.conselho.isNotEmpty) const _SectionLabel(label: 'Conselho'),
         for (final member in startup.conselho)
           _PersonCard(
             name: member.nome,
@@ -1932,7 +1934,9 @@ class _EquipeContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (startup.mentores.isEmpty) {
-      return const _EmptyContent(message: 'Nenhum membro de equipe cadastrado.');
+      return const _EmptyContent(
+        message: 'Nenhum membro de equipe cadastrado.',
+      );
     }
 
     return Column(
@@ -1964,11 +1968,7 @@ class _VideosContent extends StatelessWidget {
       return const _EmptyContent(message: 'Nenhum vídeo publicado.');
     }
 
-    return Column(
-      children: [
-        _VideoCard(video: video),
-      ],
-    );
+    return Column(children: [_VideoCard(video: video)]);
   }
 }
 
@@ -2200,7 +2200,8 @@ _StartupVideoAsset? _videoAssetForStartup(Startup startup) {
   if (key.contains('agro')) {
     return const _StartupVideoAsset(
       title: 'Pitch AgroIA',
-      description: 'Visão geral da solução de IA para monitoramento de lavouras.',
+      description:
+          'Visão geral da solução de IA para monitoramento de lavouras.',
       dateLabel: '19 de janeiro de 2026',
       durationLabel: '0:10',
       assetPath: 'assets/videos/agro.mp4',
@@ -2210,7 +2211,8 @@ _StartupVideoAsset? _videoAssetForStartup(Startup startup) {
   if (key.contains('med') || key.contains('health') || key.contains('saude')) {
     return const _StartupVideoAsset(
       title: 'Demo MedFácil',
-      description: 'Apresentação da jornada de consulta online e prontuário digital.',
+      description:
+          'Apresentação da jornada de consulta online e prontuário digital.',
       dateLabel: '19 de janeiro de 2026',
       durationLabel: '0:10',
       assetPath: 'assets/videos/med.mp4',
@@ -2220,7 +2222,8 @@ _StartupVideoAsset? _videoAssetForStartup(Startup startup) {
   if (key.contains('edu')) {
     return const _StartupVideoAsset(
       title: 'Demo EduBlocks',
-      description: 'Experiência de aprendizagem por jogos e desafios de programação.',
+      description:
+          'Experiência de aprendizagem por jogos e desafios de programação.',
       dateLabel: '19 de janeiro de 2026',
       durationLabel: '0:10',
       assetPath: 'assets/videos/edu.mp4',
@@ -2230,7 +2233,8 @@ _StartupVideoAsset? _videoAssetForStartup(Startup startup) {
   if (key.contains('fin')) {
     return const _StartupVideoAsset(
       title: 'Pitch FinTrack',
-      description: 'Resumo da plataforma de gestão financeira com categorização por IA.',
+      description:
+          'Resumo da plataforma de gestão financeira com categorização por IA.',
       dateLabel: '19 de janeiro de 2026',
       durationLabel: '0:10',
       assetPath: 'assets/videos/fin.mp4',
@@ -2243,7 +2247,8 @@ _StartupVideoAsset? _videoAssetForStartup(Startup startup) {
       key.contains('verde')) {
     return const _StartupVideoAsset(
       title: 'Demo GreenRoute',
-      description: 'Como a rota sustentável reduz emissões no deslocamento urbano.',
+      description:
+          'Como a rota sustentável reduz emissões no deslocamento urbano.',
       dateLabel: '19 de janeiro de 2026',
       durationLabel: '0:10',
       assetPath: 'assets/videos/green.mp4',
@@ -2331,7 +2336,8 @@ class _InfoRow extends StatelessWidget {
           ),
           const SizedBox(width: 14),
           Expanded(
-            child: valueWidget ??
+            child:
+                valueWidget ??
                 Text(
                   value?.isNotEmpty == true ? value! : '-',
                   textAlign: TextAlign.right,
@@ -2493,10 +2499,7 @@ class _StickyInvestButton extends StatelessWidget {
   final bool isLoading;
   final VoidCallback onPressed;
 
-  const _StickyInvestButton({
-    required this.isLoading,
-    required this.onPressed,
-  });
+  const _StickyInvestButton({required this.isLoading, required this.onPressed});
 
   @override
   Widget build(BuildContext context) {
@@ -2617,7 +2620,9 @@ class _VariationBadge extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            value >= 0 ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+            value >= 0
+                ? Icons.arrow_upward_rounded
+                : Icons.arrow_downward_rounded,
             size: 14,
             color: color,
           ),
@@ -2661,13 +2666,21 @@ class _StartupLogo extends StatelessWidget {
     if (url.isEmpty) return placeholder;
 
     return ClipOval(
-      child: Image.network(
-        url,
-        width: size,
-        height: size,
-        fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => placeholder,
-      ),
+      child: isStartupLogoAsset(url)
+          ? Image.asset(
+              url,
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => placeholder,
+            )
+          : Image.network(
+              url,
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => placeholder,
+            ),
     );
   }
 }
@@ -2740,9 +2753,7 @@ List<StartupPricePoint> _seriesForPeriod({
   required double fallbackValue,
 }) {
   final now = DateTime.now();
-  final validPoints = points
-      .where((point) => point.preco > 0)
-      .toList()
+  final validPoints = points.where((point) => point.preco > 0).toList()
     ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
   final normalizedPoints = <StartupPricePoint>[
     for (var i = 0; i < validPoints.length; i++)
