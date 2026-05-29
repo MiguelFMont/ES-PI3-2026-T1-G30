@@ -38,6 +38,7 @@ export interface Startup {
   tokensDisponiveis?: number;
   precoTokenInicialCentavos?: number;
   precoTokenAtualCentavos?: number;
+  variacaoPreco?: number;
   resumoExecutivo: string;
   socios: Socio[];
   conselho: Membro[];
