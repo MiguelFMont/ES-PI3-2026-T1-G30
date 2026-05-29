@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../app/routes.dart';
+import '../../../../core/state/app_data_refresh_bus.dart';
 import '../../../../core/storage/session_manager.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../features/perfil/data/datasource/perfil_datasource.dart';
@@ -24,6 +27,7 @@ class _DashboardPageState extends State<DashboardPage> {
   final DashboardDatasource _datasource = DashboardDatasource();
   final PerfilDatasource _perfilDatasource = PerfilDatasource();
   final StartupService _startupService = StartupService();
+  StreamSubscription<AppDataRefreshEvent>? _refreshSubscription;
 
   bool _isLoading = true;
   DashboardSummaryModel? _summary;
@@ -38,7 +42,20 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   void initState() {
     super.initState();
+    _refreshSubscription = AppDataRefreshBus.instance.stream.listen((event) {
+      if (!event.affects(AppDataRefreshScope.dashboard) || !mounted) {
+        return;
+      }
+
+      _carregarDados();
+    });
     _carregarDados();
+  }
+
+  @override
+  void dispose() {
+    _refreshSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _carregarDados() async {

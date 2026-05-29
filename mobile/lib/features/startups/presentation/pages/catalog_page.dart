@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:mesclainvest/app/routes.dart';
+import 'package:mesclainvest/core/state/app_data_refresh_bus.dart';
 import 'package:mesclainvest/core/theme/app_colors.dart';
 
 import '../../data/startup_service.dart';
@@ -18,6 +21,7 @@ class CatalogPage extends StatefulWidget {
 class _CatalogPageState extends State<CatalogPage> {
   final StartupService _service = StartupService();
   final TextEditingController _searchController = TextEditingController();
+  StreamSubscription<AppDataRefreshEvent>? _refreshSubscription;
 
   List<Startup> _startups = [];
   CatalogState _state = CatalogState.loading;
@@ -95,22 +99,32 @@ class _CatalogPageState extends State<CatalogPage> {
   @override
   void initState() {
     super.initState();
+    _refreshSubscription = AppDataRefreshBus.instance.stream.listen((event) {
+      if (!event.affects(AppDataRefreshScope.catalog) || !mounted) {
+        return;
+      }
+
+      _fetchStartups(showLoading: false);
+    });
     _fetchStartups();
     _searchController.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
+    _refreshSubscription?.cancel();
     _searchController.dispose();
     super.dispose();
   }
 
-  Future<void> _fetchStartups() async {
-    setState(() {
-      _state = CatalogState.loading;
-      _errorMessage = null;
-      _startups = [];
-    });
+  Future<void> _fetchStartups({bool showLoading = true}) async {
+    if (showLoading || _startups.isEmpty) {
+      setState(() {
+        _state = CatalogState.loading;
+        _errorMessage = null;
+        _startups = [];
+      });
+    }
 
     try {
       final startups = await _service.listarStartups(estagio: _selectedStage);
@@ -138,6 +152,11 @@ class _CatalogPageState extends State<CatalogPage> {
       });
     } catch (e) {
       if (!mounted) return;
+      if (!showLoading && _startups.isNotEmpty) {
+        debugPrint('Erro ao atualizar catálogo em segundo plano: $e');
+        return;
+      }
+
       setState(() {
         _errorMessage = e is StartupApiException
             ? e.message

@@ -7,8 +7,11 @@ mostra saldo, participacoes, grafico e ultimas operacoes
 se conecta com o backend via repository
 */
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../../core/state/app_data_refresh_bus.dart';
 import '../../../../core/network/http_client.dart';
 import '../../../../core/storage/session_manager.dart';
 import '../../../../shared/widgets/saldo_card.dart';
@@ -32,11 +35,25 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
   Map<String, StartupModel> _startupsPorId = {};
   bool _isLoading = true;
   String? _erro;
+  StreamSubscription<AppDataRefreshEvent>? _refreshSubscription;
 
   @override
   void initState() {
     super.initState();
+    _refreshSubscription = AppDataRefreshBus.instance.stream.listen((event) {
+      if (!event.affects(AppDataRefreshScope.portfolio) || !mounted) {
+        return;
+      }
+
+      _carregarDados(showLoading: false);
+    });
     _carregarDados();
+  }
+
+  @override
+  void dispose() {
+    _refreshSubscription?.cancel();
+    super.dispose();
   }
 
   // garante que os dados estejam carregados quando a tela for exibida
@@ -49,12 +66,14 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
   }
 
   // carrega os dados da carteira (saldo, participações e operações) e os nomes das startups
-  Future<void> _carregarDados() async {
+  Future<void> _carregarDados({bool showLoading = true}) async {
     try {
-      setState(() {
-        _isLoading = true;
-        _erro = null;
-      });
+      if (showLoading || _wallet == null) {
+        setState(() {
+          _isLoading = true;
+          _erro = null;
+        });
+      }
 
       // busca o token JWT e o uid do usuário autenticado na sessão
       final token = await SessionManager.getToken();
@@ -77,10 +96,16 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
       setState(() {
         _wallet = wallet;
         _startupsPorId = _mapearStartupsPorId(startups);
+        _erro = null;
         _isLoading = false;
       });
     } catch (e) {
       if (!mounted) return;
+      if (!showLoading && _wallet != null) {
+        debugPrint('Erro ao atualizar portfólio em segundo plano: $e');
+        return;
+      }
+
       setState(() {
         _erro = e.toString();
         _isLoading = false;

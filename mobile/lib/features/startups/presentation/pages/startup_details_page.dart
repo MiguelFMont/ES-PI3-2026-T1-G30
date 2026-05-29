@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:mesclainvest/core/state/app_data_refresh_bus.dart';
 import 'package:mesclainvest/core/theme/app_colors.dart';
 
 import '../../data/startup_service.dart';
@@ -160,6 +161,17 @@ class _StartupDetailsPageState extends State<StartupDetailsPage> {
           ),
           backgroundColor: AppColors.success,
         ),
+      );
+
+      AppDataRefreshBus.instance.refresh(
+        scopes: const {
+          AppDataRefreshScope.dashboard,
+          AppDataRefreshScope.portfolio,
+          AppDataRefreshScope.catalog,
+          AppDataRefreshScope.balcao,
+          AppDataRefreshScope.perfilWallet,
+        },
+        reason: 'startup-direct-buy',
       );
     } catch (e) {
       if (!mounted) return;
@@ -1023,8 +1035,5 @@ String _formatInteger(int value) {
 }
 
 String _formatTokens(int value) {
-  if (value >= 1000) {
-    return '${(value / 1000).toStringAsFixed(0)}k';
-  }
-  return value.toString();
+  return _formatInteger(value);
 }

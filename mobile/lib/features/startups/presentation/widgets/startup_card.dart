@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:mesclainvest/core/theme/app_colors.dart';
 
 import '../../domain/startup_model.dart';
@@ -6,6 +7,8 @@ import '../../domain/startup_model.dart';
 class StartupCard extends StatelessWidget {
   final Startup startup;
   final VoidCallback onTap;
+
+  static final NumberFormat _tokenFormat = NumberFormat.decimalPattern('pt_BR');
 
   const StartupCard({super.key, required this.startup, required this.onTap});
 
@@ -47,10 +50,7 @@ class StartupCard extends StatelessWidget {
   }
 
   String _formatarTokens(int tokens) {
-    if (tokens >= 1000) {
-      return '${(tokens / 1000).toStringAsFixed(0)}k';
-    }
-    return '$tokens';
+    return _tokenFormat.format(tokens);
   }
 
   @override

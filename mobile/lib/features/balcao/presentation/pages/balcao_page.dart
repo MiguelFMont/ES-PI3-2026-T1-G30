@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:mesclainvest/core/state/app_data_refresh_bus.dart';
 import 'package:mesclainvest/core/theme/app_colors.dart';
 import 'package:mesclainvest/features/balcao/data/balcao_api_service.dart';
 import 'package:mesclainvest/features/balcao/models/holding_model.dart';
@@ -31,11 +34,25 @@ class _BalcaoPageState extends State<BalcaoPage> {
   List<OfferModel> _myOffers = [];
   List<OfferModel> _marketOffers = [];
   Map<String, StartupModel> _startupsById = {};
+  StreamSubscription<AppDataRefreshEvent>? _refreshSubscription;
 
   @override
   void initState() {
     super.initState();
+    _refreshSubscription = AppDataRefreshBus.instance.stream.listen((event) {
+      if (!event.affects(AppDataRefreshScope.balcao) || !mounted) {
+        return;
+      }
+
+      _refreshData(showErrorFeedback: false);
+    });
     _loadInitialData();
+  }
+
+  @override
+  void dispose() {
+    _refreshSubscription?.cancel();
+    super.dispose();
   }
 
   List<HoldingModel> get _sellableHoldings {
@@ -74,7 +91,7 @@ class _BalcaoPageState extends State<BalcaoPage> {
     }
   }
 
-  Future<void> _refreshData() async {
+  Future<void> _refreshData({bool showErrorFeedback = true}) async {
     try {
       final data = await _fetchData();
       if (!mounted) return;
@@ -85,7 +102,11 @@ class _BalcaoPageState extends State<BalcaoPage> {
       });
     } catch (error) {
       if (!mounted) return;
-      _showFeedback(_errorText(error), isError: true);
+      if (showErrorFeedback) {
+        _showFeedback(_errorText(error), isError: true);
+      } else {
+        debugPrint('Erro ao atualizar balcão em segundo plano: $error');
+      }
     }
   }
 
@@ -196,6 +217,15 @@ class _BalcaoPageState extends State<BalcaoPage> {
 
     _showFeedback(result.message);
     await _refreshData();
+    AppDataRefreshBus.instance.refresh(
+      scopes: const {
+        AppDataRefreshScope.dashboard,
+        AppDataRefreshScope.portfolio,
+        AppDataRefreshScope.catalog,
+        AppDataRefreshScope.perfilWallet,
+      },
+      reason: 'balcao-direct-sell',
+    );
   }
 
   Future<void> _openCreateOfferSheet() async {
@@ -224,6 +254,13 @@ class _BalcaoPageState extends State<BalcaoPage> {
 
     _showFeedback(result.message);
     await _refreshData();
+    AppDataRefreshBus.instance.refresh(
+      scopes: const {
+        AppDataRefreshScope.dashboard,
+        AppDataRefreshScope.portfolio,
+      },
+      reason: 'balcao-create-offer',
+    );
   }
 
   Future<bool> _confirmAction({
@@ -298,6 +335,13 @@ class _BalcaoPageState extends State<BalcaoPage> {
 
       _showFeedback('Oferta cancelada com sucesso.');
       await _refreshData();
+      AppDataRefreshBus.instance.refresh(
+        scopes: const {
+          AppDataRefreshScope.dashboard,
+          AppDataRefreshScope.portfolio,
+        },
+        reason: 'balcao-cancel-offer',
+      );
     } catch (error) {
       if (!mounted) return;
       _showFeedback(_errorText(error), isError: true);
@@ -332,6 +376,14 @@ class _BalcaoPageState extends State<BalcaoPage> {
 
       _showFeedback('Oferta aceita com sucesso.');
       await _refreshData();
+      AppDataRefreshBus.instance.refresh(
+        scopes: const {
+          AppDataRefreshScope.dashboard,
+          AppDataRefreshScope.portfolio,
+          AppDataRefreshScope.perfilWallet,
+        },
+        reason: 'balcao-accept-offer',
+      );
     } catch (error) {
       if (!mounted) return;
       _showFeedback(_errorText(error), isError: true);
