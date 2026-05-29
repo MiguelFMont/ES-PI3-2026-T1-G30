@@ -56,23 +56,28 @@ class HoldingModel {
   const HoldingModel({
     required this.nomeStartup,
     required this.setor,
+    required this.totalTokens,
     required this.valorInvestido,
     required this.percentualRetorno,
   });
 
   final String nomeStartup;
   final String setor;
+  final double totalTokens;
   final double valorInvestido;
   final double percentualRetorno;
 
   factory HoldingModel.fromJson(Map<String, dynamic> json) {
     final quantidade = _toDouble(json['quantidade']);
+    final quantidadeBloqueada = _toDouble(json['quantidadeBloqueada']);
     final precoMedioCentavos = _toDouble(json['precoMedioCentavos']);
+    final quantidadeTotal = quantidade + quantidadeBloqueada;
 
     return HoldingModel(
       nomeStartup: _toText(json['nomeStartup'] ?? json['startupId']),
       setor: _toText(json['setor']),
-      valorInvestido: (quantidade * precoMedioCentavos) / 100,
+      totalTokens: quantidadeTotal,
+      valorInvestido: (quantidadeTotal * precoMedioCentavos) / 100,
       percentualRetorno: _toDouble(json['percentualRetorno']),
     );
   }

@@ -108,6 +108,19 @@ export class WalletRepo extends FirestoreBaseRepo {
     return typeof value === "number" && Number.isInteger(value) && value >= 0;
   }
 
+  // Participação ativa existe enquanto houver tokens livres ou bloqueados.
+  private getHoldingTotalTokens(
+    holding: Pick<HoldingRecord, "quantidade" | "quantidadeBloqueada">,
+  ) {
+    return holding.quantidade + holding.quantidadeBloqueada;
+  }
+
+  private hasActiveHolding(
+    holding: Pick<HoldingRecord, "quantidade" | "quantidadeBloqueada">,
+  ) {
+    return this.getHoldingTotalTokens(holding) > 0;
+  }
+
   // Normaliza um documento de wallet lido do Firestore para a estrutura interna do módulo.
   // É chamada pelos métodos getWallet, getOrCreateWallet e addBalance.
   private toWalletRecord(
@@ -259,13 +272,14 @@ export class WalletRepo extends FirestoreBaseRepo {
       .get();
 
     // retorna os campos do documento wallet 
-    const wallet = walletDoc.data();
+    const wallet = this.toWalletRecord(uid, walletDoc.data());
 
-    // obejtos holdings 
-    const holdings = holdingsSnapshot.docs.map((doc: admin.firestore.QueryDocumentSnapshot) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    // objetos holdings
+    const holdings = holdingsSnapshot.docs
+      .map((doc: admin.firestore.QueryDocumentSnapshot) =>
+        this.toHoldingRecord(uid, doc.id, doc.data()),
+      )
+      .filter((holding) => this.hasActiveHolding(holding));
 
     // objetos transações 
     const transacoes = transacoesSnapshot.docs.map((doc: admin.firestore.QueryDocumentSnapshot) => ({
@@ -321,9 +335,11 @@ export class WalletRepo extends FirestoreBaseRepo {
       .collection("holdings")
       .get();
 
-    return holdingsSnapshot.docs.map((holdingDoc) =>
-      this.toHoldingRecord(uid, holdingDoc.id, holdingDoc.data()),
-    );
+    return holdingsSnapshot.docs
+      .map((holdingDoc) =>
+        this.toHoldingRecord(uid, holdingDoc.id, holdingDoc.data()),
+      )
+      .filter((holding) => this.hasActiveHolding(holding));
   }
 
   // Soma valorCentavos ao saldo atual da carteira dentro de uma transação.

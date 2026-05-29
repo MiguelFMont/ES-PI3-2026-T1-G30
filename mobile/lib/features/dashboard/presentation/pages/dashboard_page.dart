@@ -30,6 +30,7 @@ class _DashboardPageState extends State<DashboardPage> {
   List<HoldingModel>? _holdings;
   List<TransactionModel>? _transactions;
   List<Startup>? _startupsDestaque;
+  Map<String, Startup> _startupsPorId = const {};
   String _primeiroNome = '';
 
   String _periodoSelecionado = '1M';
@@ -64,6 +65,7 @@ class _DashboardPageState extends State<DashboardPage> {
         _transactions = transactions;
         _primeiroNome = _primeiroNomeDe(perfil?.nome);
         _startupsDestaque = _selecionarDestaques(startups);
+        _startupsPorId = _mapearStartupsPorId(startups);
         _isLoading = false;
       });
     } catch (e) {
@@ -136,6 +138,27 @@ class _DashboardPageState extends State<DashboardPage> {
         return varB.compareTo(varA);
       });
     return ordenadas.take(3).toList();
+  }
+
+  Map<String, Startup> _mapearStartupsPorId(List<Startup>? startups) {
+    if (startups == null || startups.isEmpty) return const {};
+
+    return {
+      for (final startup in startups)
+        if (startup.id.trim().isNotEmpty) startup.id.trim(): startup,
+    };
+  }
+
+  String _resolverNomeStartup(String nomeOuId) {
+    final valor = nomeOuId.trim();
+    if (valor.isEmpty) return '-';
+
+    final startup = _startupsPorId[valor];
+    if (startup != null && startup.nome.trim().isNotEmpty) {
+      return startup.nome.trim();
+    }
+
+    return valor;
   }
 
   @override
@@ -564,7 +587,7 @@ class _DashboardPageState extends State<DashboardPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _SecaoTitulo(
-            titulo: 'Minhas posições',
+            titulo: 'Minhas participações',
             acao: 'Ver carteira',
             onAcaoTap: () => Navigator.pushNamed(context, AppRoutes.portfolio),
           ),
@@ -572,14 +595,17 @@ class _DashboardPageState extends State<DashboardPage> {
           if (holdings.isEmpty)
             _EstadoVazio(
               icone: Icons.work_outline_rounded,
-              mensagem: 'Você ainda não possui posições.',
+              mensagem: 'Você ainda não possui participações.',
             )
           else
             ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: holdings.length,
-              itemBuilder: (_, i) => _PosicaoCard(holding: holdings[i]),
+              itemBuilder: (_, i) => _PosicaoCard(
+                holding: holdings[i],
+                nomeStartup: _resolverNomeStartup(holdings[i].nomeStartup),
+              ),
             ),
         ],
       ),
@@ -610,8 +636,12 @@ class _DashboardPageState extends State<DashboardPage> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: transacoesExibidas.length,
-              itemBuilder: (_, i) =>
-                  _AtividadeCard(transaction: transacoesExibidas[i]),
+              itemBuilder: (_, i) => _AtividadeCard(
+                transaction: transacoesExibidas[i],
+                nomeStartup: _resolverNomeStartup(
+                  transacoesExibidas[i].nomeStartup,
+                ),
+              ),
             ),
         ],
       ),
@@ -781,8 +811,9 @@ class _OportunidadeCard extends StatelessWidget {
 
 class _PosicaoCard extends StatelessWidget {
   final HoldingModel holding;
+  final String nomeStartup;
 
-  const _PosicaoCard({required this.holding});
+  const _PosicaoCard({required this.holding, required this.nomeStartup});
 
   @override
   Widget build(BuildContext context) {
@@ -810,7 +841,7 @@ class _PosicaoCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  holding.nomeStartup.isEmpty ? '-' : holding.nomeStartup,
+                  nomeStartup,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -863,8 +894,9 @@ class _PosicaoCard extends StatelessWidget {
 
 class _AtividadeCard extends StatelessWidget {
   final TransactionModel transaction;
+  final String nomeStartup;
 
-  const _AtividadeCard({required this.transaction});
+  const _AtividadeCard({required this.transaction, required this.nomeStartup});
 
   String _labelTipo(String tipoUpper) {
     if (tipoUpper.startsWith('COMPRA')) return 'Compra';
@@ -890,13 +922,13 @@ class _AtividadeCard extends StatelessWidget {
     final isDebito = isCompra || isSaque;
     final tipoExibido = _labelTipo(tipoUpper);
     final cor = isDebito ? AppColors.destructive : AppColors.success;
-    final titulo = transaction.nomeStartup.trim().isEmpty
+    final titulo = nomeStartup.trim().isEmpty
         ? _tituloFallback(tipoUpper)
-        : transaction.nomeStartup.trim();
+        : nomeStartup.trim();
     final subtitle = <String>[
       tipoExibido,
       if (transaction.detalhes.isNotEmpty) transaction.detalhes,
-      if (transaction.data.isNotEmpty) transaction.data,
+      if (transaction.data.isNotEmpty) _formatarDataCurta(transaction.data),
     ].join(' · ');
     final valorExibido = isDebito
         ? -transaction.valor.abs()
@@ -1248,4 +1280,26 @@ String _formatPercent(double valor) {
   final sign = valor >= 0 ? '+' : '';
   final formatted = valor.toStringAsFixed(2).replaceAll('.', ',');
   return '$sign$formatted%';
+}
+
+String _formatarDataCurta(String raw) {
+  final data = DateTime.tryParse(raw)?.toLocal();
+  if (data == null) return raw;
+
+  const meses = [
+    'jan.',
+    'fev.',
+    'mar.',
+    'abr.',
+    'mai.',
+    'jun.',
+    'jul.',
+    'ago.',
+    'set.',
+    'out.',
+    'nov.',
+    'dez.',
+  ];
+
+  return '${data.day} de ${meses[data.month - 1]}';
 }

@@ -24,9 +24,12 @@ class DashboardDatasource {
   Future<List<HoldingModel>> getHoldings() async {
     final body = await _get(
       '/wallet/holdings',
-      'Erro ao buscar posicoes investidas.',
+      'Erro ao buscar participacoes investidas.',
     );
-    return _parseItems(body, HoldingModel.fromJson);
+    return _parseItems(
+      body,
+      HoldingModel.fromJson,
+    ).where((holding) => holding.totalTokens > 0).toList();
   }
 
   Future<List<TransactionModel>> getTransactions() async {

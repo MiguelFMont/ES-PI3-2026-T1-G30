@@ -82,9 +82,12 @@ class PortfolioDatasource {
     // converte para o formato list do dart
     final List items = body['items'] as List;
     // parcorre a lista e converte cada item em participacao model
-    return items.map((item) {
-      return ParticipacaoModel.fromMap(item as Map<String, dynamic>);
-    }).toList();
+    return items
+        .map((item) {
+          return ParticipacaoModel.fromMap(item as Map<String, dynamic>);
+        })
+        .where((participacao) => participacao.totalTokens > 0)
+        .toList();
   }
 
   // pega o histórico de operações do usuário
