@@ -97,10 +97,7 @@ class PerfilDatasource {
   }
 
   Future<void> disableMfa() async {
-    await _post(
-      '/auth/mfa/disable',
-      fallbackMessage: 'Erro ao desativar MFA.',
-    );
+    await _post('/auth/mfa/disable', fallbackMessage: 'Erro ao desativar MFA.');
   }
 
   Future<void> alterarSenha({
@@ -195,8 +192,7 @@ class PerfilDatasource {
     if (response.statusCode == 401 ||
         response.statusCode == 403 ||
         (logoutOnUnauthorized && response.statusCode == 404)) {
-      final emModoTeste = await SessionManager.emModoTeste();
-      if (logoutOnUnauthorized && !emModoTeste) {
+      if (logoutOnUnauthorized) {
         await SessionManager.fazerLogout();
       }
       throw Exception('Sessão inválida. Faça login novamente.');

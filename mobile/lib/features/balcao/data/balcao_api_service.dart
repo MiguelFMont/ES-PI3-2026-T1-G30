@@ -5,6 +5,7 @@ import 'package:mesclainvest/core/network/http_client.dart';
 import 'package:mesclainvest/core/storage/session_manager.dart';
 import 'package:mesclainvest/features/balcao/models/holding_model.dart';
 import 'package:mesclainvest/features/balcao/models/offer_model.dart';
+import 'package:mesclainvest/features/portfolio/domain/models/operacao_model.dart';
 import 'package:mesclainvest/features/portfolio/domain/models/startup_model.dart';
 
 class BalcaoApiService {
@@ -54,6 +55,19 @@ class BalcaoApiService {
     return items
         .map((item) => StartupModel.fromMap(item as Map<String, dynamic>))
         .toList();
+  }
+
+  Future<List<OperacaoModel>> getTransactions() async {
+    final body = await _get(
+      '/wallet/transactions',
+      fallbackMessage: 'Não foi possível carregar o histórico de operações.',
+    );
+
+    final items = (body['items'] as List<dynamic>? ?? const []);
+    return items.map((item) {
+      final map = Map<String, dynamic>.from(item as Map);
+      return OperacaoModel.fromJson(map);
+    }).toList();
   }
 
   Future<void> createSellOffer({

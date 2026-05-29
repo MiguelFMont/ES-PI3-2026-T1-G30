@@ -26,10 +26,6 @@ class _ExtratoPageState extends State<ExtratoPage> {
   }
 
   Future<_ExtratoData> _carregarExtrato() async {
-    if (await SessionManager.emModoTeste()) {
-      return _extratoDemo();
-    }
-
     final token = await SessionManager.getToken();
     if (token == null || token.isEmpty) {
       throw Exception('Sessão expirada. Faça login novamente.');
@@ -42,33 +38,6 @@ class _ExtratoPageState extends State<ExtratoPage> {
     return _ExtratoData(
       operacoes: operacoes,
       startupsPorId: {for (final startup in startups) startup.id: startup},
-    );
-  }
-
-  _ExtratoData _extratoDemo() {
-    final now = DateTime.now();
-
-    return _ExtratoData(
-      operacoes: [
-        OperacaoModel(
-          id: 'skip-venda-1',
-          tipo: 'VENDA_DIRETA',
-          startupId: 'HealthAI',
-          quantidade: 120,
-          precoUnitarioCentavos: 8930,
-          valorTotalCentavos: 1071600,
-          createdAt: now.subtract(const Duration(days: 2)),
-        ),
-        OperacaoModel(
-          id: 'skip-compra-1',
-          tipo: 'COMPRA_DIRETA',
-          startupId: 'EcoTech Solutions',
-          quantidade: 120,
-          precoUnitarioCentavos: 9210,
-          valorTotalCentavos: 1105200,
-          createdAt: now.subtract(const Duration(days: 8)),
-        ),
-      ],
     );
   }
 
@@ -202,8 +171,7 @@ class _ExtratoPageState extends State<ExtratoPage> {
               if (row is _OperacaoRow) {
                 return _OperacaoCard(
                   operacao: row.operacao,
-                  nomeStartup:
-                      data.startupsPorId[row.operacao.startupId]?.nome,
+                  nomeStartup: data.startupsPorId[row.operacao.startupId]?.nome,
                 );
               }
 
@@ -560,7 +528,11 @@ class _OperacaoCard extends StatelessWidget {
         : isVenda
         ? const Color(0xFF4CAF50)
         : const Color(0xFF01579B);
-    final totalPrefix = isVenda ? '+' : isCompra ? '-' : '+';
+    final totalPrefix = isVenda
+        ? '+'
+        : isCompra
+        ? '-'
+        : '+';
     final totalColor = isVenda
         ? const Color(0xFF4CAF50)
         : isCompra
@@ -624,7 +596,11 @@ class _OperacaoCard extends StatelessWidget {
                             ),
                             const SizedBox(width: 6),
                             _TipoBadge(
-                              label: isCompra ? 'Compra' : isVenda ? 'Venda' : 'Saldo',
+                              label: isCompra
+                                  ? 'Compra'
+                                  : isVenda
+                                  ? 'Venda'
+                                  : 'Saldo',
                               color: statusColor,
                             ),
                           ],

@@ -1,4 +1,4 @@
-﻿// Autor: Miguel Fernandes Monteiro
+// Autor: Miguel Fernandes Monteiro
 // RA: 25014808
 
 import 'dart:convert';
@@ -12,7 +12,6 @@ class SessionManager {
   static const _idTokenKey = 'idToken';
   static const _refreshTokenKey = 'refreshToken';
   static const _uidKey = 'uid';
-  static const _modoTesteKey = 'modoTeste';
   static String get _firebaseApiKey => dotenv.env['FIREBASE_WEB_API_KEY'] ?? '';
 
   static Future<void> salvarSessao(
@@ -23,32 +22,6 @@ class SessionManager {
     await _storage.write(key: _idTokenKey, value: idToken);
     await _storage.write(key: _refreshTokenKey, value: refreshToken);
     await _storage.write(key: _uidKey, value: uid);
-    await _storage.delete(key: _modoTesteKey);
-  }
-
-  static Future<void> ativarModoTeste() async {
-    final expiresAt =
-        DateTime.now().add(const Duration(days: 30)).millisecondsSinceEpoch ~/
-        1000;
-    final header = _encodeJwtPart({'alg': 'none', 'typ': 'JWT'});
-    final payload = _encodeJwtPart({
-      'exp': expiresAt,
-      'sub': 'skip-user',
-      'uid': 'skip-user',
-    });
-
-    await salvarSessao('$header.$payload.', 'skip-refresh-token', 'skip-user');
-    await _storage.write(key: _modoTesteKey, value: 'true');
-  }
-
-  static Future<bool> emModoTeste() async {
-    return await _storage.read(key: _modoTesteKey) == 'true';
-  }
-
-  static String _encodeJwtPart(Map<String, dynamic> value) {
-    return base64Url
-        .encode(utf8.encode(jsonEncode(value)))
-        .replaceAll('=', '');
   }
 
   static Future<String?> getToken() async {

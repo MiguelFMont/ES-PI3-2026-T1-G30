@@ -25,10 +25,7 @@ class StartupService {
   Future<Map<String, String>> _authorizedHeaders() async {
     final token = await SessionManager.getToken();
     if (token == null || token.isEmpty) {
-      throw StartupApiException(
-        'Sessão expirada. Faça login novamente.',
-        401,
-      );
+      throw StartupApiException('Sessão expirada. Faça login novamente.', 401);
     }
 
     return {
@@ -175,11 +172,6 @@ class StartupService {
     final normalizedStartupId = startupId.trim();
     if (normalizedStartupId.isEmpty) return 0;
 
-    if (await SessionManager.emModoTeste()) {
-      await Future.delayed(const Duration(milliseconds: 300));
-      return 0;
-    }
-
     final url = _buildUri('/wallet/holdings');
 
     try {
@@ -227,9 +219,9 @@ class StartupService {
     final url = _buildUri('/wallet');
 
     try {
-      final response = await http.get(url, headers: headers).timeout(
-        _requestTimeout,
-      );
+      final response = await http
+          .get(url, headers: headers)
+          .timeout(_requestTimeout);
 
       if (response.statusCode == 200) {
         final body = _decodeJsonObject(response.body);
@@ -270,22 +262,7 @@ class StartupService {
   ) async {
     final normalizedStartupId = startupId.trim();
     if (normalizedStartupId.isEmpty || quantidade <= 0) {
-      throw StartupApiException(
-        'Informe uma quantidade inteira válida.',
-        400,
-      );
-    }
-
-    if (await SessionManager.emModoTeste()) {
-      await Future.delayed(const Duration(seconds: 2));
-      return StartupPurchaseResult(
-        transactionId: 'skip-purchase',
-        startupId: normalizedStartupId,
-        quantidade: quantidade,
-        precoUnitarioCentavos: 0,
-        valorTotalCentavos: 0,
-        saldoNovoCentavos: 0,
-      );
+      throw StartupApiException('Informe uma quantidade inteira válida.', 400);
     }
 
     final headers = await _authorizedHeaders();
@@ -304,9 +281,7 @@ class StartupService {
           .timeout(_requestTimeout);
 
       if (response.statusCode == 200) {
-        return StartupPurchaseResult.fromJson(
-          _decodeJsonObject(response.body),
-        );
+        return StartupPurchaseResult.fromJson(_decodeJsonObject(response.body));
       }
 
       throw StartupApiException(
@@ -331,9 +306,7 @@ class StartupService {
         rethrow;
       }
 
-      throw StartupApiException(
-        'Não foi possível concluir a compra agora.',
-      );
+      throw StartupApiException('Não foi possível concluir a compra agora.');
     }
   }
 
@@ -341,11 +314,6 @@ class StartupService {
     final normalizedStartupId = startupId.trim();
     if (normalizedStartupId.isEmpty || quantidade <= 0) {
       return false;
-    }
-
-    if (await SessionManager.emModoTeste()) {
-      await Future.delayed(const Duration(seconds: 1));
-      return true;
     }
 
     final headers = await _authorizedHeaders();
@@ -384,9 +352,7 @@ class StartupService {
       if (e is StartupApiException) {
         rethrow;
       }
-      throw StartupApiException(
-        'Não foi possível concluir a venda agora.',
-      );
+      throw StartupApiException('Não foi possível concluir a venda agora.');
     }
   }
 

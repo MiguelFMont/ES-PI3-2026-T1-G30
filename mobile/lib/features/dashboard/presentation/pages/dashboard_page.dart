@@ -90,7 +90,7 @@ class _DashboardPageState extends State<DashboardPage> {
       final msg = e.toString().toLowerCase();
       final sessaoExpirada =
           msg.contains('sessao expirada') || msg.contains('sessão expirada');
-      if (sessaoExpirada && !await SessionManager.emModoTeste()) {
+      if (sessaoExpirada) {
         await SessionManager.fazerLogout();
         if (!mounted) return;
         Navigator.of(
@@ -309,10 +309,7 @@ class _DashboardPageState extends State<DashboardPage> {
             right: 22,
             child: _ResumoCarteiraCard(
               summary: summary,
-              pontos: _filtrarPontosPorPeriodo(
-                summary.pontosGrafico,
-                '1M',
-              ),
+              pontos: _filtrarPontosPorPeriodo(summary.pontosGrafico, '1M'),
             ),
           ),
         ],
@@ -1380,10 +1377,7 @@ class _EvolucaoLineChartState extends State<_EvolucaoLineChart> {
     setState(() => _activeX = activeX.clamp(0.0, maxX).toDouble());
   }
 
-  _EvolucaoChartSample _sampleAt(
-    double x,
-    List<DateTime?> datas,
-  ) {
+  _EvolucaoChartSample _sampleAt(double x, List<DateTime?> datas) {
     final pontos = widget.pontos;
     if (pontos.length == 1) {
       return _EvolucaoChartSample(
@@ -1447,8 +1441,10 @@ class _EvolucaoLineChartState extends State<_EvolucaoLineChart> {
         final totalWidth = constraints.maxWidth;
         final totalHeight = constraints.maxHeight;
         final plotWidth = (totalWidth - reservedLeft).clamp(0.0, totalWidth);
-        final plotHeight = (totalHeight - reservedBottom)
-            .clamp(0.0, totalHeight);
+        final plotHeight = (totalHeight - reservedBottom).clamp(
+          0.0,
+          totalHeight,
+        );
         final active = _activeX == null ? null : _sampleAt(_activeX!, datas);
         final activeDx = active == null
             ? 0.0

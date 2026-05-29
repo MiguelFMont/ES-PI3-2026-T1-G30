@@ -7,6 +7,7 @@ import 'package:mesclainvest/core/theme/app_colors.dart';
 import 'package:mesclainvest/features/balcao/data/balcao_api_service.dart';
 import 'package:mesclainvest/features/balcao/models/holding_model.dart';
 import 'package:mesclainvest/features/balcao/models/offer_model.dart';
+import 'package:mesclainvest/features/portfolio/domain/models/operacao_model.dart';
 import 'package:mesclainvest/features/portfolio/domain/models/startup_model.dart';
 import 'package:mesclainvest/shared/widgets/index.dart';
 
@@ -34,6 +35,7 @@ class _BalcaoPageState extends State<BalcaoPage> {
   List<OfferModel> _myOffers = [];
   List<OfferModel> _marketOffers = [];
   Map<String, StartupModel> _startupsById = {};
+  Map<String, int> _initialPositionPricesByStartupId = {};
   StreamSubscription<AppDataRefreshEvent>? _refreshSubscription;
 
   @override
@@ -116,6 +118,7 @@ class _BalcaoPageState extends State<BalcaoPage> {
       _service.getMyActiveOffers(),
       _service.getMarketOffers(),
       _service.getStartups(),
+      _service.getTransactions(),
     ]);
 
     return _BalcaoDataBundle(
@@ -123,6 +126,7 @@ class _BalcaoPageState extends State<BalcaoPage> {
       myOffers: results[1] as List<OfferModel>,
       marketOffers: results[2] as List<OfferModel>,
       startups: results[3] as List<StartupModel>,
+      transactions: results[4] as List<OperacaoModel>,
     );
   }
 
@@ -131,6 +135,10 @@ class _BalcaoPageState extends State<BalcaoPage> {
     _myOffers = data.myOffers;
     _marketOffers = data.marketOffers;
     _startupsById = _mapearStartupsPorId(data.startups);
+    _initialPositionPricesByStartupId = _buildInitialPositionPricesByStartupId(
+      holdings: data.holdings,
+      transactions: data.transactions,
+    );
   }
 
   Map<String, StartupModel> _mapearStartupsPorId(List<StartupModel> startups) {
@@ -209,6 +217,7 @@ class _BalcaoPageState extends State<BalcaoPage> {
         service: _service,
         holdings: _sellableHoldings,
         startupsById: _startupsById,
+        initialPositionPricesByStartupId: _initialPositionPricesByStartupId,
         currencyFormat: _currencyFormat,
       ),
     );
@@ -246,6 +255,7 @@ class _BalcaoPageState extends State<BalcaoPage> {
         service: _service,
         holdings: _sellableHoldings,
         startupsById: _startupsById,
+        initialPositionPricesByStartupId: _initialPositionPricesByStartupId,
         currencyFormat: _currencyFormat,
       ),
     );
@@ -962,12 +972,14 @@ class _DirectSellSheet extends StatefulWidget {
     required this.service,
     required this.holdings,
     required this.startupsById,
+    required this.initialPositionPricesByStartupId,
     required this.currencyFormat,
   });
 
   final BalcaoApiService service;
   final List<HoldingModel> holdings;
   final Map<String, StartupModel> startupsById;
+  final Map<String, int> initialPositionPricesByStartupId;
   final NumberFormat currencyFormat;
 
   @override
@@ -999,6 +1011,15 @@ class _DirectSellSheetState extends State<_DirectSellSheet> {
     final startupId = _selectedStartupId;
     if (startupId == null) return null;
     return widget.startupsById[startupId];
+  }
+
+  int? get _selectedInitialPositionPriceInCents {
+    final startupId = _selectedStartupId;
+    if (startupId == null) {
+      return null;
+    }
+
+    return widget.initialPositionPricesByStartupId[startupId];
   }
 
   @override
@@ -1078,6 +1099,17 @@ class _DirectSellSheetState extends State<_DirectSellSheet> {
                 currencyFormat: widget.currencyFormat,
               ),
             ],
+            if (startup != null) ...[
+              const SizedBox(height: 12),
+              _CurrentTokenPriceCard(
+                startup: startup,
+                initialPositionPriceInCents:
+                    _selectedInitialPositionPriceInCents,
+                currencyFormat: widget.currencyFormat,
+                helperText:
+                    'Use esse valor como referência para acompanhar o preço atual da recompra. A validação final continua no backend.',
+              ),
+            ],
             const SizedBox(height: 16),
             TextFormField(
               controller: _quantityController,
@@ -1104,25 +1136,6 @@ class _DirectSellSheetState extends State<_DirectSellSheet> {
 
                 return null;
               },
-            ),
-            const SizedBox(height: 14),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Text(
-                startup == null
-                    ? 'Selecione uma startup para conferir seus tokens livres antes de enviar.'
-                    : 'Preço indicativo atual: ${widget.currencyFormat.format(startup.precoAtualReais)} por token. O valor efetivo será validado pelo backend.',
-                style: const TextStyle(
-                  fontSize: 13,
-                  height: 1.5,
-                  color: AppColors.mutedForeground,
-                ),
-              ),
             ),
             if (_backendError != null) ...[
               const SizedBox(height: 12),
@@ -1153,12 +1166,14 @@ class _CreateOfferSheet extends StatefulWidget {
     required this.service,
     required this.holdings,
     required this.startupsById,
+    required this.initialPositionPricesByStartupId,
     required this.currencyFormat,
   });
 
   final BalcaoApiService service;
   final List<HoldingModel> holdings;
   final Map<String, StartupModel> startupsById;
+  final Map<String, int> initialPositionPricesByStartupId;
   final NumberFormat currencyFormat;
 
   @override
@@ -1195,6 +1210,15 @@ class _CreateOfferSheetState extends State<_CreateOfferSheet> {
     final startupId = _selectedStartupId;
     if (startupId == null) return null;
     return widget.startupsById[startupId];
+  }
+
+  int? get _selectedInitialPositionPriceInCents {
+    final startupId = _selectedStartupId;
+    if (startupId == null) {
+      return null;
+    }
+
+    return widget.initialPositionPricesByStartupId[startupId];
   }
 
   int? get _quantityValue => int.tryParse(_quantityController.text.trim());
@@ -1298,6 +1322,8 @@ class _CreateOfferSheetState extends State<_CreateOfferSheet> {
               const SizedBox(height: 12),
               _CurrentTokenPriceCard(
                 startup: startup,
+                initialPositionPriceInCents:
+                    _selectedInitialPositionPriceInCents,
                 currencyFormat: widget.currencyFormat,
                 onUseCurrentPrice: _isSubmitting ? null : _useCurrentTokenPrice,
               ),
@@ -1553,17 +1579,23 @@ class _HoldingSummary extends StatelessWidget {
 class _CurrentTokenPriceCard extends StatelessWidget {
   const _CurrentTokenPriceCard({
     required this.startup,
+    this.initialPositionPriceInCents,
     required this.currencyFormat,
-    required this.onUseCurrentPrice,
+    this.onUseCurrentPrice,
+    this.helperText,
   });
 
   final StartupModel startup;
+  final int? initialPositionPriceInCents;
   final NumberFormat currencyFormat;
   final VoidCallback? onUseCurrentPrice;
+  final String? helperText;
 
   @override
   Widget build(BuildContext context) {
     final variation = startup.variacaoPercent;
+    final initialReferencePriceInCents =
+        initialPositionPriceInCents ?? startup.precoTokenInicialCentavos;
     final variationPrefix = variation > 0 ? '+' : '';
     final variationColor = variation > 0
         ? AppColors.success
@@ -1620,14 +1652,15 @@ class _CurrentTokenPriceCard extends StatelessWidget {
                   ],
                 ),
               ),
-              TextButton(
-                onPressed: onUseCurrentPrice,
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  textStyle: const TextStyle(fontWeight: FontWeight.w700),
+              if (onUseCurrentPrice != null)
+                TextButton(
+                  onPressed: onUseCurrentPrice,
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    textStyle: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  child: const Text('Usar valor'),
                 ),
-                child: const Text('Usar valor'),
-              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -1663,7 +1696,7 @@ class _CurrentTokenPriceCard extends StatelessWidget {
               _PriceReferenceChip(
                 icon: Icons.flag_outlined,
                 label:
-                    'Inicial ${currencyFormat.format(startup.precoInicialReais)}',
+                    'Inicial ${currencyFormat.format(initialReferencePriceInCents / 100)}',
               ),
               _PriceReferenceChip(
                 icon: variation >= 0
@@ -1676,9 +1709,10 @@ class _CurrentTokenPriceCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          const Text(
-            'Use esse valor como referência para definir o preço unitário da oferta. A validação final continua no backend.',
-            style: TextStyle(
+          Text(
+            helperText ??
+                'Use esse valor como referência para definir o preço unitário da oferta. A validação final continua no backend.',
+            style: const TextStyle(
               fontSize: 13,
               height: 1.5,
               color: AppColors.mutedForeground,
@@ -1871,10 +1905,93 @@ class _BalcaoDataBundle {
     required this.myOffers,
     required this.marketOffers,
     required this.startups,
+    required this.transactions,
   });
 
   final List<HoldingModel> holdings;
   final List<OfferModel> myOffers;
   final List<OfferModel> marketOffers;
   final List<StartupModel> startups;
+  final List<OperacaoModel> transactions;
+}
+
+Map<String, int> _buildInitialPositionPricesByStartupId({
+  required List<HoldingModel> holdings,
+  required List<OperacaoModel> transactions,
+}) {
+  // Reconstroi o primeiro preço pago na posição ainda aberta e só reinicia
+  // a referência quando o saldo daquela startup volta a zero.
+  final activeHoldingTotalsByStartupId = <String, int>{};
+
+  for (final holding in holdings) {
+    final startupId = holding.startupId.trim();
+    final totalTokens = holding.quantidade + holding.quantidadeBloqueada;
+
+    if (startupId.isEmpty || totalTokens <= 0) {
+      continue;
+    }
+
+    activeHoldingTotalsByStartupId[startupId] = totalTokens;
+  }
+
+  if (activeHoldingTotalsByStartupId.isEmpty || transactions.isEmpty) {
+    return const {};
+  }
+
+  final currentBalancesByStartupId = <String, int>{
+    for (final startupId in activeHoldingTotalsByStartupId.keys) startupId: 0,
+  };
+  final initialPricesByStartupId = <String, int?>{};
+
+  final tradeTransactions = transactions.where((transaction) {
+    final startupId = transaction.startupId?.trim();
+    final quantity = transaction.quantidade;
+
+    return startupId != null &&
+        startupId.isNotEmpty &&
+        activeHoldingTotalsByStartupId.containsKey(startupId) &&
+        quantity != null &&
+        quantity > 0 &&
+        (transaction.isCompra || transaction.isVenda);
+  }).toList()..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
+  for (final transaction in tradeTransactions) {
+    final startupId = transaction.startupId!.trim();
+    final quantity = transaction.quantidade!;
+    final currentBalance = currentBalancesByStartupId[startupId] ?? 0;
+
+    if (transaction.isCompra) {
+      final priceInCents = transaction.precoUnitarioCentavos;
+      if (currentBalance == 0 && priceInCents != null && priceInCents > 0) {
+        initialPricesByStartupId[startupId] = priceInCents;
+      }
+
+      currentBalancesByStartupId[startupId] = currentBalance + quantity;
+      continue;
+    }
+
+    final nextBalance = currentBalance - quantity;
+    currentBalancesByStartupId[startupId] = nextBalance > 0 ? nextBalance : 0;
+
+    if (currentBalancesByStartupId[startupId] == 0) {
+      initialPricesByStartupId.remove(startupId);
+    }
+  }
+
+  final derivedInitialPricesByStartupId = <String, int>{};
+
+  for (final entry in activeHoldingTotalsByStartupId.entries) {
+    final startupId = entry.key;
+    final holdingTotal = entry.value;
+    final currentBalance = currentBalancesByStartupId[startupId] ?? 0;
+    final initialPrice = initialPricesByStartupId[startupId];
+
+    if (currentBalance == holdingTotal &&
+        initialPrice != null &&
+        initialPrice > 0) {
+      derivedInitialPricesByStartupId[startupId] = initialPrice;
+    }
+  }
+
+  return derivedInitialPricesByStartupId;
 }
