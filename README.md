@@ -136,7 +136,7 @@ firebase deploy --only functions
 
 ---
 
-### 3. Configurar e executar o Aplicativo Mobile
+### 6. Configurar e executar o Aplicativo Mobile
 
 ```bash
 # Acesse a pasta do frontend
@@ -154,7 +154,7 @@ flutter run
 
 ---
 
-### 4. Variáveis de Ambiente
+### 7. Variáveis de Ambiente
 
 Crie o arquivo `backend/.env` com base no `.env.example`. As principais variáveis necessárias são:
 
