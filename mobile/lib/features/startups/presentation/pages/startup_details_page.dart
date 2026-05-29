@@ -139,43 +139,47 @@ class _StartupDetailsPageState extends State<StartupDetailsPage> {
     setState(() => _isInvesting = true);
 
     try {
-      bool sucesso;
+      String mensagemSucesso;
+
       if (trade.type == _TradeType.buy) {
-        await _service.investirStartup(_startup.id, trade.quantity);
-        sucesso = true;
+        final result = await _service.investirStartup(
+          _startup.id,
+          trade.quantity,
+        );
+        mensagemSucesso =
+            '${_formatInt(result.quantidade)} tokens comprados por ${_formatCurrencyCentavos(result.valorTotalCentavos)}.';
       } else {
-        sucesso = await _service.venderStartup(_startup.id, trade.quantity);
+        final result = await _service.venderStartup(
+          _startup.id,
+          trade.quantity,
+        );
+        mensagemSucesso =
+            '${_formatInt(result.quantidade)} tokens vendidos por ${_formatCurrencyCentavos(result.valorTotalCentavos)}.';
       }
 
       if (!mounted) return;
 
-      if (sucesso) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              trade.type == _TradeType.buy
-                  ? 'Compra realizada com sucesso!'
-                  : 'Venda realizada com sucesso!',
-            ),
-            backgroundColor: AppColors.success,
-          ),
-        );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(mensagemSucesso),
+          backgroundColor: AppColors.success,
+        ),
+      );
 
-        AppDataRefreshBus.instance.refresh(
-          scopes: const {
-            AppDataRefreshScope.dashboard,
-            AppDataRefreshScope.portfolio,
-            AppDataRefreshScope.catalog,
-            AppDataRefreshScope.balcao,
-            AppDataRefreshScope.perfilWallet,
-          },
-          reason: trade.type == _TradeType.buy
-              ? 'startup-direct-buy'
-              : 'startup-direct-sell',
-        );
+      AppDataRefreshBus.instance.refresh(
+        scopes: const {
+          AppDataRefreshScope.dashboard,
+          AppDataRefreshScope.portfolio,
+          AppDataRefreshScope.catalog,
+          AppDataRefreshScope.balcao,
+          AppDataRefreshScope.perfilWallet,
+        },
+        reason: trade.type == _TradeType.buy
+            ? 'startup-direct-buy'
+            : 'startup-direct-sell',
+      );
 
-        await _fetchStartupDetails();
-      }
+      await _fetchStartupDetails();
     } catch (e) {
       if (!mounted) return;
       final message = e is StartupApiException
@@ -189,6 +193,19 @@ class _StartupDetailsPageState extends State<StartupDetailsPage> {
         setState(() => _isInvesting = false);
       }
     }
+  }
+
+  String _formatCurrencyCentavos(int centavos) {
+    final reais = centavos / 100;
+    final inteiro = reais.floor();
+    final decimal = ((reais - inteiro) * 100).round();
+    final buffer = StringBuffer();
+    final str = inteiro.toString();
+    for (var i = 0; i < str.length; i++) {
+      if (i > 0 && (str.length - i) % 3 == 0) buffer.write('.');
+      buffer.write(str[i]);
+    }
+    return 'R\$ $buffer,${decimal.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -1155,7 +1172,7 @@ class _MetricsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(42, 22, 42, 0),
+      padding: const EdgeInsets.fromLTRB(16, 22, 16, 0),
       child: Row(
         children: [
           Expanded(

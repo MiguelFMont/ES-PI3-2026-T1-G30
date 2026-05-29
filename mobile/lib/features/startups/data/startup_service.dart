@@ -310,10 +310,13 @@ class StartupService {
     }
   }
 
-  Future<bool> venderStartup(String startupId, int quantidade) async {
+  Future<StartupSellResult> venderStartup(
+    String startupId,
+    int quantidade,
+  ) async {
     final normalizedStartupId = startupId.trim();
     if (normalizedStartupId.isEmpty || quantidade <= 0) {
-      return false;
+      throw StartupApiException('Informe uma quantidade inteira válida.', 400);
     }
 
     final headers = await _authorizedHeaders();
@@ -331,8 +334,8 @@ class StartupService {
           )
           .timeout(_requestTimeout);
 
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        return true;
+      if (response.statusCode == 200) {
+        return StartupSellResult.fromJson(_decodeJsonObject(response.body));
       }
 
       throw StartupApiException(
@@ -347,6 +350,10 @@ class StartupService {
     } on SocketException {
       throw StartupApiException(
         'Não foi possível conectar ao servidor para concluir a venda.',
+      );
+    } on FormatException {
+      throw StartupApiException(
+        'O servidor retornou dados inválidos para esta venda.',
       );
     } catch (e) {
       if (e is StartupApiException) {
@@ -453,6 +460,36 @@ class StartupPurchaseResult {
 
   factory StartupPurchaseResult.fromJson(Map<String, dynamic> json) {
     return StartupPurchaseResult(
+      transactionId: json['transactionId'] as String? ?? '',
+      startupId: json['startupId'] as String? ?? '',
+      quantidade: (json['quantidade'] as num? ?? 0).toInt(),
+      precoUnitarioCentavos: (json['precoUnitarioCentavos'] as num? ?? 0)
+          .toInt(),
+      valorTotalCentavos: (json['valorTotalCentavos'] as num? ?? 0).toInt(),
+      saldoNovoCentavos: (json['saldoNovoCentavos'] as num? ?? 0).toInt(),
+    );
+  }
+}
+
+class StartupSellResult {
+  final String transactionId;
+  final String startupId;
+  final int quantidade;
+  final int precoUnitarioCentavos;
+  final int valorTotalCentavos;
+  final int saldoNovoCentavos;
+
+  const StartupSellResult({
+    required this.transactionId,
+    required this.startupId,
+    required this.quantidade,
+    required this.precoUnitarioCentavos,
+    required this.valorTotalCentavos,
+    required this.saldoNovoCentavos,
+  });
+
+  factory StartupSellResult.fromJson(Map<String, dynamic> json) {
+    return StartupSellResult(
       transactionId: json['transactionId'] as String? ?? '',
       startupId: json['startupId'] as String? ?? '',
       quantidade: (json['quantidade'] as num? ?? 0).toInt(),
