@@ -1,4 +1,3 @@
-//representa um socio da startup
 class Socio {
   final String nome;
   final String foto;
@@ -6,7 +5,6 @@ class Socio {
 
   Socio({required this.nome, required this.foto, required this.participacao});
 
-  //converte o json da api para o objeto dart
   factory Socio.fromJson(Map<String, dynamic> json) {
     return Socio(
       nome: _stringFromJson(json['nome']),
@@ -16,7 +14,6 @@ class Socio {
   }
 }
 
-// representa um membro do conselho ou mentor
 class Membro {
   final String nome;
   final String foto;
@@ -40,7 +37,6 @@ class Membro {
   }
 }
 
-// representa um video da startup
 class Video {
   final String titulo;
   final String url;
@@ -57,7 +53,6 @@ class Video {
   }
 }
 
-// representa uma atualização da startup
 class Atualizacao {
   final String titulo;
   final String descricao;
@@ -78,7 +73,6 @@ class Atualizacao {
   }
 }
 
-// representa uma startup completa
 class Startup {
   final String id;
   final List<String> aliasIds;
@@ -89,10 +83,12 @@ class Startup {
   final String setor;
   final double precoToken;
   final double? variacaoPreco;
+  final int descontoVendaDiretaBps;
   final bool investido;
   final double capitalAportado;
   final int totalTokens;
   final int tokensDisponiveis;
+  final DateTime? createdAt;
   final String resumoExecutivo;
   final List<Socio> socios;
   final List<Membro> conselho;
@@ -110,10 +106,12 @@ class Startup {
     this.setor = '',
     this.precoToken = 0,
     this.variacaoPreco,
+    this.descontoVendaDiretaBps = 0,
     this.investido = false,
     required this.capitalAportado,
     required this.totalTokens,
     this.tokensDisponiveis = 0,
+    this.createdAt,
     required this.resumoExecutivo,
     required this.socios,
     required this.conselho,
@@ -143,16 +141,17 @@ class Startup {
       variacaoPreco: json['variacaoPreco'] == null
           ? null
           : _doubleFromJson(json['variacaoPreco']),
+      descontoVendaDiretaBps: _intFromJson(json['descontoVendaDiretaBps']),
       investido: json['investido'] == true,
       capitalAportado: _doubleFromJson(json['capitalAportado']),
       totalTokens: totalTokens,
       tokensDisponiveis: totalTokens > 0
           ? tokensDisponiveis.clamp(0, totalTokens).toInt()
           : tokensDisponiveis,
+      createdAt: _dateTimeFromJson(json['createdAt']),
       resumoExecutivo: _stringFromJson(
         json['resumoExecutivo'] ?? json['resumoExecutive'],
       ),
-      // Converte cada item da lista JSON para o objeto correspondente
       socios: _listFromJson(
         json['socios'],
       ).map((s) => Socio.fromJson(_mapFromJson(s))).toList(),
@@ -214,6 +213,31 @@ List<String> _stringListFromJson(dynamic value) {
       .map((item) => _stringFromJson(item))
       .where((item) => item.trim().isNotEmpty)
       .toList();
+}
+
+DateTime? _dateTimeFromJson(dynamic value) {
+  if (value == null) return null;
+  if (value is DateTime) return value;
+  if (value is String) return DateTime.tryParse(value);
+
+  final map = _mapFromJson(value);
+  final seconds = map['_seconds'] ?? map['seconds'];
+  final nanoseconds = map['_nanoseconds'] ?? map['nanoseconds'] ?? 0;
+  if (seconds is num) {
+    return DateTime.fromMillisecondsSinceEpoch(
+      seconds.toInt() * 1000 +
+          (nanoseconds is num ? nanoseconds.toInt() ~/ 1000000 : 0),
+    );
+  }
+
+  if (value is num) {
+    final timestamp = value.toInt();
+    return DateTime.fromMillisecondsSinceEpoch(
+      timestamp < 10000000000 ? timestamp * 1000 : timestamp,
+    );
+  }
+
+  return null;
 }
 
 // O backend remoto serializa datas do Firestore como mapa com _seconds.

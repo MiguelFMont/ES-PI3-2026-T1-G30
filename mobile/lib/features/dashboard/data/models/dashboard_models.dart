@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class DashboardSummaryModel {
   const DashboardSummaryModel({
     required this.saldoDisponivel,
@@ -90,6 +92,8 @@ class TransactionModel {
     required this.detalhes,
     required this.data,
     required this.valor,
+    required this.createdAt,
+    this.precoUnitario,
   });
 
   final String tipo;
@@ -97,9 +101,15 @@ class TransactionModel {
   final String detalhes;
   final String data;
   final double valor;
+  final DateTime createdAt;
+  final double? precoUnitario;
 
   factory TransactionModel.fromJson(Map<String, dynamic> json) {
     final quantidade = _toDouble(json['quantidade']);
+    final createdAt = _toDateTime(json['createdAt']);
+    final precoUnitarioCentavos = _toNullableDouble(
+      json['precoUnitarioCentavos'],
+    );
 
     return TransactionModel(
       tipo: _toText(json['tipo']),
@@ -107,6 +117,10 @@ class TransactionModel {
       detalhes: _buildTokenDetails(quantidade),
       data: _toText(json['createdAt']),
       valor: _toDouble(json['valorTotalCentavos']) / 100,
+      createdAt: createdAt,
+      precoUnitario: precoUnitarioCentavos == null
+          ? null
+          : precoUnitarioCentavos / 100,
     );
   }
 }
@@ -120,6 +134,16 @@ double _toDouble(dynamic value) {
   return 0.0;
 }
 
+double? _toNullableDouble(dynamic value) {
+  if (value == null) return null;
+  if (value is num) return value.toDouble();
+  if (value is String) {
+    final clean = value.replaceAll('%', '').replaceAll(',', '.');
+    return double.tryParse(clean);
+  }
+  return null;
+}
+
 String _toText(dynamic value) => value == null ? '' : value.toString();
 
 String _buildTokenDetails(double quantidade) {
@@ -128,4 +152,45 @@ String _buildTokenDetails(double quantidade) {
   final quantidadeTexto = quantidade.toStringAsFixed(0);
   final sufixo = quantidade == 1 ? 'token' : 'tokens';
   return '$quantidadeTexto $sufixo';
+}
+
+DateTime _toDateTime(dynamic value) {
+  if (value is DateTime) return value;
+  if (value is Timestamp) return value.toDate();
+
+  if (value is String) {
+    return DateTime.tryParse(value) ?? DateTime.fromMillisecondsSinceEpoch(0);
+  }
+
+  if (value is Map) {
+    final seconds = _toNullableInt(value['_seconds'] ?? value['seconds']);
+    final nanoseconds = _toNullableInt(
+          value['_nanoseconds'] ?? value['nanoseconds'],
+        ) ??
+        0;
+
+    if (seconds != null) {
+      return DateTime.fromMillisecondsSinceEpoch(
+        seconds * 1000 + nanoseconds ~/ 1000000,
+      );
+    }
+  }
+
+  if (value is num) {
+    final timestamp = value.toInt();
+    final milliseconds = timestamp < 10000000000
+        ? timestamp * 1000
+        : timestamp;
+    return DateTime.fromMillisecondsSinceEpoch(milliseconds);
+  }
+
+  return DateTime.fromMillisecondsSinceEpoch(0);
+}
+
+int? _toNullableInt(dynamic value) {
+  if (value == null) return null;
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value);
+  return null;
 }

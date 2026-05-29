@@ -1,7 +1,8 @@
-// lib/features/auth/presentation/pages/welcome_page.dart
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:mesclainvest/app/routes.dart';
+import 'package:mesclainvest/core/storage/session_manager.dart';
 import '../../../../core/theme/app_colors.dart';
 
 class WelcomePage extends StatelessWidget {
@@ -60,6 +61,10 @@ class WelcomePage extends StatelessWidget {
           const SizedBox(height: 32),
           _botaoCadastrar(context),
           const SizedBox(height: 12),
+          if (kDebugMode) ...[
+            _botaoSkip(context),
+            const SizedBox(height: 12),
+          ],
           _linkLogin(context),
         ],
       ),
@@ -106,6 +111,34 @@ class WelcomePage extends StatelessWidget {
             fontSize: 16,
             fontWeight: FontWeight.w700,
             color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _botaoSkip(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: OutlinedButton(
+        onPressed: () async {
+          final navigator = Navigator.of(context);
+          await SessionManager.ativarModoTeste();
+          navigator.pushReplacementNamed(AppRoutes.main);
+        },
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.primary,
+          side: const BorderSide(color: AppColors.primary),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: const Text(
+          'Pular por enquanto',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ),

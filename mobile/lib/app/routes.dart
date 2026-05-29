@@ -14,6 +14,7 @@ import '../features/startups/presentation/pages/startup_details_page.dart';
 import '../features/perfil/presentation/pages/informacoes_pessoais_page.dart';
 import '../features/perfil/presentation/pages/mfa_page.dart';
 import '../features/perfil/presentation/pages/senha_page.dart';
+import '../features/portfolio/presentation/screens/extrato_page.dart';
 
 class AppRoutes {
   static const splash = '/';
@@ -33,6 +34,7 @@ class AppRoutes {
   static const mfaChallenge = '/mfa-challenge';
   static const segurancaSenha = '/seguranca-senha';
   static const portfolio = '/portfolio';
+  static const extrato = '/extrato';
   static const balcao = '/balcao';
   static const dashboard = '/dashboard';
 
@@ -69,6 +71,7 @@ class AppRoutes {
     segurancaSenha: (_) => SenhaPage(),
     portfolio: (context) =>
         MainNavigationShell(initialIndex: _resolveMainShellIndex(context, 1)),
+    extrato: (_) => const ExtratoPage(),
     balcao: (context) =>
         MainNavigationShell(initialIndex: _resolveMainShellIndex(context, 3)),
     dashboard: (context) =>

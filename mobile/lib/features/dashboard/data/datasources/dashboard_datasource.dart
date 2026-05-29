@@ -8,10 +8,11 @@ import '../models/dashboard_models.dart';
 
 class DashboardDatasource {
   Future<DashboardSummaryModel> getSummary() async {
-    final body = await _get(
-      '/wallet/dashboard',
-      'Erro ao buscar resumo do dashboard.',
-    );
+    if (await SessionManager.emModoTeste()) {
+      return _demoSummary();
+    }
+
+    final body = await _get('/wallet/dashboard', 'Erro ao buscar resumo do dashboard.');
     final dashboard = body['dashboard'];
 
     if (dashboard is! Map<String, dynamic>) {
@@ -22,10 +23,11 @@ class DashboardDatasource {
   }
 
   Future<List<HoldingModel>> getHoldings() async {
-    final body = await _get(
-      '/wallet/holdings',
-      'Erro ao buscar participacoes investidas.',
-    );
+    if (await SessionManager.emModoTeste()) {
+      return const [];
+    }
+
+    final body = await _get('/wallet/holdings', 'Erro ao buscar posicoes investidas.');
     return _parseItems(
       body,
       HoldingModel.fromJson,
@@ -33,10 +35,11 @@ class DashboardDatasource {
   }
 
   Future<List<TransactionModel>> getTransactions() async {
-    final body = await _get(
-      '/wallet/transactions',
-      'Erro ao buscar transacoes do dashboard.',
-    );
+    if (await SessionManager.emModoTeste()) {
+      return _demoTransactions();
+    }
+
+    final body = await _get('/wallet/transactions', 'Erro ao buscar transacoes do dashboard.');
     return _parseItems(body, TransactionModel.fromJson);
   }
 
@@ -75,5 +78,50 @@ class DashboardDatasource {
         .whereType<Map>()
         .map((item) => fromJson(Map<String, dynamic>.from(item)))
         .toList();
+  }
+
+  DashboardSummaryModel _demoSummary() {
+    final now = DateTime.now();
+    final values = <double>[39000, 40500, 39800, 41200, 40750, 42105];
+
+    return DashboardSummaryModel(
+      saldoDisponivel: 50000,
+      valorTotalCarteira: 42105,
+      totalInvestido: 38217.5,
+      lucro: 3887.5,
+      retorno: 10.45,
+      pontosGrafico: [
+        for (var i = 0; i < values.length; i++)
+          DashboardChartPointModel(
+            data: now.subtract(Duration(days: values.length - i)).toIso8601String(),
+            valor: values[i],
+          ),
+      ],
+    );
+  }
+
+  List<TransactionModel> _demoTransactions() {
+    final now = DateTime.now();
+
+    return [
+      TransactionModel(
+        tipo: 'VENDA_DIRETA',
+        nomeStartup: 'HealthAI',
+        detalhes: '120 tokens',
+        data: now.subtract(const Duration(days: 2)).toIso8601String(),
+        valor: 10716,
+        createdAt: now.subtract(const Duration(days: 2)),
+        precoUnitario: 89.30,
+      ),
+      TransactionModel(
+        tipo: 'COMPRA_DIRETA',
+        nomeStartup: 'EcoTech Solutions',
+        detalhes: '90 tokens',
+        data: now.subtract(const Duration(days: 6)).toIso8601String(),
+        valor: 11295,
+        createdAt: now.subtract(const Duration(days: 6)),
+        precoUnitario: 125.50,
+      ),
+    ];
   }
 }

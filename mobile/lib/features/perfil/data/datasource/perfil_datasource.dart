@@ -195,7 +195,8 @@ class PerfilDatasource {
     if (response.statusCode == 401 ||
         response.statusCode == 403 ||
         (logoutOnUnauthorized && response.statusCode == 404)) {
-      if (logoutOnUnauthorized) {
+      final emModoTeste = await SessionManager.emModoTeste();
+      if (logoutOnUnauthorized && !emModoTeste) {
         await SessionManager.fazerLogout();
       }
       throw Exception('Sessão inválida. Faça login novamente.');

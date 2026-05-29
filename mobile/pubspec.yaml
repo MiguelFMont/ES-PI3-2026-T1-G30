@@ -39,6 +39,7 @@ flutter_launcher_icons:
 flutter:
   assets:
     - assets/images/
+    - assets/videos/
     - .env
 
   uses-material-design: true

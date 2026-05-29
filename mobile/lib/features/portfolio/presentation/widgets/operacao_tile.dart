@@ -75,6 +75,14 @@ class OperacaoTile extends StatelessWidget {
     return const Color(0xFF01579B);
   }
 
+  Color get _corValor {
+    if (operacao.isCompra) return const Color(0xFF263238);
+    if (operacao.isVenda || operacao.tipo == 'ADICIONAR_SALDO') {
+      return const Color(0xFF4CAF50);
+    }
+    return const Color(0xFF01579B);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -172,7 +180,7 @@ class OperacaoTile extends StatelessWidget {
             style: GoogleFonts.inter(
               fontSize: 14,
               fontWeight: FontWeight.w700,
-              color: _corTipo,
+              color: _corValor,
             ),
           ),
         ],

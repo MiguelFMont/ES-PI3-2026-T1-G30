@@ -11,6 +11,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../../app/routes.dart';
 import '../../../../core/state/app_data_refresh_bus.dart';
 import '../../../../core/network/http_client.dart';
 import '../../../../core/storage/session_manager.dart';
@@ -250,7 +251,10 @@ class _PortfolioContent extends StatelessWidget {
                   titulo: 'Últimas Operações',
                   icone: Icons.receipt_long_outlined,
                   acao: 'Ver extrato completo',
-                  onAcao: () => onAcaoIndisponivel('Extrato'),
+                  onAcao: () => Navigator.pushNamed(
+                    context,
+                    AppRoutes.extrato,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 if (wallet.operacoes.isEmpty)

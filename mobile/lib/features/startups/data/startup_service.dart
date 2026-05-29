@@ -4,10 +4,10 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:mesclainvest/core/network/http_client.dart';
+import 'package:mesclainvest/core/storage/session_manager.dart';
 
-import '../../../core/storage/session_manager.dart';
 import '../domain/startup_model.dart';
-import 'startup_mock.dart';
+import '../domain/startup_price_point.dart';
 
 class StartupService {
   static const Duration _requestTimeout = Duration(seconds: 10);
@@ -38,12 +38,6 @@ class StartupService {
   }
 
   Future<List<Startup>> listarStartups({String? estagio}) async {
-    if (kUseMock) {
-      await Future.delayed(const Duration(milliseconds: 600));
-      if (estagio == null || estagio.isEmpty) return List.of(mockStartups);
-      return mockStartups.where((s) => s.estagio == estagio).toList();
-    }
-
     final url = _buildUri(
       '/startups',
       estagio != null && estagio.isNotEmpty ? {'estagio': estagio} : null,
@@ -92,14 +86,6 @@ class StartupService {
   }
 
   Future<Startup> buscarStartupPorId(String startupId) async {
-    if (kUseMock) {
-      await Future.delayed(const Duration(milliseconds: 600));
-      return mockStartups.firstWhere(
-        (startup) => startup.id == startupId,
-        orElse: () => throw StartupApiException('Startup nao encontrada.', 404),
-      );
-    }
-
     final url = _buildUri('/startups/$startupId');
 
     try {
@@ -136,6 +122,102 @@ class StartupService {
       }
       throw StartupApiException(
         'Não foi possível carregar os detalhes da startup agora.',
+      );
+    }
+  }
+
+  Future<List<StartupPricePoint>> buscarHistoricoPrecos(
+    String startupId,
+  ) async {
+    final normalizedStartupId = startupId.trim();
+    if (normalizedStartupId.isEmpty) return const [];
+
+    final url = _buildUri('/startups/$normalizedStartupId/price-history');
+
+    try {
+      final response = await http.get(url).timeout(_requestTimeout);
+
+      if (response.statusCode == 200) {
+        final body = _decodeJsonObject(response.body);
+        final data = body['data'] ?? body['items'];
+        if (data is! List) return const [];
+
+        return data
+            .map((item) => StartupPricePoint.fromJson(_asJsonMap(item)))
+            .where((point) => point.preco > 0)
+            .toList();
+      }
+
+      throw StartupApiException(
+        _extractErrorMessage(response.body) ??
+            'Erro ao buscar histórico de preço: ${response.statusCode}',
+        response.statusCode,
+      );
+    } on TimeoutException {
+      throw StartupApiException(
+        'O histórico de preço demorou para responder. Tente novamente.',
+      );
+    } on SocketException {
+      throw StartupApiException(
+        'Não foi possível conectar ao histórico de preço.',
+      );
+    } catch (e) {
+      if (e is StartupApiException) {
+        rethrow;
+      }
+      throw StartupApiException(
+        'Não foi possível carregar o histórico de preço agora.',
+      );
+    }
+  }
+
+  Future<int> buscarQuantidadeTokensUsuario(String startupId) async {
+    final normalizedStartupId = startupId.trim();
+    if (normalizedStartupId.isEmpty) return 0;
+
+    if (await SessionManager.emModoTeste()) {
+      await Future.delayed(const Duration(milliseconds: 300));
+      return 0;
+    }
+
+    final url = _buildUri('/wallet/holdings');
+
+    try {
+      final response = await http
+          .get(url, headers: await _authorizedHeaders())
+          .timeout(_requestTimeout);
+
+      if (response.statusCode == 200) {
+        final body = _decodeJsonObject(response.body);
+        final items = body['items'];
+        if (items is! List) return 0;
+
+        for (final item in items) {
+          final map = _asJsonMap(item);
+          if ('${map['startupId']}' == normalizedStartupId) {
+            return _intFromJson(map['quantidade']);
+          }
+        }
+        return 0;
+      }
+
+      throw StartupApiException(
+        _extractErrorMessage(response.body) ??
+            'Erro ao buscar participação: ${response.statusCode}',
+        response.statusCode,
+      );
+    } on TimeoutException {
+      throw StartupApiException(
+        'A carteira demorou para responder. Tente novamente.',
+      );
+    } on SocketException {
+      throw StartupApiException('Não foi possível conectar à carteira.');
+    } catch (e) {
+      if (e is StartupApiException) {
+        rethrow;
+      }
+      throw StartupApiException(
+        'Não foi possível carregar sua participação agora.',
       );
     }
   }
@@ -186,10 +268,23 @@ class StartupService {
     String startupId,
     int quantidade,
   ) async {
-    if (startupId.trim().isEmpty || quantidade <= 0) {
+    final normalizedStartupId = startupId.trim();
+    if (normalizedStartupId.isEmpty || quantidade <= 0) {
       throw StartupApiException(
         'Informe uma quantidade inteira válida.',
         400,
+      );
+    }
+
+    if (await SessionManager.emModoTeste()) {
+      await Future.delayed(const Duration(seconds: 2));
+      return StartupPurchaseResult(
+        transactionId: 'skip-purchase',
+        startupId: normalizedStartupId,
+        quantidade: quantidade,
+        precoUnitarioCentavos: 0,
+        valorTotalCentavos: 0,
+        saldoNovoCentavos: 0,
       );
     }
 
@@ -202,7 +297,7 @@ class StartupService {
             url,
             headers: headers,
             body: jsonEncode({
-              'startupId': startupId.trim(),
+              'startupId': normalizedStartupId,
               'quantidade': quantidade,
             }),
           )
@@ -242,6 +337,59 @@ class StartupService {
     }
   }
 
+  Future<bool> venderStartup(String startupId, int quantidade) async {
+    final normalizedStartupId = startupId.trim();
+    if (normalizedStartupId.isEmpty || quantidade <= 0) {
+      return false;
+    }
+
+    if (await SessionManager.emModoTeste()) {
+      await Future.delayed(const Duration(seconds: 1));
+      return true;
+    }
+
+    final headers = await _authorizedHeaders();
+    final url = _buildUri('/trades/direct-sell');
+
+    try {
+      final response = await http
+          .post(
+            url,
+            headers: headers,
+            body: jsonEncode({
+              'startupId': normalizedStartupId,
+              'quantidade': quantidade,
+            }),
+          )
+          .timeout(_requestTimeout);
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return true;
+      }
+
+      throw StartupApiException(
+        _extractErrorMessage(response.body) ??
+            _resolveDirectSellErrorMessage(response.statusCode),
+        response.statusCode,
+      );
+    } on TimeoutException {
+      throw StartupApiException(
+        'A venda demorou para responder. Tente novamente.',
+      );
+    } on SocketException {
+      throw StartupApiException(
+        'Não foi possível conectar ao servidor para concluir a venda.',
+      );
+    } catch (e) {
+      if (e is StartupApiException) {
+        rethrow;
+      }
+      throw StartupApiException(
+        'Não foi possível concluir a venda agora.',
+      );
+    }
+  }
+
   Map<String, dynamic> _decodeJsonObject(String body) {
     final decoded = jsonDecode(body);
     return _asJsonMap(decoded);
@@ -257,6 +405,13 @@ class StartupService {
     throw const FormatException('JSON object expected.');
   }
 
+  int _intFromJson(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse('$value') ?? 0;
+  }
+
   String _resolveListErrorMessage(http.Response response) {
     if (response.statusCode >= 500) {
       return 'O catálogo está indisponível no momento. Tente novamente mais tarde.';
@@ -264,6 +419,16 @@ class StartupService {
 
     return _extractErrorMessage(response.body) ??
         'Erro ao buscar startups: ${response.statusCode}';
+  }
+
+  String _resolveDirectSellErrorMessage(int statusCode) {
+    return switch (statusCode) {
+      401 => 'Sessão expirada. Faça login novamente.',
+      404 => 'Startup não encontrada.',
+      409 => 'Não foi possível concluir a venda com os dados atuais.',
+      >= 500 => 'O serviço de investimentos está indisponível no momento.',
+      _ => 'Erro ao vender tokens da startup: $statusCode',
+    };
   }
 
   String? _extractErrorMessage(String body) {
@@ -280,7 +445,6 @@ class StartupService {
         if (error is String && error.trim().isNotEmpty) {
           return error.trim();
         }
-
         final message = decoded['message'];
         if (message is String && message.trim().isNotEmpty) {
           return message.trim();
