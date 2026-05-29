@@ -130,6 +130,9 @@ Isso iniciará os serviços locais configurados (Functions, Firestore etc.).
 
 ### 5. Implantar as Cloud Functions
 
+O backend segue uma arquitetura modular baseada em Cloud Functions do Firebase. 
+Cada domínio de negócio possui seu próprio módulo, que posteriormente é integrado e disponibilizado através das Functions da aplicação.
+
 ```bash
 firebase deploy --only functions
 ```
