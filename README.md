@@ -135,17 +135,112 @@ FIREBASE_CLIENT_EMAIL=seu_client_email
 
 ## 📁 Estrutura do Repositório
 
-```
+```text
 ES-PI3-2026-T1-G30/
-├── backend/          # API Node.js + TypeScript
-│   ├── src/
-│   ├── package.json
-│   └── .env.example
-├── mobile/           # Aplicativo Flutter
-│   ├── lib/
-│   └── pubspec.yaml
+│
+├── backend/
+│   ├── scripts/
+│   │   └── lib/
+│   │
+│   └── src/
+│       ├── @types/
+│       ├── config/
+│       ├── infra/
+│       │   └── repositories/
+│       │
+│       ├── modules/
+│       │   ├── auth/
+│       │   │   └── mfa/
+│       │   ├── offers/
+│       │   ├── prices/
+│       │   ├── questions/
+│       │   ├── startups/
+│       │   ├── tokens/
+│       │   ├── trades/
+│       │   ├── users/
+│       │   └── wallet/
+│       │
+│       └── shared/
+│           ├── errors/
+│           ├── http/
+│           └── utils/
+│
+├── mobile/
+│   ├── android/
+│   ├── ios/
+│   ├── linux/
+│   ├── macos/
+│   ├── windows/
+│   ├── web/
+│   ├── test/
+│   │
+│   ├── assets/
+│   │   ├── images/
+│   │   │   └── startups/
+│   │   └── videos/
+│   │
+│   └── lib/
+│       ├── app/
+│       ├── core/
+│       │   ├── constants/
+│       │   ├── errors/
+│       │   ├── network/
+│       │   ├── state/
+│       │   ├── storage/
+│       │   └── theme/
+│       │
+│       ├── features/
+│       │   ├── analytics/
+│       │   ├── auth/
+│       │   │   ├── data/
+│       │   │   ├── domain/
+│       │   │   └── presentation/
+│       │   │
+│       │   ├── balcao/
+│       │   ├── dashboard/
+│       │   ├── navigation/
+│       │   ├── perfil/
+│       │   ├── portfolio/
+│       │   ├── questions/
+│       │   ├── startups/
+│       │   └── trading/
+│       │
+│       └── shared/
+│           ├── formatters/
+│           ├── utils/
+│           ├── validators/
+│           └── widgets/
+│
 └── README.md
 ```
+
+### Organização da Arquitetura
+
+#### Backend
+O backend segue uma arquitetura modular, onde cada domínio de negócio possui seu próprio módulo:
+
+- `auth` → autenticação, login e MFA;
+- `users` → gerenciamento de usuários;
+- `wallet` → carteira digital;
+- `tokens` → gerenciamento dos tokens;
+- `trades` → compra e venda de tokens;
+- `startups` → informações das startups;
+- `offers` → ofertas do balcão de negociação;
+- `prices` → histórico e atualização de preços;
+- `questions` → perguntas e respostas públicas.
+
+#### Mobile
+O aplicativo Flutter utiliza uma organização baseada em features:
+
+- `data` → comunicação com APIs e fontes de dados;
+- `domain` → modelos e regras de negócio;
+- `presentation` → telas, widgets e gerenciamento de interface.
+
+Além disso:
+
+- `core` contém componentes compartilhados da aplicação;
+- `shared` reúne utilitários, validadores e widgets reutilizáveis;
+- `assets` armazena imagens e vídeos utilizados no aplicativo.
 
 ---
 
