@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:mesclainvest/core/state/app_data_refresh_bus.dart';
 import 'package:mesclainvest/core/theme/app_colors.dart';
 import 'package:mesclainvest/features/dashboard/data/datasources/dashboard_datasource.dart';
+import 'package:mesclainvest/shared/utils/startup_logo_resolver.dart';
 import 'package:mesclainvest/shared/widgets/index.dart';
 
 import '../../data/startup_service.dart';
@@ -40,6 +41,13 @@ class _StartupDetailsPageState extends State<StartupDetailsPage> {
     _fetchStartupDetails();
   }
 
+  Set<String> _startupIds(Startup startup) {
+    return {
+      startup.id.trim(),
+      ...startup.aliasIds.map((aliasId) => aliasId.trim()),
+    }.where((startupId) => startupId.isNotEmpty).toSet();
+  }
+
   Future<void> _fetchStartupDetails() async {
     setState(() {
       _isLoading = true;
@@ -47,15 +55,15 @@ class _StartupDetailsPageState extends State<StartupDetailsPage> {
     });
 
     try {
-      final startupFuture = _service.buscarStartupPorId(widget.startup.id);
+      final startup = await _service.buscarStartupPorId(widget.startup.id);
+      final startupIds = _startupIds(startup);
       final historyFuture = _opcional(
-        _service.buscarHistoricoPrecos(widget.startup.id),
+        _service.buscarHistoricoPrecos(startup.id),
       );
       final tokensFuture = _opcional(
-        _service.buscarQuantidadeTokensUsuario(widget.startup.id),
+        _service.buscarQuantidadeTokensUsuarioPorIds(startupIds),
       );
 
-      final startup = await startupFuture;
       final history = await historyFuture;
       final tokens = await tokensFuture;
 
@@ -99,7 +107,7 @@ class _StartupDetailsPageState extends State<StartupDetailsPage> {
     try {
       final summaryFuture = _dashboardDatasource.getSummary();
       final tokensFuture = _opcional(
-        _service.buscarQuantidadeTokensUsuario(_startup.id),
+        _service.buscarQuantidadeTokensUsuarioPorIds(_startupIds(_startup)),
       );
       final summary = await summaryFuture;
       final tokens = await tokensFuture;
@@ -138,40 +146,46 @@ class _StartupDetailsPageState extends State<StartupDetailsPage> {
     setState(() => _isInvesting = true);
 
     try {
-      bool sucesso;
+      String mensagemSucesso;
+
       if (trade.type == _TradeType.buy) {
-        await _service.investirStartup(_startup.id, trade.quantity);
-        sucesso = true;
+        final result = await _service.investirStartup(
+          _startup.id,
+          trade.quantity,
+        );
+        mensagemSucesso =
+            '${_formatInt(result.quantidade)} tokens comprados por ${_formatCurrencyCentavos(result.valorTotalCentavos)}.';
       } else {
-        sucesso = await _service.venderStartup(_startup.id, trade.quantity);
+        final result = await _service.venderStartup(
+          _startup.id,
+          trade.quantity,
+        );
+        mensagemSucesso =
+            '${_formatInt(result.quantidade)} tokens vendidos por ${_formatCurrencyCentavos(result.valorTotalCentavos)}.';
       }
 
       if (!mounted) return;
 
-      if (sucesso) {
-        MesclaNotificacao.mostrar(
-          context,
-          label: trade.type == _TradeType.buy
-              ? 'Compra realizada com sucesso!'
-              : 'Venda realizada com sucesso!',
-          cor: Colors.green,
-        );
+      MesclaNotificacao.mostrar(
+        context,
+        label: mensagemSucesso,
+        cor: Colors.green,
+      );
 
-        AppDataRefreshBus.instance.refresh(
-          scopes: const {
-            AppDataRefreshScope.dashboard,
-            AppDataRefreshScope.portfolio,
-            AppDataRefreshScope.catalog,
-            AppDataRefreshScope.balcao,
-            AppDataRefreshScope.perfilWallet,
-          },
-          reason: trade.type == _TradeType.buy
-              ? 'startup-direct-buy'
-              : 'startup-direct-sell',
-        );
+      AppDataRefreshBus.instance.refresh(
+        scopes: const {
+          AppDataRefreshScope.dashboard,
+          AppDataRefreshScope.portfolio,
+          AppDataRefreshScope.catalog,
+          AppDataRefreshScope.balcao,
+          AppDataRefreshScope.perfilWallet,
+        },
+        reason: trade.type == _TradeType.buy
+            ? 'startup-direct-buy'
+            : 'startup-direct-sell',
+      );
 
-        await _fetchStartupDetails();
-      }
+      await _fetchStartupDetails();
     } catch (e) {
       if (!mounted) return;
       final message = e is StartupApiException
@@ -187,6 +201,19 @@ class _StartupDetailsPageState extends State<StartupDetailsPage> {
         setState(() => _isInvesting = false);
       }
     }
+  }
+
+  String _formatCurrencyCentavos(int centavos) {
+    final reais = centavos / 100;
+    final inteiro = reais.floor();
+    final decimal = ((reais - inteiro) * 100).round();
+    final buffer = StringBuffer();
+    final str = inteiro.toString();
+    for (var i = 0; i < str.length; i++) {
+      if (i > 0 && (str.length - i) % 3 == 0) buffer.write('.');
+      buffer.write(str[i]);
+    }
+    return 'R\$ $buffer,${decimal.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -383,18 +410,13 @@ class _TradeDialogState extends State<_TradeDialog> {
                     const SizedBox(height: 22),
                     _TradeInfoCard(
                       icon: Icons.account_balance_wallet_outlined,
-                      label: _isBuy
-                          ? 'Saldo disponível'
-                          : 'Tokens disponíveis',
+                      label: _isBuy ? 'Saldo disponível' : 'Tokens disponíveis',
                       value: _isBuy
                           ? _formatCurrencyFull(widget.saldoDisponivel)
                           : '${_formatInt(widget.tokensDisponiveis)} tokens',
                     ),
                     const SizedBox(height: 12),
-                    _TradeTotalCard(
-                      isBuy: _isBuy,
-                      value: _total,
-                    ),
+                    _TradeTotalCard(isBuy: _isBuy, value: _total),
                     if (_validationMessage != null) ...[
                       const SizedBox(height: 10),
                       Text(
@@ -553,13 +575,21 @@ class _TradeLogo extends StatelessWidget {
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(14),
-      child: Image.network(
-        url,
-        width: 56,
-        height: 56,
-        fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => placeholder,
-      ),
+      child: isStartupLogoAsset(url)
+          ? Image.asset(
+              url,
+              width: 56,
+              height: 56,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => placeholder,
+            )
+          : Image.network(
+              url,
+              width: 56,
+              height: 56,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => placeholder,
+            ),
     );
   }
 }
@@ -879,10 +909,7 @@ class _DetailsContent extends StatelessWidget {
           onPeriodChanged: onPeriodChanged,
         ),
         const SizedBox(height: 22),
-        _DetailsTabs(
-          selectedTab: tabSelecionada,
-          onChanged: onTabChanged,
-        ),
+        _DetailsTabs(selectedTab: tabSelecionada, onChanged: onTabChanged),
         const SizedBox(height: 12),
         _TabContent(startup: startup, selectedTab: tabSelecionada),
         const SizedBox(height: 96),
@@ -1010,7 +1037,9 @@ class _StartupSummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final variacao = startup.variacaoPreco ?? 0;
-    final variacaoColor = variacao >= 0 ? AppColors.success : AppColors.destructive;
+    final variacaoColor = variacao >= 0
+        ? AppColors.success
+        : AppColors.destructive;
 
     return Container(
       height: 318,
@@ -1151,7 +1180,7 @@ class _MetricsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(42, 22, 42, 0),
+      padding: const EdgeInsets.fromLTRB(16, 22, 16, 0),
       child: Row(
         children: [
           Expanded(
@@ -1266,7 +1295,9 @@ class _PerformanceSection extends StatelessWidget {
       fallbackValue: startup.precoToken,
     );
     final stats = _PriceStats.from(series, startup.totalTokens);
-    final color = stats.variation >= 0 ? AppColors.success : AppColors.destructive;
+    final color = stats.variation >= 0
+        ? AppColors.success
+        : AppColors.destructive;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 42),
@@ -1288,7 +1319,11 @@ class _PerformanceSection extends StatelessWidget {
           children: [
             const Row(
               children: [
-                Icon(Icons.trending_up_rounded, color: AppColors.primary, size: 16),
+                Icon(
+                  Icons.trending_up_rounded,
+                  color: AppColors.primary,
+                  size: 16,
+                ),
                 SizedBox(width: 7),
                 Text(
                   'Performance',
@@ -1523,10 +1558,7 @@ class _StartupPriceChartState extends State<_StartupPriceChart> {
                 left: activeDx,
                 top: 0,
                 bottom: 0,
-                child: Container(
-                  width: 1,
-                  color: const Color(0xFFD4D8DE),
-                ),
+                child: Container(width: 1, color: const Color(0xFFD4D8DE)),
               ),
               Positioned(
                 left: activeDx - 4,
@@ -1757,10 +1789,7 @@ class _DetailsTabs extends StatelessWidget {
   final String selectedTab;
   final ValueChanged<String> onChanged;
 
-  const _DetailsTabs({
-    required this.selectedTab,
-    required this.onChanged,
-  });
+  const _DetailsTabs({required this.selectedTab, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -1908,8 +1937,7 @@ class _SocietariaContent extends StatelessWidget {
             description: '',
             imageUrl: socio.foto,
           ),
-        if (startup.conselho.isNotEmpty)
-          const _SectionLabel(label: 'Conselho'),
+        if (startup.conselho.isNotEmpty) const _SectionLabel(label: 'Conselho'),
         for (final member in startup.conselho)
           _PersonCard(
             name: member.nome,
@@ -1931,7 +1959,9 @@ class _EquipeContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (startup.mentores.isEmpty) {
-      return const _EmptyContent(message: 'Nenhum membro de equipe cadastrado.');
+      return const _EmptyContent(
+        message: 'Nenhum membro de equipe cadastrado.',
+      );
     }
 
     return Column(
@@ -1963,11 +1993,7 @@ class _VideosContent extends StatelessWidget {
       return const _EmptyContent(message: 'Nenhum vídeo publicado.');
     }
 
-    return Column(
-      children: [
-        _VideoCard(video: video),
-      ],
-    );
+    return Column(children: [_VideoCard(video: video)]);
   }
 }
 
@@ -2199,7 +2225,8 @@ _StartupVideoAsset? _videoAssetForStartup(Startup startup) {
   if (key.contains('agro')) {
     return const _StartupVideoAsset(
       title: 'Pitch AgroIA',
-      description: 'Visão geral da solução de IA para monitoramento de lavouras.',
+      description:
+          'Visão geral da solução de IA para monitoramento de lavouras.',
       dateLabel: '19 de janeiro de 2026',
       durationLabel: '0:10',
       assetPath: 'assets/videos/agro.mp4',
@@ -2209,7 +2236,8 @@ _StartupVideoAsset? _videoAssetForStartup(Startup startup) {
   if (key.contains('med') || key.contains('health') || key.contains('saude')) {
     return const _StartupVideoAsset(
       title: 'Demo MedFácil',
-      description: 'Apresentação da jornada de consulta online e prontuário digital.',
+      description:
+          'Apresentação da jornada de consulta online e prontuário digital.',
       dateLabel: '19 de janeiro de 2026',
       durationLabel: '0:10',
       assetPath: 'assets/videos/med.mp4',
@@ -2219,7 +2247,8 @@ _StartupVideoAsset? _videoAssetForStartup(Startup startup) {
   if (key.contains('edu')) {
     return const _StartupVideoAsset(
       title: 'Demo EduBlocks',
-      description: 'Experiência de aprendizagem por jogos e desafios de programação.',
+      description:
+          'Experiência de aprendizagem por jogos e desafios de programação.',
       dateLabel: '19 de janeiro de 2026',
       durationLabel: '0:10',
       assetPath: 'assets/videos/edu.mp4',
@@ -2229,7 +2258,8 @@ _StartupVideoAsset? _videoAssetForStartup(Startup startup) {
   if (key.contains('fin')) {
     return const _StartupVideoAsset(
       title: 'Pitch FinTrack',
-      description: 'Resumo da plataforma de gestão financeira com categorização por IA.',
+      description:
+          'Resumo da plataforma de gestão financeira com categorização por IA.',
       dateLabel: '19 de janeiro de 2026',
       durationLabel: '0:10',
       assetPath: 'assets/videos/fin.mp4',
@@ -2242,7 +2272,8 @@ _StartupVideoAsset? _videoAssetForStartup(Startup startup) {
       key.contains('verde')) {
     return const _StartupVideoAsset(
       title: 'Demo GreenRoute',
-      description: 'Como a rota sustentável reduz emissões no deslocamento urbano.',
+      description:
+          'Como a rota sustentável reduz emissões no deslocamento urbano.',
       dateLabel: '19 de janeiro de 2026',
       durationLabel: '0:10',
       assetPath: 'assets/videos/green.mp4',
@@ -2330,7 +2361,8 @@ class _InfoRow extends StatelessWidget {
           ),
           const SizedBox(width: 14),
           Expanded(
-            child: valueWidget ??
+            child:
+                valueWidget ??
                 Text(
                   value?.isNotEmpty == true ? value! : '-',
                   textAlign: TextAlign.right,
@@ -2492,10 +2524,7 @@ class _StickyInvestButton extends StatelessWidget {
   final bool isLoading;
   final VoidCallback onPressed;
 
-  const _StickyInvestButton({
-    required this.isLoading,
-    required this.onPressed,
-  });
+  const _StickyInvestButton({required this.isLoading, required this.onPressed});
 
   @override
   Widget build(BuildContext context) {
@@ -2616,7 +2645,9 @@ class _VariationBadge extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            value >= 0 ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+            value >= 0
+                ? Icons.arrow_upward_rounded
+                : Icons.arrow_downward_rounded,
             size: 14,
             color: color,
           ),
@@ -2660,13 +2691,21 @@ class _StartupLogo extends StatelessWidget {
     if (url.isEmpty) return placeholder;
 
     return ClipOval(
-      child: Image.network(
-        url,
-        width: size,
-        height: size,
-        fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => placeholder,
-      ),
+      child: isStartupLogoAsset(url)
+          ? Image.asset(
+              url,
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => placeholder,
+            )
+          : Image.network(
+              url,
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => placeholder,
+            ),
     );
   }
 }
@@ -2739,9 +2778,7 @@ List<StartupPricePoint> _seriesForPeriod({
   required double fallbackValue,
 }) {
   final now = DateTime.now();
-  final validPoints = points
-      .where((point) => point.preco > 0)
-      .toList()
+  final validPoints = points.where((point) => point.preco > 0).toList()
     ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
   final normalizedPoints = <StartupPricePoint>[
     for (var i = 0; i < validPoints.length; i++)

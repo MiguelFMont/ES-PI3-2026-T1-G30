@@ -479,17 +479,27 @@ export class TradesRepo {
     uid: string,
     startupId: string,
     quantidade: number,
+    holdingStartupIds: string[] = [startupId],
   ): Promise<DirectSellResult> {
     return this.db.runTransaction<DirectSellResult>(async (transaction) => {
       const walletRef = this.getWalletRef(uid);
-      const holdingRef = this.getHoldingRef(uid, startupId);
       const startupRef = this.getStartupRef(startupId);
       const transactionRef = this.db.collection("transactions").doc();
+      const candidateHoldingIds = [
+        ...new Set(
+          holdingStartupIds
+            .map((id) => id.trim())
+            .filter((id) => id.length > 0),
+        ),
+      ];
+      const holdingRefs = candidateHoldingIds.map((holdingStartupId) =>
+        this.getHoldingRef(uid, holdingStartupId),
+      );
 
-      const [startupDoc, walletDoc, holdingDoc] = await Promise.all([
+      const [startupDoc, walletDoc, ...holdingDocs] = await Promise.all([
         transaction.get(startupRef),
         transaction.get(walletRef),
-        transaction.get(holdingRef),
+        ...holdingRefs.map((holdingRef) => transaction.get(holdingRef)),
       ]);
 
       if (!startupDoc.exists) {
@@ -508,7 +518,19 @@ export class TradesRepo {
         );
       }
 
-      if (!holdingDoc.exists) {
+      const holdings = holdingDocs
+        .map((holdingDoc, index) => ({ holdingDoc, holdingRef: holdingRefs[index] }))
+        .filter((entry) => entry.holdingDoc.exists)
+        .map((entry) => ({
+          ref: entry.holdingRef,
+          record: this.toHoldingRecord(
+            uid,
+            entry.holdingRef.id,
+            entry.holdingDoc.data(),
+          ),
+        }));
+
+      if (holdings.length === 0) {
         throw new AppError(
           "Holding não encontrada para a startup informada.",
           404,
@@ -518,12 +540,19 @@ export class TradesRepo {
 
       const startup = this.toDirectSellStartupRecord(startupId, startupDoc.data());
       const wallet = this.toWalletRecord(uid, walletDoc.data());
-      const holding = this.toHoldingRecord(uid, startupId, holdingDoc.data());
+      const quantidadeLivreTotal = holdings.reduce(
+        (total, holding) => total + holding.record.quantidade,
+        0,
+      );
+      const quantidadeBloqueadaTotal = holdings.reduce(
+        (total, holding) => total + holding.record.quantidadeBloqueada,
+        0,
+      );
 
       // Samuel Campovilla:
       // A posse para venda direta considera somente tokens livres em holding.quantidade.
       // quantidadeBloqueada representa tokens presos em ofertas abertas e não entra aqui.
-      if (holding.quantidade < quantidade) {
+      if (quantidadeLivreTotal < quantidade) {
         throw new AppError(
           "Você não possui tokens livres suficientes para vender.",
           409,
@@ -584,25 +613,63 @@ export class TradesRepo {
         );
       }
 
-      const quantidadeAtual = holding.quantidade - quantidade;
-      const quantidadeBloqueada = holding.quantidadeBloqueada;
+      let quantidadeRestante = quantidade;
+      let quantidadeAtual = quantidadeLivreTotal;
       const commonTimestamp = FieldValue.serverTimestamp();
 
-      // A escrita preserva explicitamente quantidadeBloqueada e precoMedioCentavos.
-      // Esta operação só reduz os tokens livres do usuário e credita o saldo correspondente.
       transaction.update(walletRef, {
         saldoCentavos: saldoNovoCentavos,
         updatedAt: commonTimestamp,
       });
 
-      transaction.update(holdingRef, {
-        uid,
-        startupId,
-        quantidade: quantidadeAtual,
-        quantidadeBloqueada,
-        precoMedioCentavos: holding.precoMedioCentavos,
-        updatedAt: commonTimestamp,
+      const orderedHoldings = [...holdings].sort((a, b) => {
+        const aIsCanonical = a.record.startupId === startupId;
+        const bIsCanonical = b.record.startupId === startupId;
+
+        if (aIsCanonical !== bIsCanonical) {
+          return aIsCanonical ? 1 : -1;
+        }
+
+        return b.record.quantidade - a.record.quantidade;
       });
+
+      for (const holding of orderedHoldings) {
+        if (quantidadeRestante <= 0) {
+          break;
+        }
+
+        const quantidadeConsumida = Math.min(
+          holding.record.quantidade,
+          quantidadeRestante,
+        );
+
+        if (quantidadeConsumida <= 0) {
+          continue;
+        }
+
+        const quantidadeLivreAtualizada =
+          holding.record.quantidade - quantidadeConsumida;
+
+        transaction.update(holding.ref, {
+          uid,
+          startupId: holding.record.startupId,
+          quantidade: quantidadeLivreAtualizada,
+          quantidadeBloqueada: holding.record.quantidadeBloqueada,
+          precoMedioCentavos: holding.record.precoMedioCentavos,
+          updatedAt: commonTimestamp,
+        });
+
+        quantidadeRestante -= quantidadeConsumida;
+        quantidadeAtual -= quantidadeConsumida;
+      }
+
+      if (quantidadeRestante !== 0) {
+        throw new AppError(
+          "Holding com estado inválido durante a venda.",
+          500,
+          "INVALID_HOLDING_STATE",
+        );
+      }
 
       transaction.set(transactionRef, {
         userId: uid,
@@ -642,7 +709,7 @@ export class TradesRepo {
         saldoAnteriorCentavos,
         saldoNovoCentavos,
         quantidadeAtual,
-        quantidadeBloqueada,
+        quantidadeBloqueada: quantidadeBloqueadaTotal,
       };
     });
   }

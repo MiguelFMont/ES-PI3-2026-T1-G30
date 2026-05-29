@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mesclainvest/core/theme/app_colors.dart';
+import 'package:mesclainvest/shared/utils/startup_logo_resolver.dart';
 
 import '../../domain/startup_model.dart';
 
@@ -55,14 +56,15 @@ class StartupCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final variacao = startup.variacaoPreco ?? 0;
     final stageColor = _estagioColor(startup.estagio);
-    final isPositive = (startup.variacaoPreco ?? 0) >= 0;
+    final isPositive = variacao >= 0;
     final variacaoColor = isPositive
         ? AppColors.success
         : AppColors.destructive;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 46, vertical: 7),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
       child: Material(
         color: AppColors.card,
         borderRadius: BorderRadius.circular(14),
@@ -219,8 +221,11 @@ class StartupCard extends StatelessWidget {
                               ],
                             ),
                           ),
-                          if (startup.variacaoPreco != null)
-                            _buildVariacaoBadge(isPositive, variacaoColor),
+                          _buildVariacaoBadge(
+                            isPositive,
+                            variacaoColor,
+                            variacao,
+                          ),
                         ],
                       ),
                     ),
@@ -263,23 +268,35 @@ class StartupCard extends StatelessWidget {
   Widget _buildLogo() {
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
-      child: Image.network(
-        startup.logo,
-        width: 52,
-        height: 52,
-        fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => Container(
-          width: 52,
-          height: 52,
-          decoration: BoxDecoration(
-            color: AppColors.muted,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: const Icon(
-            Icons.business_rounded,
-            color: AppColors.mutedForeground,
-          ),
-        ),
+      child: isStartupLogoAsset(startup.logo)
+          ? Image.asset(
+              startup.logo,
+              width: 52,
+              height: 52,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => _buildLogoPlaceholder(),
+            )
+          : Image.network(
+              startup.logo,
+              width: 52,
+              height: 52,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => _buildLogoPlaceholder(),
+            ),
+    );
+  }
+
+  Widget _buildLogoPlaceholder() {
+    return Container(
+      width: 52,
+      height: 52,
+      decoration: BoxDecoration(
+        color: AppColors.muted,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Icon(
+        Icons.business_rounded,
+        color: AppColors.mutedForeground,
       ),
     );
   }
@@ -302,7 +319,7 @@ class StartupCard extends StatelessWidget {
     );
   }
 
-  Widget _buildVariacaoBadge(bool isPositive, Color color) {
+  Widget _buildVariacaoBadge(bool isPositive, Color color, double variacao) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -319,7 +336,7 @@ class StartupCard extends StatelessWidget {
           ),
           const SizedBox(width: 2),
           Text(
-            '${startup.variacaoPreco!.abs().toStringAsFixed(1)}%',
+            '${variacao.abs().toStringAsFixed(1)}%',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,

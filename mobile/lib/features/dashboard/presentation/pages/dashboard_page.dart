@@ -13,6 +13,7 @@ import '../../../../features/perfil/data/datasource/perfil_datasource.dart';
 import '../../../../features/perfil/domain/perfil_models.dart';
 import '../../../../features/startups/data/startup_service.dart';
 import '../../../../features/startups/domain/startup_model.dart';
+import '../../../../shared/utils/startup_logo_resolver.dart';
 import '../../../../shared/formatters/reais_formatter.dart';
 import '../../data/datasources/dashboard_datasource.dart';
 import '../../data/models/dashboard_models.dart';
@@ -170,6 +171,11 @@ class _DashboardPageState extends State<DashboardPage> {
         startupsPorId[id] = startup;
       }
 
+      final nome = startup.nome.trim();
+      if (nome.isNotEmpty) {
+        startupsPorId[nome] = startup;
+      }
+
       for (final aliasId in startup.aliasIds) {
         final aliasNormalizado = aliasId.trim();
         if (aliasNormalizado.isNotEmpty) {
@@ -181,16 +187,32 @@ class _DashboardPageState extends State<DashboardPage> {
     return startupsPorId;
   }
 
+  Startup? _resolverStartup(String? nomeOuId) {
+    if (nomeOuId == null) return null;
+
+    final valor = nomeOuId.trim();
+    if (valor.isEmpty) return null;
+
+    return _startupsPorId[valor];
+  }
+
   String _resolverNomeStartup(String nomeOuId) {
     final valor = nomeOuId.trim();
     if (valor.isEmpty) return '-';
 
-    final startup = _startupsPorId[valor];
+    final startup = _resolverStartup(valor);
     if (startup != null && startup.nome.trim().isNotEmpty) {
       return startup.nome.trim();
     }
 
     return valor;
+  }
+
+  String _resolverLogoStartup(String nomeOuId) {
+    final valor = nomeOuId.trim();
+    if (valor.isEmpty) return '';
+
+    return _resolverStartup(valor)?.logo ?? '';
   }
 
   @override
@@ -507,6 +529,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   final startup = startups[i];
                   return _OportunidadeCard(
                     nome: startup.nome,
+                    logoSource: startup.logo,
                     setor: startup.setor,
                     variacao: _formatPercent(startup.variacaoPreco ?? 0),
                     cor: cores[i % cores.length],
@@ -544,10 +567,25 @@ class _DashboardPageState extends State<DashboardPage> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: holdings.length,
-              itemBuilder: (_, i) => _PosicaoCard(
-                holding: holdings[i],
-                nomeStartup: _resolverNomeStartup(holdings[i].nomeStartup),
-              ),
+              itemBuilder: (_, i) {
+                final holding = holdings[i];
+                final startup = _resolverStartup(
+                  holding.startupId.isNotEmpty
+                      ? holding.startupId
+                      : holding.nomeStartup,
+                );
+
+                return _PosicaoCard(
+                  holding: holding,
+                  startup: startup,
+                  nomeStartup: _resolverNomeStartup(
+                    holding.startupId.isNotEmpty
+                        ? holding.startupId
+                        : holding.nomeStartup,
+                  ),
+                  logoSource: startup?.logo ?? _resolverLogoStartup(holding.nomeStartup),
+                );
+              },
             ),
         ],
       ),
@@ -1005,6 +1043,7 @@ class _AcaoRapida extends StatelessWidget {
 
 class _OportunidadeCard extends StatelessWidget {
   final String nome;
+  final String logoSource;
   final String setor;
   final String variacao;
   final Color cor;
@@ -1012,6 +1051,7 @@ class _OportunidadeCard extends StatelessWidget {
 
   const _OportunidadeCard({
     required this.nome,
+    required this.logoSource,
     required this.setor,
     required this.variacao,
     required this.cor,
@@ -1032,9 +1072,10 @@ class _OportunidadeCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            backgroundColor: cor.withValues(alpha: 0.12),
-            child: Icon(Icons.business_rounded, color: cor, size: 20),
+          _DashboardStartupLogo(
+            logoSource: logoSource,
+            fallbackLabel: nome,
+            color: cor,
           ),
           const Spacer(),
           Text(
@@ -1079,15 +1120,29 @@ class _OportunidadeCard extends StatelessWidget {
 
 class _PosicaoCard extends StatelessWidget {
   final HoldingModel holding;
+  final Startup? startup;
   final String nomeStartup;
+  final String logoSource;
 
-  const _PosicaoCard({required this.holding, required this.nomeStartup});
+  const _PosicaoCard({
+    required this.holding,
+    this.startup,
+    required this.nomeStartup,
+    required this.logoSource,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final cor = holding.percentualRetorno >= 0
+    final variacao = startup?.variacaoPreco ?? holding.percentualRetorno;
+    final valorPosicao = startup != null && startup!.precoToken > 0
+        ? holding.totalTokens * startup!.precoToken
+        : holding.valorInvestido;
+    final cor = variacao >= 0
         ? AppColors.success
         : AppColors.destructive;
+    final setor = startup?.setor.trim().isNotEmpty == true
+        ? startup!.setor
+        : holding.setor;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1099,9 +1154,10 @@ class _PosicaoCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            backgroundColor: cor.withValues(alpha: 0.12),
-            child: Icon(Icons.business_rounded, color: cor, size: 20),
+          _DashboardStartupLogo(
+            logoSource: logoSource,
+            fallbackLabel: nomeStartup,
+            color: cor,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -1120,7 +1176,7 @@ class _PosicaoCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  holding.setor.isEmpty ? 'Setor não informado' : holding.setor,
+                  setor.isEmpty ? 'Setor não informado' : setor,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -1136,7 +1192,7 @@ class _PosicaoCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                _formatBRL(holding.valorInvestido),
+                _formatBRL(valorPosicao),
                 style: const TextStyle(
                   color: AppColors.foreground,
                   fontSize: 13,
@@ -1145,7 +1201,7 @@ class _PosicaoCard extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                _formatPercent(holding.percentualRetorno),
+                _formatPercent(variacao),
                 style: TextStyle(
                   color: cor,
                   fontSize: 12,
@@ -1157,6 +1213,66 @@ class _PosicaoCard extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _DashboardStartupLogo extends StatelessWidget {
+  const _DashboardStartupLogo({
+    required this.logoSource,
+    required this.fallbackLabel,
+    required this.color,
+  });
+
+  final String logoSource;
+  final String fallbackLabel;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final placeholder = CircleAvatar(
+      backgroundColor: color.withValues(alpha: 0.12),
+      child: Text(
+        _initials(fallbackLabel),
+        style: TextStyle(
+          color: color,
+          fontSize: 13,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+
+    if (logoSource.trim().isEmpty) {
+      return placeholder;
+    }
+
+    return ClipOval(
+      child: isStartupLogoAsset(logoSource)
+          ? Image.asset(
+              logoSource,
+              width: 40,
+              height: 40,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => placeholder,
+            )
+          : Image.network(
+              logoSource,
+              width: 40,
+              height: 40,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => placeholder,
+            ),
+    );
+  }
+
+  String _initials(String value) {
+    final cleaned = value.trim();
+    if (cleaned.isEmpty) {
+      return 'ST';
+    }
+
+    return cleaned.length >= 2
+        ? cleaned.substring(0, 2).toUpperCase()
+        : cleaned.toUpperCase();
   }
 }
 

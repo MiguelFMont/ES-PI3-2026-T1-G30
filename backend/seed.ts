@@ -45,7 +45,7 @@ async function seed(): Promise<void> {
   const startups = [
     withStartupTokenomicsPolicy({
       nome: "AgroIA",
-      logo: "https://placehold.co/200x200?text=AgroIA",
+      logo: "assets/images/startups/AgroIA.png",
       descricao:
         "Plataforma de inteligêcia artificial para monitoramento de lavoura via sátelite.",
       estagio: "Em Expansão",
@@ -103,7 +103,7 @@ async function seed(): Promise<void> {
     }),
     withStartupTokenomicsPolicy({
       nome: "MedFácil",
-      logo: "https://placehold.co/200x200?text=Medfacil",
+      logo: "assets/images/startups/MedFacil.png",
       descricao:
         "Conecta pacientes a médicos para consultas online com prontuários digital integrado.",
       estagio: "Em Operação",
@@ -156,7 +156,7 @@ async function seed(): Promise<void> {
     }),
     withStartupTokenomicsPolicy({
       nome: "EduBlocks",
-      logo: "https://placehold.co/200x200?text=EduBlocks",
+      logo: "assets/images/startups/EduBlocks.png",
       descricao:
         "Ensino de programação para crianças de 6 a 14 anos através de jogos e desafios.",
       estagio: "Nova",
@@ -190,7 +190,7 @@ async function seed(): Promise<void> {
     }),
     withStartupTokenomicsPolicy({
       nome: "FinTrack",
-      logo: "https://placehold.co/200x200?text=FinTrack",
+      logo: "assets/images/startups/FinTrack.png",
       descricao:
         "Plataforma de gestão financeira pessoal com categorização automática de gastos por IA.",
       estagio: "Em Operação",
@@ -254,7 +254,7 @@ async function seed(): Promise<void> {
     }),
     withStartupTokenomicsPolicy({
       nome: "GreenRoute",
-      logo: "https://placehold.co/200x200?text=GreenRoute",
+      logo: "assets/images/startups/GreenRoute.png",
       descricao:
         "App de mobilidade urbana sustentável que calcula rotas com menor emissão de carbono.",
       estagio: "Nova",
