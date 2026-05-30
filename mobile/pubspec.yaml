@@ -21,6 +21,7 @@ dependencies:
   intl: ^0.19.0 #formatação de moeda
 
   http: ^1.2.0
+  video_player: ^2.9.0
   google_fonts: ^6.2.1
   flutter_secure_storage: ^9.0.0
   flutter_dotenv: ^6.0.1
