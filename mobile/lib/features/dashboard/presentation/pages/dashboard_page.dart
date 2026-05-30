@@ -217,7 +217,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(child: _buildDashboardContent());
+    return _buildDashboardContent();
   }
 
   void _abrirExtrato() {
@@ -269,9 +269,10 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Widget _buildTopSection(DashboardSummaryModel summary) {
     final greeting = _primeiroNome.isEmpty ? 'Olá!' : 'Olá, $_primeiroNome 👋';
+    final statusBarHeight = MediaQuery.paddingOf(context).top;
 
     return SizedBox(
-      height: 338,
+      height: 338 + statusBarHeight,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -279,14 +280,14 @@ class _DashboardPageState extends State<DashboardPage> {
             top: 0,
             left: 0,
             right: 0,
-            height: 226,
+            height: 226 + statusBarHeight,
             child: CustomPaint(
               painter: const _DashboardHeaderPainter(),
               child: const SizedBox.expand(),
             ),
           ),
           Positioned(
-            top: 32,
+            top: 32 + statusBarHeight,
             left: 27,
             right: 22,
             child: Row(
@@ -326,7 +327,7 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
           ),
           Positioned(
-            top: 102,
+            top: 102 + statusBarHeight,
             left: 27,
             right: 22,
             child: _ResumoCarteiraCard(

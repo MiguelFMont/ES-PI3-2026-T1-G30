@@ -987,8 +987,8 @@ class _StartupHero extends StatelessWidget {
           ),
           Positioned(
             top: 80,
-            left: 42,
-            right: 42,
+            left: 16,
+            right: 16,
             child: _StartupSummaryCard(
               startup: startup,
               tokensUsuario: tokensUsuario,
@@ -1300,7 +1300,7 @@ class _PerformanceSection extends StatelessWidget {
         : AppColors.destructive;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 42),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
         padding: const EdgeInsets.fromLTRB(14, 17, 14, 14),
         decoration: BoxDecoration(
@@ -1798,7 +1798,7 @@ class _DetailsTabs extends StatelessWidget {
     return SizedBox(
       height: 34,
       child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 42),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         scrollDirection: Axis.horizontal,
         itemBuilder: (_, index) {
           final tab = tabs[index];
