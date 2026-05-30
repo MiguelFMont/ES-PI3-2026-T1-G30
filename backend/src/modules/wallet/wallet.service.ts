@@ -110,12 +110,28 @@ export async function getDadosDashboardService(uid: string | undefined) {
         ? ((lucro / totalInvestido) * 100).toFixed(2) // limita duas casas decimais 
         : '0.00';
 
-    // monta os pontos do gráfico a partir das transações 
-    // cada ponto tem data e valor 
-    const pontosGrafico = transacoes.map((tx: any) => ({
-        data: tx.createdAt, // eixo x 
-        valor: tx.valorTotalCentavos / 100, // eixo y
-    }));
+    const tiposCompra = ['COMPRA_DIRETA', 'COMPRA_BALCAO', 'DIRECT_BUY', 'MARKET_BUY'];
+    const tiposVenda  = ['VENDA_DIRETA',  'VENDA_BALCAO',  'DIRECT_SELL', 'MARKET_SELL'];
+
+    const transacoesOrdenadas = [...transacoes].sort((a: any, b: any) => {
+        const toMs = (v: any) =>
+            v && typeof v.toMillis === 'function' ? v.toMillis() : new Date(v).getTime();
+        return toMs(a.createdAt) - toMs(b.createdAt);
+    });
+
+    let acumulado = 0;
+    const pontosGrafico = transacoesOrdenadas.map((tx: any) => {
+        const valor = tx.valorTotalCentavos / 100;
+        if (tiposCompra.includes(tx.tipo)) {
+            acumulado += valor;
+        } else if (tiposVenda.includes(tx.tipo)) {
+            acumulado -= valor;
+        }
+        return {
+            data: tx.createdAt,
+            valor: acumulado,
+        };
+    });
 
     // retorna todos os dados calculados 
     return {
