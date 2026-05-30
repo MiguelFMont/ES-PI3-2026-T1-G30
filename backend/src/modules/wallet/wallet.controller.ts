@@ -1,6 +1,11 @@
 /*
 Autora: Maria Júlia Lazarini Oleto
 RA: 25006031
+Realizado: Retornar dados do dashboard e enviá-los para a carteira, e o histórico de operações do usuário.
+
+Samuel Campovilla: 
+Realizado: Controllers de holdings, transactions, wallet e saques.
+
 significado do arquivo:
 
 recebe a requisição http da busca 
