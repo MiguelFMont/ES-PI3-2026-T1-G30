@@ -1,7 +1,7 @@
 /* 
 Autora: Maria Júlia Lazarini Oleto
 RA: 25006031
-Realizado: Funções da walletRepo, retornar os dados do dashboarde e retornar histórico das operações do usuário.
+Realizado: Funções da walletRepo, retornar os dados do dashboard e retornar histórico das operações do usuário.
 
 // Autor: Samuel Campovilla
 Realizado: Normalização e adaptação das funções para utilizarem holdings e wallet (documentos), utilizando o uid do usuário.
