@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'startup_video_player_stub.dart'
+import 'startup_video_player_mobile.dart'
     if (dart.library.html) 'startup_video_player_web.dart' as impl;
 
 class StartupVideoPlayer extends StatelessWidget {
