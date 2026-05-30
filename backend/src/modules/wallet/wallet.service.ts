@@ -1,6 +1,11 @@
 /*
 Autora: Maria Júlia Lazarini Oleto
 RA: 25006031
+Realizado: Funções que retornam os dados da wallet para o dashboard (com as lógicas) e retorno do histórico de transações.
+
+Autor: Samuel Campovilla
+Realizado: Normalização e aplicação das funções utilizando as holdings, transactions, filtros e conversões.
+
 significado do arquivo:
 
 importa a wallet (repositório)
@@ -17,7 +22,6 @@ faz os pontos do gráfico com data e valor
 retorna os dados pro dashboard 
 */
 
-// Autor: Samuel Campovilla
 // Este arquivo concentra a regra de negócio da carteira.
 // Os controllers chamam estas funções; elas validam entrada, estado e normalizam a resposta.
 
@@ -57,6 +61,7 @@ interface TransactionsResponse {
   items: TransactionResponse[];
 }
 
+// Maria Julia 
 // retorna os dados agregados da wallet para o dashboard 
 export async function getDadosDashboardService(uid: string | undefined) {
     // valida se o uid foi informado 
@@ -148,7 +153,7 @@ export async function getDadosDashboardService(uid: string | undefined) {
 }
 
 
-
+// Samuel 
 // Instância única do repositório usada pelo módulo.
 // O service depende dela para ler e escrever no Firestore sem misturar HTTP com persistência.
 const walletRepo = new WalletRepo();
