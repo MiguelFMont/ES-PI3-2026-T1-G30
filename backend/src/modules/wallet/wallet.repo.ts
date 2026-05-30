@@ -1,6 +1,11 @@
 /* 
 Autora: Maria Júlia Lazarini Oleto
 RA: 25006031
+Realizado: Funções da walletRepo, retornar os dados do dashboarde e retornar histórico das operações do usuário.
+
+// Autor: Samuel Campovilla
+Realizado: Normalização e adaptação das funções para utilizarem holdings e wallet (documentos), utilizando o uid do usuário.
+
 significado do arquivo:
 ele vai herdar a classe base do repositório do firestore 
 entra na coleção de transações, filtra pelo uid do usuário 
@@ -13,7 +18,6 @@ trasnformar esses documentos em objetos
 retornar as coleções de objetos como informações pro dashboard e para os gráficos de valorização 
 */
 
-// Autor: Samuel Campovilla
 // Este arquivo concentra o acesso ao Firestore para o módulo de carteira.
 // Ele é chamado por wallet.service.ts, que valida regras de negócio antes de persistir dados.
 
@@ -80,6 +84,7 @@ export interface TransactionFilters {
   tipo?: TipoTransacao;
 }
 
+// Maria Júlia 
 // função que herda o que o firebaserepo tem 
 export class WalletRepo extends FirestoreBaseRepo {
   // Referência compartilhada do Firestore para todas as operações deste repositório.
@@ -244,6 +249,7 @@ export class WalletRepo extends FirestoreBaseRepo {
     });
   }
 
+  // Maria Júlia
   // busca os dados agregados da wallet para o dashboard 
   async getDadosDashboard(uid: string) {
     const db = getDb();
