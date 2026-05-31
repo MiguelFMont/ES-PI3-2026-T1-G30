@@ -1,3 +1,6 @@
+// Autor: Gabriel Martins de Almeida
+// RA: 25006162
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 

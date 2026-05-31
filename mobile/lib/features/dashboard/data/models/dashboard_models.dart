@@ -1,3 +1,6 @@
+// Autor: Gabriel Martins de Almeida
+// RA: 25006162
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class DashboardSummaryModel {
