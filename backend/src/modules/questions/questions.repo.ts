@@ -17,13 +17,11 @@ export class QuestionsRepo extends FirestoreBaseRepo {
       .collection('questions')
       .where('startupId', '==', startupId)
       .where('isPublica', '==', true)
-      .orderBy('criadoEm', 'desc')
       .get();
 
-    return snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    } as Question));
+    return snapshot.docs
+      .map((doc) => ({ id: doc.id, ...doc.data() } as Question))
+      .sort((a, b) => b.criadoEm.toMillis() - a.criadoEm.toMillis()) // ordena em memória
   }
 
   // Busca todas as perguntas de uma startup (públicas + privadas — para investidores)

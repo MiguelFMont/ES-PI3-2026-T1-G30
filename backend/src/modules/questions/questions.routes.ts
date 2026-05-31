@@ -21,10 +21,10 @@ router.get('/:startupId/todas', authMiddleware, (req, res) =>
 );
 
 // POST /v1/questions
-router.post('/', authMiddleware, (req, res) =>
+router.post('/enviarPergunta', authMiddleware, (req, res) =>
   controller.criar(req, res)
 );
-
+  
 // PUT /v1/questions/:id/responder
 router.put('/:id/responder', authMiddleware, (req, res) =>
   controller.responder(req, res)

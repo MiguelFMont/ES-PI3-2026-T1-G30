@@ -6,6 +6,7 @@ import 'package:mesclainvest/core/theme/app_colors.dart';
 import 'package:mesclainvest/features/dashboard/data/datasources/dashboard_datasource.dart';
 import 'package:mesclainvest/shared/utils/startup_logo_resolver.dart';
 import 'package:mesclainvest/shared/widgets/index.dart';
+import 'package:mesclainvest/features/questions/presentation/widgets/questions_tab.dart';
 
 import '../../data/startup_service.dart';
 import '../../domain/startup_model.dart';
@@ -910,7 +911,7 @@ class _DetailsContent extends StatelessWidget {
         const SizedBox(height: 22),
         _DetailsTabs(selectedTab: tabSelecionada, onChanged: onTabChanged),
         const SizedBox(height: 12),
-        _TabContent(startup: startup, selectedTab: tabSelecionada),
+        _TabContent(startup: startup, selectedTab: tabSelecionada, tokensUsuario: tokensUsuario),
         const SizedBox(height: 96),
       ],
     );
@@ -1840,15 +1841,16 @@ class _DetailsTabs extends StatelessWidget {
 class _TabContent extends StatelessWidget {
   final Startup startup;
   final String selectedTab;
+  final int tokensUsuario;
 
-  const _TabContent({required this.startup, required this.selectedTab});
+  const _TabContent({required this.startup, required this.selectedTab, required this.tokensUsuario});
 
   @override
   Widget build(BuildContext context) {
     return switch (selectedTab) {
       'Societária' => _SocietariaContent(startup: startup),
       'Equipe' => _EquipeContent(startup: startup),
-      'Q&A' => const _EmptyContent(message: 'Nenhuma pergunta publicada.'),
+      'Q&A' => _QandAContent(startupId: startup.id, isInvestidor: tokensUsuario > 0),
       'Vídeos' => _VideosContent(startup: startup),
       _ => _ResumoContent(startup: startup),
     };
@@ -2888,4 +2890,19 @@ String _formatInt(int value) {
 String _formatPercent(double value) {
   final sign = value >= 0 ? '+' : '';
   return '$sign${value.toStringAsFixed(2).replaceAll('.', ',')}%';
+}
+
+class _QandAContent extends StatelessWidget {
+  final String startupId;
+  final bool isInvestidor;
+
+  const _QandAContent({required this.startupId, required this.isInvestidor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 16),
+      child: QuestionsTab(startupId: startupId, isInvestidor: isInvestidor),
+    );
+  }
 }
