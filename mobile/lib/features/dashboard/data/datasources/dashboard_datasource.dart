@@ -1,3 +1,6 @@
+// Autor: Gabriel Martins de Almeida
+// RA: 25006162
+
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
