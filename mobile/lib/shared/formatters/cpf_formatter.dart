@@ -1,4 +1,5 @@
 // shared/formatters/cpf_formatter.dart
+// Autor: Miguel Fernandes Monteiro — RA: 25014808
 import 'package:flutter/services.dart';
 
 class CpfFormatter extends TextInputFormatter {

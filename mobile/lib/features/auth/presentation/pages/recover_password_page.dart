@@ -5,6 +5,7 @@ import 'package:mesclainvest/shared/widgets/mescla_button.dart';
 import '../../../../shared/widgets/campo_texto.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/mescla_auth_layout.dart';
+import '../../../../shared/widgets/mescla_notificacao.dart';
 import '../../data/repositories/auth_repository.dart';
 
 class RecoverPasswordPage extends StatefulWidget {
@@ -55,13 +56,11 @@ class _RecoverPasswordPageState extends State<RecoverPasswordPage> {
     }
   }
 
-  // Função auxiliar para mostrar o Snackbar
   void _mostrarMensagem(String mensagem, {required bool isError}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(mensagem),
-        backgroundColor: isError ? Colors.red : Colors.green,
-      ),
+    MesclaNotificacao.mostrar(
+      context,
+      label: mensagem.replaceAll('Exception: ', ''),
+      cor: isError ? AppColors.destructive : Colors.green,
     );
   }
 

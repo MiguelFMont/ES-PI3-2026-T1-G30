@@ -4,6 +4,60 @@ import * as crypto from "crypto";
 import axios from "axios";
 import { env } from "../../config/env";
 
+// _______________   CRIPTOGRAFIA AES-256-GCM   _______________ //
+
+function getEncryptionKey(): Buffer {
+  // Lido em runtime para funcionar com Firebase Secrets (injetado em process.env)
+  const key = process.env.TOKEN_ENCRYPTION_KEY;
+  if (!key) throw new Error("TOKEN_ENCRYPTION_KEY não configurada.");
+  return crypto.createHash("sha256").update(key).digest();
+}
+
+export function encryptToken(plaintext: string): string {
+  const key = getEncryptionKey();
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
+  const encrypted = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return [iv.toString("hex"), encrypted.toString("hex"), tag.toString("hex")].join(":");
+}
+
+export function decryptToken(ciphertext: string): string {
+  const key = getEncryptionKey();
+  const [ivHex, encHex, tagHex] = ciphertext.split(":");
+  const decipher = crypto.createDecipheriv("aes-256-gcm", key, Buffer.from(ivHex, "hex"));
+  decipher.setAuthTag(Buffer.from(tagHex, "hex"));
+  return decipher.update(Buffer.from(encHex, "hex")) + decipher.final("utf8");
+}
+
+// _______________   VALIDAÇÃO DE SENHA   _______________ //
+
+// Regras espelhadas no frontend (cadastro_page / reset_password_page):
+// mínimo 8 caracteres, letra maiúscula, número e caractere especial.
+export function validarSenhaForte(senha: string) {
+  if (!senha || senha.length < 8)
+    throw new Error("A senha deve ter no mínimo 8 caracteres.");
+  if (!/[A-Z]/.test(senha))
+    throw new Error("A senha deve conter ao menos uma letra maiúscula.");
+  if (!/[0-9]/.test(senha))
+    throw new Error("A senha deve conter ao menos um número.");
+  if (!/[!@#$%^&*(),.?":{}|<>]/.test(senha))
+    throw new Error("A senha deve conter ao menos um caractere especial.");
+}
+
+// _______________   VERIFICAÇÃO DE CPF   _______________ //
+
+// Verifica se o CPF já está cadastrado em algum usuário.
+export async function verificarCpfDisponivelService(cpf: string) {
+  const snap = await getDb()
+    .collection("users")
+    .where("cpf", "==", cpf)
+    .limit(1)
+    .get();
+
+  return { disponivel: snap.empty };
+}
+
 // _______________   CADASTRO EM 2 ETAPAS   _______________ //
 
 // 1. INICIA O CADASTRO — salva dados temporários e envia token por email
@@ -15,6 +69,27 @@ export async function iniciarCadastroService(dados: {
   telefone: string;
   senha: string;
 }) {
+  // Valida a força da senha antes de qualquer escrita/envio de email
+  validarSenhaForte(dados.senha);
+
+  // E-mail não pode estar cadastrado no Firebase Auth
+  let emailEmUso = false;
+  try {
+    await getAuth().getUserByEmail(dados.email);
+    emailEmUso = true;
+  } catch (e: any) {
+    if (e.code !== "auth/user-not-found") throw e;
+  }
+  if (emailEmUso) throw new Error("E-mail já cadastrado.");
+
+  // CPF não pode estar cadastrado em outro usuário
+  const cpfSnap = await getDb()
+    .collection("users")
+    .where("cpf", "==", dados.cpf)
+    .limit(1)
+    .get();
+  if (!cpfSnap.empty) throw new Error("CPF já cadastrado.");
+
   const token = crypto.randomInt(10000, 99999).toString();
   const expiresAt = new Date(Date.now() + 2 * 60 * 1000);
   const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
@@ -55,6 +130,8 @@ export async function concluirCadastroService(
   if (dados.expiresAt.toDate() < new Date())
     throw new Error("Código expirado. Solicite um novo cadastro.");
   if (dados.token !== inputHash) throw new Error("Código inválido.");
+
+  validarSenhaForte(senha);
 
   // Cria o usuário no Firebase Auth
   const userRecord = await getAuth().createUser({
@@ -115,9 +192,10 @@ export async function loginService(email: string, senha: string) {
 
     await getDb().collection('mfaChallengePending').doc(uid).set({
       tokenHash,
-      idToken,
-      refreshToken,
+      idToken: encryptToken(idToken),
+      refreshToken: encryptToken(refreshToken),
       expiresAt: Timestamp.fromDate(new Date(Date.now() + 5 * 60 * 1000)), // 5 min
+      deleteAt: Timestamp.fromDate(new Date(Date.now() + 60 * 60 * 1000)), // TTL: 1h
     });
 
     return { mfaRequired: true, tempToken, uid };
@@ -202,6 +280,8 @@ export async function novaSenhaService(
   token: string,
   novaSenha: string,
 ) {
+  validarSenhaForte(novaSenha);
+
   // Valida o token novamente por segurança antes de alterar
   const { uid } = await validarTokenService(email, token);
 

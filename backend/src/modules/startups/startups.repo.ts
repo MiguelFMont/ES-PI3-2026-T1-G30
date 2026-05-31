@@ -123,6 +123,10 @@ export class StartupsRepo extends FirestoreBaseRepo {
       this.pickNumber(ordered, "precoTokenAtualCentavos", {
         positiveOnly: true,
       }) ?? precoTokenInicialCentavos;
+    const variacaoPreco = this.calculatePriceVariationPercentage(
+      precoTokenInicialCentavos,
+      precoTokenAtualCentavos,
+    );
     const createdAt =
       this.pickTimestamp(
         [...ordered].sort(
@@ -149,6 +153,7 @@ export class StartupsRepo extends FirestoreBaseRepo {
       tokensDisponiveis,
       precoTokenInicialCentavos,
       precoTokenAtualCentavos,
+      variacaoPreco,
       resumoExecutivo: this.pickText(ordered, [
         "resumoExecutivo",
         "resumoExecutive",
@@ -225,6 +230,20 @@ export class StartupsRepo extends FirestoreBaseRepo {
     }
 
     return Math.min(...values);
+  }
+
+  private calculatePriceVariationPercentage(
+    precoInicialCentavos: number,
+    precoAtualCentavos: number,
+  ): number {
+    if (precoInicialCentavos <= 0 || precoAtualCentavos <= 0) {
+      return 0;
+    }
+
+    return (
+      ((precoAtualCentavos - precoInicialCentavos) / precoInicialCentavos) *
+      100
+    );
   }
 
   private compareCandidates(a: StartupDoc, b: StartupDoc): number {

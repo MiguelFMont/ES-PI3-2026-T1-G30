@@ -8,6 +8,7 @@ import '../../../../shared/widgets/campo_texto.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/mescla_auth_layout.dart';
 import '../../../../shared/widgets/mescla_button.dart';
+import '../../../../shared/widgets/mescla_notificacao.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -44,9 +45,11 @@ class _LoginPageState extends State<LoginPage> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
+      MesclaNotificacao.mostrar(
         context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+        label: e.toString().replaceAll('Exception: ', ''),
+        cor: AppColors.destructive,
+      );
     } finally {
       setState(() => _isLoading = false);
     }
@@ -60,27 +63,35 @@ class _LoginPageState extends State<LoginPage> {
           child: Column(
             children: [
               _titulo(),
-              CampoTexto(
-                controller: _emailController,
-                label: 'E-mail',
-                keyboardType: TextInputType.emailAddress,
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CampoTexto(
+                      controller: _emailController,
+                      label: 'E-mail',
+                      keyboardType: TextInputType.emailAddress,
+                    ),
+                    const SizedBox(height: 16),
+                    CampoTexto(
+                      controller: _senhaController,
+                      label: 'Senha',
+                      obscureText: true,
+                    ),
+                    const SizedBox(height: 8),
+                    _linkEsqueceuSenha(),
+                    const SizedBox(height: 32),
+                    _isLoading
+                        ? const CircularProgressIndicator(
+                            color: AppColors.foreground,
+                            backgroundColor: AppColors.primary,
+                          )
+                        : _botaoLogin(),
+                  ],
+                ),
               ),
-              const SizedBox(height: 16),
-              CampoTexto(
-                controller: _senhaController,
-                label: 'Senha',
-                obscureText: true,
-              ),
-              _linkEsqueceuSenha(),
-              const SizedBox(height: 32),
-              _isLoading
-                  ? const CircularProgressIndicator(
-                      color: AppColors.foreground,
-                      backgroundColor: AppColors.primary,
-                    )
-                  : _botaoLogin(),
-              const SizedBox(height: 55),
               _linkCadastro(),
+              const SizedBox(height: 24),
             ],
           ),
         ),
@@ -105,13 +116,16 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Widget _linkEsqueceuSenha() {
-    return Transform.translate(
-      offset: const Offset(-16, -8),
+    return SizedBox(
+      width: 250,
       child: Align(
         alignment: Alignment.centerRight,
         child: TextButton(
           onPressed: () => Navigator.pushNamed(context, '/forgot-password'),
           style: TextButton.styleFrom(
+            padding: EdgeInsets.zero,
+            minimumSize: const Size(0, 0),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             splashFactory: NoSplash.splashFactory,
             overlayColor: Colors.transparent,
           ),

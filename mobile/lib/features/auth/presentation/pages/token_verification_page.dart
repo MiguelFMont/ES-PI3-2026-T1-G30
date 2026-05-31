@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../../shared/widgets/mescla_button.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/mescla_auth_layout.dart';
+import '../../../../shared/widgets/mescla_notificacao.dart';
 import '../../data/repositories/auth_repository.dart';
 import 'package:pinput/pinput.dart';
 import 'dart:async';
@@ -45,9 +46,9 @@ class _TokenVerificationPageState extends State<TokenVerificationPage> {
         _otpController.clear();
       });
       _iniciarTimer();
-      _showSnackBar('Novo código enviado!', isError: false);
+      _showNotificacao('Novo código enviado!', isError: false);
     } catch (e) {
-      _showSnackBar(e.toString(), isError: true);
+      _showNotificacao(e.toString(), isError: true);
     }
   }
 
@@ -61,7 +62,7 @@ class _TokenVerificationPageState extends State<TokenVerificationPage> {
     final token = _otpController.text;
 
     if (token.length != 5) {
-      _showSnackBar('O código deve ter 5 dígitos', isError: true);
+      _showNotificacao('O código deve ter 5 dígitos', isError: true);
       return;
     }
 
@@ -73,7 +74,7 @@ class _TokenVerificationPageState extends State<TokenVerificationPage> {
         await _authRepository.concluirCadastro(email, token, senha!);
 
         if (mounted) {
-          _showSnackBar('Conta ativada com sucesso!', isError: false);
+          _showNotificacao('Conta ativada com sucesso!', isError: false);
           Navigator.pushReplacementNamed(context, '/login');
         }
       } else if (fluxo == 'senha') {
@@ -92,18 +93,17 @@ class _TokenVerificationPageState extends State<TokenVerificationPage> {
         }
       }
     } catch (e) {
-      _showSnackBar(e.toString(), isError: true);
+      _showNotificacao(e.toString(), isError: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _showSnackBar(String message, {required bool isError}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Colors.red : Colors.green,
-      ),
+  void _showNotificacao(String message, {required bool isError}) {
+    MesclaNotificacao.mostrar(
+      context,
+      label: message.replaceAll('Exception: ', ''),
+      cor: isError ? AppColors.destructive : Colors.green,
     );
   }
 

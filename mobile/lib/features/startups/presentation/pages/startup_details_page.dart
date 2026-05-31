@@ -1,3 +1,6 @@
+// Autor: Gabriel Martins de Almeida
+// RA: 25006162
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -93,10 +96,10 @@ class _StartupDetailsPageState extends State<StartupDetailsPage> {
     final precoToken = _startup.precoToken;
 
     if (precoToken <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Preço do token indisponível para esta startup.'),
-        ),
+      MesclaNotificacao.mostrar(
+        context,
+        label: 'Preço do token indisponível para esta startup.',
+        cor: AppColors.destructive,
       );
       return;
     }
@@ -118,10 +121,10 @@ class _StartupDetailsPageState extends State<StartupDetailsPage> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _isInvesting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Não foi possível buscar os dados da carteira.'),
-        ),
+      MesclaNotificacao.mostrar(
+        context,
+        label: 'Não foi possível buscar os dados da carteira.',
+        cor: AppColors.destructive,
       );
       return;
     }
@@ -167,11 +170,10 @@ class _StartupDetailsPageState extends State<StartupDetailsPage> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(mensagemSucesso),
-          backgroundColor: AppColors.success,
-        ),
+      MesclaNotificacao.mostrar(
+        context,
+        label: mensagemSucesso,
+        cor: Colors.green,
       );
 
       AppDataRefreshBus.instance.refresh(
@@ -193,9 +195,11 @@ class _StartupDetailsPageState extends State<StartupDetailsPage> {
       final message = e is StartupApiException
           ? e.message
           : 'Não foi possível concluir a negociação.';
-      ScaffoldMessenger.of(
+      MesclaNotificacao.mostrar(
         context,
-      ).showSnackBar(SnackBar(content: Text(message)));
+        label: message,
+        cor: AppColors.destructive,
+      );
     } finally {
       if (mounted) {
         setState(() => _isInvesting = false);
@@ -987,8 +991,8 @@ class _StartupHero extends StatelessWidget {
           ),
           Positioned(
             top: 80,
-            left: 42,
-            right: 42,
+            left: 16,
+            right: 16,
             child: _StartupSummaryCard(
               startup: startup,
               tokensUsuario: tokensUsuario,
@@ -1300,7 +1304,7 @@ class _PerformanceSection extends StatelessWidget {
         : AppColors.destructive;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 42),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
         padding: const EdgeInsets.fromLTRB(14, 17, 14, 14),
         decoration: BoxDecoration(
@@ -1798,7 +1802,7 @@ class _DetailsTabs extends StatelessWidget {
     return SizedBox(
       height: 34,
       child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 42),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         scrollDirection: Axis.horizontal,
         itemBuilder: (_, index) {
           final tab = tabs[index];

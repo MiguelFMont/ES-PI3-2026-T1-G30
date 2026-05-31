@@ -12,7 +12,8 @@ class MesclaAuthLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tecladoAberto = MediaQuery.of(context).viewInsets.bottom > 0;
+    final mq = MediaQuery.of(context);
+    final fullHeight = mq.size.height - mq.padding.top - mq.padding.bottom;
 
     return Scaffold(
       backgroundColor: AppColors.card,
@@ -21,13 +22,10 @@ class MesclaAuthLayout extends StatelessWidget {
         child: SingleChildScrollView(
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           child: SizedBox(
-            height:
-                MediaQuery.of(context).size.height -
-                MediaQuery.of(context).padding.top -
-                MediaQuery.of(context).padding.bottom,
+            height: fullHeight,
             child: Column(
               children: [
-                MesclaHeader(tecladoAberto: tecladoAberto),
+                const MesclaHeader(),
                 ...children,
               ],
             ),
@@ -39,20 +37,15 @@ class MesclaAuthLayout extends StatelessWidget {
 }
 
 class MesclaHeader extends StatelessWidget {
-  final bool tecladoAberto;
-
-  const MesclaHeader({super.key, required this.tecladoAberto});
+  const MesclaHeader({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return const Column(
       children: [
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          height: tecladoAberto ? 30 : 80,
-        ),
-        const MesclaLogo(),
-        const SizedBox(height: 32),
+        SizedBox(height: 80),
+        MesclaLogo(),
+        SizedBox(height: 32),
       ],
     );
   }

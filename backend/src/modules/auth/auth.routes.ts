@@ -7,7 +7,8 @@ import {
     redefinirSenhaController,
     validarTokenController,
     reenviarTokenCadastroController,
-    logoutController
+    logoutController,
+    verificarCpfController
 } from "./auth.controller";
 import { authMiddleware } from '../../shared/http/auth.middleware';
 import mfaRoutes from './mfa/mfa.routes';
@@ -18,6 +19,7 @@ router.post('/logout', authMiddleware, logoutController);
 router.post('/register/iniciar', iniciarCadastroController);
 router.post('/register/concluir', concluirCadastroController);
 router.post('/register/reenviar-token', reenviarTokenCadastroController);
+router.post('/register/verificar-cpf', verificarCpfController);
 router.post('/login', loginController);
 router.post('/recuperar-senha', solicitarRecuperacaoSenhaController);
 router.post('/redefinir-senha', redefinirSenhaController);

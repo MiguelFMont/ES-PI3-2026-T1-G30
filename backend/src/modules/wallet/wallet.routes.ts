@@ -8,10 +8,6 @@ aponta para o controller
 registra os endpoints atuais da carteira
 */
 
-// Samuel Campovilla
-// Este arquivo registra as rotas HTTP do módulo de carteira.
-// Ele é importado em src/modules/index.ts, que monta o prefixo /wallet.
-// O server.ts aplica /v1 acima disso, então os caminhos finais ficam /api/v1/wallet...
 import { Router } from 'express';
 import {
   getTransactionsController,
@@ -46,7 +42,6 @@ router.post('/add-balance', addBalanceController);
 // Chama withdrawController, que valida req.body.valorCentavos e saldo suficiente.
 router.post('/withdraw', withdrawController);
 
-// Samuel Campovilla:
 // O histórico da carteira expõe apenas o contrato atual /transactions.
 // O UID nunca entra pela URL para evitar qualquer brecha de consulta a dados de terceiros.
 router.get('/transactions', getTransactionsController);

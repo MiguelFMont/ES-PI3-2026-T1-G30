@@ -10,6 +10,7 @@ se conecta com o backend via repository
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:mesclainvest/shared/widgets/mescla_notificacao.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../app/routes.dart';
 import '../../../../core/state/app_data_refresh_bus.dart';
@@ -23,6 +24,7 @@ import '../../domain/models/wallet_model.dart';
 import '../widgets/operacao_tile.dart';
 import '../widgets/participacao_card.dart';
 import '../widgets/performance_chart.dart';
+import '../../../startups/domain/startup_model.dart';
 
 class PortfolioScreen extends StatefulWidget {
   const PortfolioScreen({super.key});
@@ -158,12 +160,10 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$recurso em breve'),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: const Color(0xFF263238),
-      ),
+    MesclaNotificacao.mostrar(
+      context,
+      label: '$recurso em breve',
+      cor: const Color(0xFF263238),
     );
   }
 
@@ -245,7 +245,30 @@ class _PortfolioContent extends StatelessWidget {
                       child: ParticipacaoCard(
                         participacao: participacao,
                         startup: startupPorId(participacao.startupId),
-                        onTap: () => onAcaoIndisponivel('Detalhe da startup'),
+                        onTap: () {
+                          final startup = startupPorId(participacao.startupId);
+                          if (startup == null) return;
+                            Navigator.pushNamed(
+                              context,
+                              '/startup-detail',
+                              arguments: Startup(
+                                id: startup.id,
+                                nome: startup.nome,
+                                logo: startup.logo,
+                                descricao: startup.descricao,
+                                estagio: startup.estagio,
+                                capitalAportado: startup.capitalAportado,
+                                totalTokens: startup.totalTokens,
+                                tokensDisponiveis: startup.tokensDisponiveis,
+                                resumoExecutivo: '',
+                                socios: [],
+                                conselho: [],
+                                mentores: [],
+                                videos: [],
+                                atualizacoes: [],
+                              ),
+                            );
+                        },
                       ),
                     ),
                   ),

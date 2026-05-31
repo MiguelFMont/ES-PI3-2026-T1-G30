@@ -7,10 +7,21 @@ class CampoData extends StatefulWidget {
   final ValueChanged<DateTime?> onDateChanged;
   final String label;
 
+  /// Estado de validação: null = neutro, true = válido (verde), false = inválido (vermelho).
+  final bool? valido;
+  final String? mensagemErro;
+
+  /// Valor inicial — preenche os campos ao reconstruir o widget
+  /// (ex.: ao voltar para esta etapa do cadastro).
+  final DateTime? initialDate;
+
   const CampoData({
     super.key,
     required this.onDateChanged,
     this.label = 'Data de Nascimento',
+    this.valido,
+    this.mensagemErro,
+    this.initialDate,
   });
 
   @override
@@ -25,6 +36,17 @@ class _CampoDataState extends State<CampoData> {
   final _diaFocus = FocusNode();
   final _mesFocus = FocusNode();
   final _anoFocus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    final d = widget.initialDate;
+    if (d != null) {
+      _diaController.text = d.day.toString().padLeft(2, '0');
+      _mesController.text = d.month.toString().padLeft(2, '0');
+      _anoController.text = d.year.toString();
+    }
+  }
 
   // Tenta montar o DateTime sempre que algum campo muda
   void _onChanged() {
@@ -109,8 +131,16 @@ class _CampoDataState extends State<CampoData> {
     );
   }
 
+  Color? get _corBorda {
+    if (widget.valido == null) return null;
+    return widget.valido!
+        ? const Color(0xFF4CAF50)
+        : const Color(0xFFF44336);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final corBorda = _corBorda;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -132,6 +162,9 @@ class _CampoDataState extends State<CampoData> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             color: Colors.white,
+            border: corBorda == null
+                ? null
+                : Border.all(color: corBorda, width: 1.5),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.08),
@@ -170,6 +203,21 @@ class _CampoDataState extends State<CampoData> {
             ],
           ),
         ),
+        if (widget.mensagemErro != null && widget.valido == false)
+          Padding(
+            padding: const EdgeInsets.only(top: 6, left: 4),
+            child: SizedBox(
+              width: 250,
+              child: Text(
+                widget.mensagemErro!,
+                style: const TextStyle(
+                  color: Color(0xFFF44336),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }

@@ -1,3 +1,6 @@
+// Autor: Gabriel Martins de Almeida
+// RA: 25006162
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mesclainvest/core/theme/app_colors.dart';
@@ -56,8 +59,9 @@ class StartupCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final variacao = startup.variacaoPreco ?? 0;
     final stageColor = _estagioColor(startup.estagio);
-    final isPositive = (startup.variacaoPreco ?? 0) >= 0;
+    final isPositive = variacao >= 0;
     final variacaoColor = isPositive
         ? AppColors.success
         : AppColors.destructive;
@@ -220,8 +224,11 @@ class StartupCard extends StatelessWidget {
                               ],
                             ),
                           ),
-                          if (startup.variacaoPreco != null)
-                            _buildVariacaoBadge(isPositive, variacaoColor),
+                          _buildVariacaoBadge(
+                            isPositive,
+                            variacaoColor,
+                            variacao,
+                          ),
                         ],
                       ),
                     ),
@@ -315,7 +322,7 @@ class StartupCard extends StatelessWidget {
     );
   }
 
-  Widget _buildVariacaoBadge(bool isPositive, Color color) {
+  Widget _buildVariacaoBadge(bool isPositive, Color color, double variacao) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -332,7 +339,7 @@ class StartupCard extends StatelessWidget {
           ),
           const SizedBox(width: 2),
           Text(
-            '${startup.variacaoPreco!.abs().toStringAsFixed(1)}%',
+            '${variacao.abs().toStringAsFixed(1)}%',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,

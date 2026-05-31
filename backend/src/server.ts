@@ -13,6 +13,7 @@ import { defineSecret } from 'firebase-functions/params';
 import './config/firebase';
 
 const RESEND_API_KEY = defineSecret('RESEND_API_KEY');
+const TOKEN_ENCRYPTION_KEY = defineSecret('TOKEN_ENCRYPTION_KEY');
 
 export const app = express();
 
@@ -23,7 +24,7 @@ app.use(errorMiddleware);
 
 export const api = onRequest(
     {
-        secrets: [RESEND_API_KEY],
+        secrets: [RESEND_API_KEY, TOKEN_ENCRYPTION_KEY],
         region: 'southamerica-east1',
     },
     app

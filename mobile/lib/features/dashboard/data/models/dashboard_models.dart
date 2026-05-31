@@ -1,3 +1,6 @@
+// Autor: Gabriel Martins de Almeida
+// RA: 25006162
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class DashboardSummaryModel {
@@ -56,6 +59,7 @@ class DashboardChartPointModel {
 
 class HoldingModel {
   const HoldingModel({
+    required this.startupId,
     required this.nomeStartup,
     required this.setor,
     required this.totalTokens,
@@ -63,6 +67,7 @@ class HoldingModel {
     required this.percentualRetorno,
   });
 
+  final String startupId;
   final String nomeStartup;
   final String setor;
   final double totalTokens;
@@ -76,6 +81,7 @@ class HoldingModel {
     final quantidadeTotal = quantidade + quantidadeBloqueada;
 
     return HoldingModel(
+      startupId: _toText(json['startupId']),
       nomeStartup: _toText(json['nomeStartup'] ?? json['startupId']),
       setor: _toText(json['setor']),
       totalTokens: quantidadeTotal,

@@ -90,6 +90,8 @@ class Startup {
   final double capitalAportado;
   final int totalTokens;
   final int tokensDisponiveis;
+  final int precoTokenInicialCentavos;
+  final int precoTokenAtualCentavos;
   final DateTime? createdAt;
   final String resumoExecutivo;
   final List<Socio> socios;
@@ -113,6 +115,8 @@ class Startup {
     required this.capitalAportado,
     required this.totalTokens,
     this.tokensDisponiveis = 0,
+    this.precoTokenInicialCentavos = 0,
+    this.precoTokenAtualCentavos = 0,
     this.createdAt,
     required this.resumoExecutivo,
     required this.socios,
@@ -127,6 +131,20 @@ class Startup {
     final tokensDisponiveis = _intFromJson(
       json['tokensDisponiveis'] ?? json['totalTokens'],
     );
+    final precoTokenInicialCentavos = _intFromJson(
+      json['precoTokenInicialCentavos'] ?? json['precoInicialCentavos'],
+    );
+    final precoTokenAtualCentavos = _intFromJson(
+      json['precoTokenAtualCentavos'] ??
+          json['precoAtualCentavos'] ??
+          precoTokenInicialCentavos,
+    );
+    final variacaoPrecoCalculada =
+        precoTokenInicialCentavos > 0 && precoTokenAtualCentavos > 0
+        ? ((precoTokenAtualCentavos - precoTokenInicialCentavos) /
+                  precoTokenInicialCentavos) *
+              100
+        : 0.0;
 
     return Startup(
       id: _stringFromJson(json['id']),
@@ -141,11 +159,11 @@ class Startup {
       estagio: _stringFromJson(json['estagio']),
       setor: _stringFromJson(json['setor']),
       precoToken: _doubleFromJson(
-        json['precoToken'] ?? json['precoTokenAtualCentavos'],
+        json['precoToken'] ?? precoTokenAtualCentavos,
         fromCentavos: json['precoToken'] == null,
       ),
       variacaoPreco: json['variacaoPreco'] == null
-          ? null
+          ? variacaoPrecoCalculada
           : _doubleFromJson(json['variacaoPreco']),
       descontoVendaDiretaBps: _intFromJson(json['descontoVendaDiretaBps']),
       investido: json['investido'] == true,
@@ -154,6 +172,8 @@ class Startup {
       tokensDisponiveis: totalTokens > 0
           ? tokensDisponiveis.clamp(0, totalTokens).toInt()
           : tokensDisponiveis,
+      precoTokenInicialCentavos: precoTokenInicialCentavos,
+      precoTokenAtualCentavos: precoTokenAtualCentavos,
       createdAt: _dateTimeFromJson(json['createdAt']),
       resumoExecutivo: _stringFromJson(
         json['resumoExecutivo'] ?? json['resumoExecutive'],

@@ -1,4 +1,5 @@
 // lib/shared/widgets/app_gradient_header.dart
+// Autor: Miguel Fernandes Monteiro — RA: 25014808
 
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';

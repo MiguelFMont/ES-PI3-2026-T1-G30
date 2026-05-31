@@ -1,3 +1,6 @@
+// Autor: Gabriel Martins de Almeida
+// RA: 25006162
+
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -187,11 +190,20 @@ class _DashboardPageState extends State<DashboardPage> {
     return startupsPorId;
   }
 
+  Startup? _resolverStartup(String? nomeOuId) {
+    if (nomeOuId == null) return null;
+
+    final valor = nomeOuId.trim();
+    if (valor.isEmpty) return null;
+
+    return _startupsPorId[valor];
+  }
+
   String _resolverNomeStartup(String nomeOuId) {
     final valor = nomeOuId.trim();
     if (valor.isEmpty) return '-';
 
-    final startup = _startupsPorId[valor];
+    final startup = _resolverStartup(valor);
     if (startup != null && startup.nome.trim().isNotEmpty) {
       return startup.nome.trim();
     }
@@ -203,12 +215,12 @@ class _DashboardPageState extends State<DashboardPage> {
     final valor = nomeOuId.trim();
     if (valor.isEmpty) return '';
 
-    return _startupsPorId[valor]?.logo ?? '';
+    return _resolverStartup(valor)?.logo ?? '';
   }
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(child: _buildDashboardContent());
+    return _buildDashboardContent();
   }
 
   void _abrirExtrato() {
@@ -260,9 +272,10 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Widget _buildTopSection(DashboardSummaryModel summary) {
     final greeting = _primeiroNome.isEmpty ? 'Olá!' : 'Olá, $_primeiroNome 👋';
+    final statusBarHeight = MediaQuery.paddingOf(context).top;
 
     return SizedBox(
-      height: 338,
+      height: 338 + statusBarHeight,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -270,14 +283,14 @@ class _DashboardPageState extends State<DashboardPage> {
             top: 0,
             left: 0,
             right: 0,
-            height: 226,
+            height: 226 + statusBarHeight,
             child: CustomPaint(
               painter: const _DashboardHeaderPainter(),
               child: const SizedBox.expand(),
             ),
           ),
           Positioned(
-            top: 32,
+            top: 32 + statusBarHeight,
             left: 27,
             right: 22,
             child: Row(
@@ -317,7 +330,7 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
           ),
           Positioned(
-            top: 102,
+            top: 102 + statusBarHeight,
             left: 27,
             right: 22,
             child: _ResumoCarteiraCard(
@@ -558,11 +571,25 @@ class _DashboardPageState extends State<DashboardPage> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: holdings.length,
-              itemBuilder: (_, i) => _PosicaoCard(
-                holding: holdings[i],
-                nomeStartup: _resolverNomeStartup(holdings[i].nomeStartup),
-                logoSource: _resolverLogoStartup(holdings[i].nomeStartup),
-              ),
+              itemBuilder: (_, i) {
+                final holding = holdings[i];
+                final startup = _resolverStartup(
+                  holding.startupId.isNotEmpty
+                      ? holding.startupId
+                      : holding.nomeStartup,
+                );
+
+                return _PosicaoCard(
+                  holding: holding,
+                  startup: startup,
+                  nomeStartup: _resolverNomeStartup(
+                    holding.startupId.isNotEmpty
+                        ? holding.startupId
+                        : holding.nomeStartup,
+                  ),
+                  logoSource: startup?.logo ?? _resolverLogoStartup(holding.nomeStartup),
+                );
+              },
             ),
         ],
       ),
@@ -1097,20 +1124,29 @@ class _OportunidadeCard extends StatelessWidget {
 
 class _PosicaoCard extends StatelessWidget {
   final HoldingModel holding;
+  final Startup? startup;
   final String nomeStartup;
   final String logoSource;
 
   const _PosicaoCard({
     required this.holding,
+    this.startup,
     required this.nomeStartup,
     required this.logoSource,
   });
 
   @override
   Widget build(BuildContext context) {
-    final cor = holding.percentualRetorno >= 0
+    final variacao = startup?.variacaoPreco ?? holding.percentualRetorno;
+    final valorPosicao = startup != null && startup!.precoToken > 0
+        ? holding.totalTokens * startup!.precoToken
+        : holding.valorInvestido;
+    final cor = variacao >= 0
         ? AppColors.success
         : AppColors.destructive;
+    final setor = startup?.setor.trim().isNotEmpty == true
+        ? startup!.setor
+        : holding.setor;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1144,7 +1180,7 @@ class _PosicaoCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  holding.setor.isEmpty ? 'Setor não informado' : holding.setor,
+                  setor.isEmpty ? 'Setor não informado' : setor,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -1160,7 +1196,7 @@ class _PosicaoCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                _formatBRL(holding.valorInvestido),
+                _formatBRL(valorPosicao),
                 style: const TextStyle(
                   color: AppColors.foreground,
                   fontSize: 13,
@@ -1169,7 +1205,7 @@ class _PosicaoCard extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                _formatPercent(holding.percentualRetorno),
+                _formatPercent(variacao),
                 style: TextStyle(
                   color: cor,
                   fontSize: 12,

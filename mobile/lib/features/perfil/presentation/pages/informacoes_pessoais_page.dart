@@ -2,10 +2,13 @@
 // Autor: Miguel Fernandes Monteiro — RA: 25014808
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/repositories/perfil_repository.dart';
 import '../../domain/perfil_models.dart';
 import '../../../../shared/widgets/index.dart';
+import '../../../../shared/formatters/censura.dart';
+import '../../../../shared/formatters/telefone_formatter.dart';
 
 class InformacoesPage extends StatefulWidget {
   const InformacoesPage({super.key});
@@ -49,6 +52,7 @@ class _InformacoesPageState extends State<InformacoesPage> {
     required ValueChanged<String> onSalvar,
     TextInputType teclado = TextInputType.text,
     String? Function(String?)? validador,
+    List<TextInputFormatter>? inputFormatters,
   }) async {
     final controller = TextEditingController(text: valorAtual);
     final formKey = GlobalKey<FormState>();
@@ -99,6 +103,7 @@ class _InformacoesPageState extends State<InformacoesPage> {
                   controller: controller,
                   autofocus: true,
                   keyboardType: teclado,
+                  inputFormatters: inputFormatters,
                   style: const TextStyle(color: AppColors.foreground),
                   validator:
                       validador ??
@@ -201,37 +206,18 @@ class _InformacoesPageState extends State<InformacoesPage> {
         _perfilFuture = _repo.buscarPerfil();
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Center(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: const [
-                Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
-                SizedBox(width: 8),
-                Text('Informações atualizadas!'),
-              ],
-            ),
-          ),
-          backgroundColor: Colors.green.shade600,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
+      MesclaNotificacao.mostrar(
+        context,
+        label: 'Informações atualizadas!',
+        cor: Colors.green,
       );
     } catch (e) {
       if (!mounted) return;
       setState(() => _salvando = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Erro ao salvar. Tente novamente.'),
-          backgroundColor: AppColors.destructive,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
+      MesclaNotificacao.mostrar(
+        context,
+        label: 'Erro ao salvar. Tente novamente.',
+        cor: AppColors.destructive,
       );
     }
   }
@@ -328,13 +314,14 @@ class _InformacoesPageState extends State<InformacoesPage> {
                       CampoInfo(
                         icon: Icons.phone_outlined,
                         label: 'Telefone',
-                        valor: _telefone,
+                        valor: Censura.telefone(_telefone),
                         onTap: () => _editarCampo(
                           titulo: 'Telefone',
-                          valorAtual: _telefone,
+                          valorAtual: TelefoneFormatter.format(_telefone),
                           teclado: TextInputType.phone,
+                          inputFormatters: [TelefoneFormatter()],
                           onSalvar: (v) => setState(() {
-                            _telefone = v;
+                            _telefone = TelefoneFormatter.somenteDigitos(v);
                             _alterado = true;
                           }),
                         ),
@@ -343,7 +330,7 @@ class _InformacoesPageState extends State<InformacoesPage> {
                       CampoInfo(
                         icon: Icons.badge_outlined,
                         label: 'CPF  •  Não editável',
-                        valor: data.cpf,
+                        valor: Censura.cpf(data.cpf),
                         editavel: false,
                       ),
                       const SizedBox(height: 8),

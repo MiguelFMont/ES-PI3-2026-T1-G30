@@ -6,6 +6,7 @@ import '../../data/repositories/auth_repository.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/mescla_auth_layout.dart';
 import '../../../../shared/widgets/mescla_button.dart';
+import '../../../../shared/widgets/mescla_notificacao.dart';
 
 class MfaChallengePage extends StatefulWidget {
   const MfaChallengePage({super.key});
@@ -18,7 +19,6 @@ class _MfaChallengePageState extends State<MfaChallengePage> {
   final _codeController = TextEditingController();
   final _repository = AuthRepository();
   bool _isLoading = false;
-  String? _erro;
 
   @override
   void dispose() {
@@ -29,14 +29,15 @@ class _MfaChallengePageState extends State<MfaChallengePage> {
   Future<void> _verificar() async {
     final code = _codeController.text.trim();
     if (code.length != 6) {
-      setState(() => _erro = 'Digite os 6 dígitos do código.');
+      MesclaNotificacao.mostrar(
+        context,
+        label: 'Digite os 6 dígitos do código.',
+        cor: AppColors.destructive,
+      );
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-      _erro = null;
-    });
+    setState(() => _isLoading = true);
 
     try {
       final args =
@@ -49,10 +50,13 @@ class _MfaChallengePageState extends State<MfaChallengePage> {
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, AppRoutes.main);
     } catch (e) {
-      setState(() {
-        _erro = e.toString().replaceAll('Exception: ', '');
-        _isLoading = false;
-      });
+      if (!mounted) return;
+      MesclaNotificacao.mostrar(
+        context,
+        label: e.toString().replaceAll('Exception: ', ''),
+        cor: AppColors.destructive,
+      );
+      setState(() => _isLoading = false);
     }
   }
 
@@ -63,8 +67,9 @@ class _MfaChallengePageState extends State<MfaChallengePage> {
         Expanded(
           child: Column(
             children: [
+              const SizedBox(height: 50),
               Container(
-                margin: const EdgeInsets.only(bottom: 8, top: 20),
+                margin: const EdgeInsets.only(bottom: 8),
                 child: const Text(
                   'Verificação em dois fatores',
                   style: TextStyle(
@@ -111,9 +116,7 @@ class _MfaChallengePageState extends State<MfaChallengePage> {
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
                   ),
-                  errorText: _erro,
                 ),
-                onChanged: (_) => setState(() => _erro = null),
               ),
               const SizedBox(height: 32),
               _isLoading
